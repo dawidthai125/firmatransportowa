@@ -13,11 +13,6 @@ import { saveTenantsRegistry } from '@/lib/tenant/storage'
 
 export type CloudSyncStatus = 'idle' | 'syncing' | 'ok' | 'error' | 'offline'
 
-const API_HEADERS: Record<string, string> = {
-  'Content-Type': 'application/json',
-  Authorization: `Bearer ${supabaseAnonKey}`,
-}
-
 let statusListeners: ((s: CloudSyncStatus, msg?: string) => void)[] = []
 let lastStatus: CloudSyncStatus = isSupabaseConfigured() ? 'idle' : 'offline'
 let pushTimer: ReturnType<typeof setTimeout> | null = null
@@ -36,10 +31,18 @@ function setStatus(s: CloudSyncStatus, msg?: string) {
   statusListeners.forEach((cb) => cb(s, msg))
 }
 
+function apiHeaders(): Record<string, string> {
+  return {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${supabaseAnonKey}`,
+    apikey: supabaseAnonKey,
+  }
+}
+
 async function batchGet(keys: string[]): Promise<unknown[]> {
   const res = await fetch(`${supabaseFunctionsBase}/batch-get`, {
     method: 'POST',
-    headers: API_HEADERS,
+    headers: apiHeaders(),
     body: JSON.stringify({ keys }),
   })
   if (!res.ok) throw new Error(`batch-get ${res.status}`)
@@ -50,7 +53,7 @@ async function batchGet(keys: string[]): Promise<unknown[]> {
 async function batchSet(entries: { key: string; value: unknown }[]): Promise<void> {
   const res = await fetch(`${supabaseFunctionsBase}/batch-set`, {
     method: 'POST',
-    headers: API_HEADERS,
+    headers: apiHeaders(),
     body: JSON.stringify({ entries }),
   })
   if (!res.ok) throw new Error(`batch-set ${res.status}`)
@@ -178,7 +181,7 @@ export async function pushKeyNow(storageKey: string): Promise<void> {
 export async function checkCloudHealth(): Promise<boolean> {
   if (!isSupabaseConfigured()) return false
   try {
-    const res = await fetch(`${supabaseFunctionsBase}/health`)
+    const res = await fetch(`${supabaseFunctionsBase}/health`, { headers: apiHeaders() })
     return res.ok
   } catch {
     return false
