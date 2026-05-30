@@ -32,7 +32,12 @@ function patchRegistryTenants(tenants: Tenant[]): Tenant[] {
               ...demo,
               settings: {
                 ...(t.settings ?? demo.settings),
-                modules: { ...(t.settings?.modules ?? demo.settings.modules), gps: true },
+                modules: {
+                  ...(t.settings?.modules ?? demo.settings.modules),
+                  gps: true,
+                  loadBoard: true,
+                  itd: true,
+                },
               },
             }
           : t,

@@ -14,6 +14,9 @@ import {
   DriverReportView,
 } from '@/app/views/DriverViews'
 import { DriversView } from '@/app/views/DriversView'
+import { DriverItdView } from '@/app/views/DriverItdView'
+import { FreightBoardView } from '@/app/views/FreightBoardView'
+import { ItdAdminView } from '@/app/views/ItdAdminView'
 import { FilesView } from '@/app/views/FilesView'
 import { FleetView } from '@/app/views/FleetView'
 import { MechanicHomeView } from '@/app/views/MechanicViews'
@@ -137,6 +140,9 @@ export default function App() {
           {driverView === 'profile' && (
             <DriverProfileView tenantId={currentTenant.id} driverName={session.user.displayName} />
           )}
+          {driverView === 'itd' && (
+            <DriverItdView tenantId={currentTenant.id} driverName={session.user.displayName} />
+          )}
         </DriverShell>
       </HelpProvider>
     )
@@ -156,6 +162,7 @@ export default function App() {
           <DashboardView tenant={currentTenant} onNavigate={setAdminView} />
         )}
         {adminView === 'courses' && <CoursesView tenantId={currentTenant.id} />}
+        {adminView === 'loads' && <FreightBoardView tenantId={currentTenant.id} />}
         {adminView === 'reports' && <DailyReportsView tenantId={currentTenant.id} />}
         {adminView === 'settlements' && (
           <SettlementsView
@@ -178,6 +185,13 @@ export default function App() {
             tenantId={currentTenant.id}
             userId={session.user.id}
             userRole={session.user.role}
+          />
+        )}
+        {adminView === 'itd' && (
+          <ItdAdminView
+            tenantId={currentTenant.id}
+            userRole={session.user.role === 'owner' ? 'owner' : 'dispatcher'}
+            userName={session.user.displayName}
           />
         )}
         {adminView === 'drivers' && <DriversView tenantId={currentTenant.id} />}

@@ -17,6 +17,7 @@ const DRIVER_VIEW_TITLES: Record<DriverView, string> = {
   issue: 'Zgłoszenie awarii',
   courses: 'Moje kursy',
   report: 'Raport dzienny',
+  itd: 'ITD — kontrole',
   profile: 'Profil kierowcy',
 }
 

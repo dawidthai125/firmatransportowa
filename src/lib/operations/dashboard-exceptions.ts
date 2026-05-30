@@ -8,6 +8,7 @@ import { buildDrivingTimeAlerts } from '@/lib/domain/driving-time'
 import { loadDailyReports, seedDemoDailyReports } from '@/lib/domain/daily-reports-store'
 import type { FleetPosition } from '@/lib/domain/fleet-position'
 import { loadFleetPositions } from '@/lib/domain/fleet-positions-store'
+import { activeItdAlerts } from '@/lib/domain/itd-store'
 import { loadRepairReports, seedDemoRepairReports } from '@/lib/domain/repair-reports-store'
 import { seedDemoCompanyDocuments, loadTenantSettingsData } from '@/lib/domain/tenant-settings'
 import { loadVehicles, seedDemoVehicles } from '@/lib/domain/vehicles-store'
@@ -63,8 +64,19 @@ export function buildOperationsExceptions(
   const companyDocs = loadTenantSettingsData(tenantId).companyDocuments
   const repairs = loadRepairReports(tenantId)
   const positions = loadFleetPositions(tenantId)
+  const itdActive = activeItdAlerts(tenantId)
 
   const out: OperationException[] = []
+
+  if (itdActive.length > 0) {
+    out.push({
+      id: 'itd-active',
+      severity: 'critical',
+      title: `${itdActive.length} alertów ITD od kierowców`,
+      description: itdActive.map((a) => `${a.driverName} — ${a.locationLabel}`).join('; '),
+      actionView: 'itd',
+    })
+  }
 
   const pendingRepairs = repairs.filter((r) => r.status === 'submitted')
   if (pendingRepairs.length > 0) {

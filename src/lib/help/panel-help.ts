@@ -227,6 +227,62 @@ function adminSteps(
       ],
       related: [{ label: 'Firma', hint: 'Lista mechaników (właściciel)' }],
     },
+    loads: {
+      title: 'Giełda ładunków',
+      summary: 'Wyszukiwarka ofert z wielu źródeł — filtry pod preferencje Twojej floty i stawki.',
+      steps: [
+        {
+          title: 'Ustaw preferencje firmy',
+          description: 'Nadwozie, stawka/km, płatność, ADR, kabotaż, baza operacyjna, koretarz trasy.',
+          action: 'Przycisk „Preferencje firmy”',
+        },
+        {
+          title: 'Wybierz źródła',
+          description: 'Trans.eu, TimoCom, Teleroute, 123cargo, e-mail, sieć partnerska — włącz te, z których korzystasz.',
+          action: 'Sekcja źródeł w filtrach',
+        },
+        {
+          title: 'Szukaj i zapisuj',
+          description: 'Wpisz miasto/trasa/ładunek. Zapisane oferty wracają filtrem „Zapisane”.',
+          action: 'Pole wyszukiwania + ikona zakładki przy ofercie',
+        },
+        {
+          title: 'Oceń stawkę',
+          description: 'Porównaj PLN/km, termin płatności i ocenę zleceniodawcy przed negocjacją.',
+          action: 'Kolumna ceny i gwiazdki na karcie oferty',
+        },
+      ],
+      tips: ['Docelowo: integracja API z giełdami — teraz agregacja demo + leady e-mail.'],
+    },
+    itd: {
+      title: 'ITD i kontrole drogowe',
+      summary: 'Alerty od kierowców, wyniki kontroli, mapa punktów ITD i edycja instrukcji.',
+      steps: [
+        {
+          title: 'Reaguj na alerty',
+          description: 'Kierowca wysyła „Kontrola w toku” — przyjmij alert i skontaktuj się po zakończeniu czynności.',
+          action: 'Zakładka Alerty → „Przyjąłem”',
+        },
+        {
+          title: 'Mapa ITD',
+          description: 'Wagi A1/A2/A4, granice, zgłoszenia na żywo (4 h).',
+          action: 'Zakładka Mapa ITD',
+        },
+        {
+          title: 'Archiwum kontroli',
+          description: 'Protokoły, mandaty — kierowca lub biuro dodaje wynik po kontroli.',
+          action: 'Zakładka Wyniki kontroli',
+        },
+        {
+          title: 'Instrukcja kierowcy',
+          description: isOwner
+            ? 'Edytujesz wszystkie sekcje — prawne i firmowe.'
+            : 'Dyspozytor edytuje tylko sekcje firmowe (kontakt, procedury).',
+          action: 'Zakładka Instrukcja kierowcy → Edytuj',
+        },
+      ],
+      related: [{ label: 'Zgodność', hint: 'Dokumenty firmy i pojazdów' }],
+    },
     drivers: {
       title: 'Kierowcy',
       summary: 'Baza kierowców, kontakt, pojazd i dokumenty (CKZ itd.).',
@@ -419,6 +475,33 @@ function driverHelp(view: DriverView): PanelHelpContent {
           action: '„Kończę pracę”',
         },
       ],
+    },
+    itd: {
+      title: 'ITD — kontrola drogowa',
+      summary: 'Alert do biura, mapa kontroli, instrukcja prawna i wysyłka protokołu po kontroli.',
+      steps: [
+        {
+          title: 'Kontrola w toku — wyślij alert',
+          description: 'Nie dzwonić do szefa w trakcie rozmowy z inspektorem — jeden przycisk powiadamia biuro.',
+          action: 'Czerwona karta „Kontrola ITD w toku” → Wyślij alert',
+        },
+        {
+          title: 'Sprawdź mapę ITD',
+          description: 'Wagi, granice, zgłoszenia innych kierowców — unikaj hot-spotów jeśli możesz legalnie.',
+          action: 'Sekcja „Gdzie stoi ITD”',
+        },
+        {
+          title: 'Przeczytaj instrukcję',
+          description: 'Dokumenty w kabinie, prawa podczas kontroli, tachograf 56 dni wstecz.',
+          action: 'Sekcje instrukcji poniżej mapy',
+        },
+        {
+          title: 'Po kontroli — wyślij wynik',
+          description: 'Nr protokołu, mandat, nazwa pliku ze skanem — biuro archiwizuje.',
+          action: '„Dodaj wynik kontroli” na dole ekranu',
+        },
+      ],
+      tips: ['Instrukcję edytuje właściciel/dyspozytor w panelu ITD biura.'],
     },
     profile: {
       title: 'Profil kierowcy',
