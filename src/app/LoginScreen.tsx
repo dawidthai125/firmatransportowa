@@ -9,7 +9,9 @@ import {
   type UserRole,
 } from '@/lib/auth/session'
 import { DEMO_EMAIL_BY_ROLE } from '@/lib/auth/portal-panels'
-import { findDemoUserByEmail, validateDemoCredentials } from '@/lib/auth/users'
+import { isSupabaseConfigured } from '@/config/supabase'
+import { signInWithEmail } from '@/lib/auth/supabase-auth'
+import { supabaseSignOut } from '@/lib/auth/supabase-client'
 import { findTenantBySlug, getDefaultTenant } from '@/lib/tenant/demo-data'
 import { isCompanyDeployment, resolveDefaultTenantSlug } from '@/config/branding'
 import { useTenant } from '@/lib/tenant/context'
@@ -33,6 +35,7 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
   const [useEmailLogin, setUseEmailLogin] = useState(false)
   const [error, setError] = useState('')
   const [companyError, setCompanyError] = useState('')
+  const [submitting, setSubmitting] = useState(false)
   const [session, setSession] = useState(() => loadSession())
 
   const tenant = useMemo(() => {
@@ -94,7 +97,7 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
     openPanel(role)
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError('')
 
@@ -108,23 +111,38 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
       return
     }
 
-    const built = useEmailLogin
-      ? buildEmailSession(tenant.id, email, password, selectedRole)
-      : buildDemoSession(tenant.id, selectedRole, displayName)
+    setSubmitting(true)
+    try {
+      let built: ReturnType<typeof loadSession> = null
 
-    if (!built) {
-      setError(
-        useEmailLogin
-          ? 'Nieprawidłowy email lub hasło dla tego panelu.'
-          : 'Błąd logowania',
-      )
-      return
+      if (useEmailLogin) {
+        built = await signInWithEmail(
+          tenant.id,
+          email,
+          password,
+          selectedRole,
+          isSupabaseConfigured(),
+        )
+      } else {
+        built = buildDemoSession(tenant.id, selectedRole, displayName)
+      }
+
+      if (!built) {
+        setError(
+          useEmailLogin
+            ? 'Nieprawidłowy email, hasło lub brak uprawnień do tego panelu.'
+            : 'Błąd logowania',
+        )
+        return
+      }
+
+      saveSession(built)
+      setSession(built)
+      setCurrentTenant(tenant)
+      enterPanel(built.user.role)
+    } finally {
+      setSubmitting(false)
     }
-
-    saveSession(built)
-    setSession(built)
-    setCurrentTenant(tenant)
-    enterPanel(built.user.role)
   }
 
   function buildDemoSession(tenantId: string, role: UserRole, name: string) {
@@ -139,33 +157,6 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
       },
       tenantId,
       loggedInAt: new Date().toISOString(),
-      authMethod: 'demo' as const,
-    }
-  }
-
-  function buildEmailSession(
-    tenantId: string,
-    userEmail: string,
-    userPassword: string,
-    role: UserRole,
-  ) {
-    const user = validateDemoCredentials(tenantId, userEmail, userPassword)
-    if (!user) return null
-    if (user.role !== role) {
-      const match = findDemoUserByEmail(tenantId, userEmail)
-      if (!match || match.role !== role) return null
-    }
-    return {
-      user: {
-        id: user.id,
-        displayName: user.displayName,
-        role: user.role,
-        tenantId,
-        mechanicId: user.mechanicId,
-      },
-      tenantId,
-      loggedInAt: new Date().toISOString(),
-      email: user.email,
       authMethod: 'demo' as const,
     }
   }
@@ -189,6 +180,7 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
           setError('')
         }}
         onSubmit={handleSubmit}
+        submitting={submitting}
       />
     )
   }
@@ -207,6 +199,7 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
 }
 
 export function handleLogout(setMode: (mode: AppMode) => void) {
+  void supabaseSignOut()
   clearSession()
   setMode('login')
 }

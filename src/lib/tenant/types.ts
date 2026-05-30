@@ -31,6 +31,7 @@ export interface TenantModules {
   drivers: boolean
   courses: boolean
   compliance: boolean
+  /** Moduł mapy GPS / floty na pulpicie */
   gps: boolean
   loadBoard: boolean
   tachographImport: boolean
@@ -42,7 +43,7 @@ export const DEFAULT_MODULES: TenantModules = {
   drivers: true,
   courses: true,
   compliance: true,
-  gps: false,
+  gps: true,
   loadBoard: false,
   tachographImport: false,
   repairs: true,
@@ -69,6 +70,7 @@ export type TenantDataKey =
   | 'files'
   | 'automation'
   | 'repair-reports'
+  | 'fleet-positions'
 
 export const TENANT_DATA_KEYS: TenantDataKey[] = [
   'drivers',
@@ -80,6 +82,7 @@ export const TENANT_DATA_KEYS: TenantDataKey[] = [
   'files',
   'automation',
   'repair-reports',
+  'fleet-positions',
 ]
 
 export function tenantStorageKey(tenantId: string, key: TenantDataKey): string {

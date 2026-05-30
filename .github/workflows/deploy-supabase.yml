@@ -43,3 +43,8 @@ jobs:
             exit 1
           fi
           supabase functions deploy transflow-api --project-ref "$SUPABASE_PROJECT_REF" --use-api
+
+      - name: Note migrations
+        run: |
+          echo "Nowe migracje SQL: uruchom w Supabase Dashboard → SQL Editor"
+          echo "lub lokalnie: supabase db push (po supabase link)"

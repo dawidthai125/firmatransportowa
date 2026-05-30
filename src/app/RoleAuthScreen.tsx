@@ -4,7 +4,7 @@ import { Input, Label } from '@/app/components/ui/Input'
 import { TransportImageBg } from '@/app/components/transport/TransportImageBg'
 import { COMPANY_BRANDING, isCompanyDeployment } from '@/config/branding'
 import { DEMO_EMAIL_BY_ROLE, PORTAL_PANELS } from '@/lib/auth/portal-panels'
-import { DEMO_PASSWORD } from '@/lib/auth/users'
+import { isSupabaseConfigured } from '@/config/supabase'
 import type { UserRole } from '@/lib/auth/session'
 import { ROLE_LABELS } from '@/lib/auth/session'
 import { getPanelTheme } from '@/lib/theme/transport-images'
@@ -24,6 +24,7 @@ interface RoleAuthScreenProps {
   useEmailLogin: boolean
   onUseEmailLoginChange: (value: boolean) => void
   error: string
+  submitting?: boolean
   onBack: () => void
   onSubmit: (e: React.FormEvent) => void
 }
@@ -40,6 +41,7 @@ export function RoleAuthScreen({
   useEmailLogin,
   onUseEmailLoginChange,
   error,
+  submitting,
   onBack,
   onSubmit,
 }: RoleAuthScreenProps) {
@@ -136,7 +138,8 @@ export function RoleAuthScreen({
                   }}
                   className="h-4 w-4 rounded border-border"
                 />
-                Logowanie emailem (demo: {DEMO_PASSWORD})
+                Logowanie emailem
+                {isSupabaseConfigured() ? ' (konto firmowe)' : ` (demo: demo2026)`}
               </label>
 
               {useEmailLogin && (
@@ -168,9 +171,9 @@ export function RoleAuthScreen({
 
               {error && <p className="text-sm text-danger">{error}</p>}
 
-              <Button type="submit" className="w-full gap-2" size="lg">
+              <Button type="submit" className="w-full gap-2" size="lg" disabled={submitting}>
                 <Icon className="h-4 w-4" />
-                Zaloguj i wejdź
+                {submitting ? 'Logowanie…' : 'Zaloguj i wejdź'}
               </Button>
             </form>
           </CardContent>

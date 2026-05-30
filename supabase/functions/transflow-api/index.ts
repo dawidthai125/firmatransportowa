@@ -2,6 +2,7 @@
 import { Hono } from 'npm:hono'
 import { cors } from 'npm:hono/cors'
 import { logger } from 'npm:hono/logger'
+import * as auth from './auth.ts'
 import * as kv from './kv_store.ts'
 
 const SLUG = 'transflow-api'
@@ -23,26 +24,34 @@ app.use(
 app.get(`${PREFIX}/health`, (c) => c.json({ status: 'ok', service: 'transflow-api' }))
 
 app.post(`${PREFIX}/batch-get`, async (c) => {
+  const requestAuth = await auth.resolveRequestAuth(c.req.header('Authorization'))
   const body = await c.req.json()
   const keys: string[] = Array.isArray(body?.keys) ? body.keys : []
-  const values = await kv.mget(keys)
-  return c.json({ values })
+  const allowed = auth.filterReadableKeys(requestAuth, keys)
+  const values = await kv.mget(allowed)
+  const result = keys.map((k) => {
+    const idx = allowed.indexOf(k)
+    return idx >= 0 ? values[idx] : null
+  })
+  return c.json({ values: result })
 })
 
 app.post(`${PREFIX}/batch-set`, async (c) => {
+  const requestAuth = await auth.resolveRequestAuth(c.req.header('Authorization'))
   const body = await c.req.json()
   const entries: { key: string; value: unknown }[] = Array.isArray(body?.entries) ? body.entries : []
-  if (entries.length === 0) return c.json({ ok: true })
-  const keys = entries.map((e) => e.key)
-  const values = entries.map((e) => e.value)
+  const allowed = auth.filterWritableEntries(requestAuth, entries)
+  if (allowed.length === 0) return c.json({ ok: true, count: 0 })
+  const keys = allowed.map((e) => e.key)
+  const values = allowed.map((e) => e.value)
   await kv.mset(keys, values)
-  return c.json({ ok: true, count: entries.length })
+  return c.json({ ok: true, count: allowed.length })
 })
 
 app.post(`${PREFIX}/automation/webhook`, async (c) => {
   const secret = Deno.env.get('TRANSFLOW_WEBHOOK_SECRET')
-  const auth = c.req.header('Authorization')
-  if (secret && auth !== `Bearer ${secret}`) {
+  const authHeader = c.req.header('Authorization')
+  if (secret && authHeader !== `Bearer ${secret}`) {
     return c.json({ error: 'unauthorized' }, 401)
   }
   const body = await c.req.json().catch(() => ({}))

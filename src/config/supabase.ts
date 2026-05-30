@@ -17,6 +17,7 @@ if (!projectId || !anonKey) {
 export const supabaseProjectId = projectId ?? ''
 export const supabaseAnonKey = anonKey ?? ''
 export const supabaseFunctionSlug = functionSlug
+export const supabaseUrl = projectId ? `https://${projectId}.supabase.co` : ''
 
 export const supabaseFunctionsBase = projectId
   ? `https://${projectId}.supabase.co/functions/v1/${functionSlug}`

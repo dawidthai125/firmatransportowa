@@ -25,7 +25,18 @@ function patchRegistryTenants(tenants: Tenant[]): Tenant[] {
   const demo = buildDemoTenant()
   const hasDemo = tenants.some((t) => t.id === demo.id)
   const next = hasDemo
-    ? tenants.map((t) => (t.id === demo.id ? { ...t, ...demo, settings: t.settings ?? demo.settings } : t))
+    ? tenants.map((t) =>
+        t.id === demo.id
+          ? {
+              ...t,
+              ...demo,
+              settings: {
+                ...(t.settings ?? demo.settings),
+                modules: { ...(t.settings?.modules ?? demo.settings.modules), gps: true },
+              },
+            }
+          : t,
+      )
     : [...tenants, demo]
   return next
 }

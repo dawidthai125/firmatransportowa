@@ -1,20 +1,28 @@
+import { FleetMapPanel } from '@/app/components/fleet/FleetMapPanel'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/Card'
 import { buildComplianceAlerts, buildCompanyComplianceAlerts } from '@/lib/domain/compliance'
 import { loadCourses, seedDemoCourses } from '@/lib/domain/courses-store'
 import { loadDrivers, seedDemoDrivers } from '@/lib/domain/drivers-store'
 import { loadDailyReports, seedDemoDailyReports } from '@/lib/domain/daily-reports-store'
 import { buildDrivingTimeAlerts } from '@/lib/domain/driving-time'
+import type { FleetPosition } from '@/lib/domain/fleet-position'
+import {
+  seedDemoFleetPositions,
+  tickFleetSimulation,
+} from '@/lib/domain/fleet-positions-store'
 import { seedDemoCompanyDocuments, loadTenantSettingsData } from '@/lib/domain/tenant-settings'
 import { loadVehicles, seedDemoVehicles } from '@/lib/domain/vehicles-store'
+import { useCloudSyncRefresh } from '@/lib/sync/useCloudSyncRefresh'
 import type { Tenant } from '@/lib/tenant/types'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/Card'
 import { AlertTriangle, Clock, Route, Truck, Users } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
 interface DashboardViewProps {
   tenant: Tenant
 }
 
 export function DashboardView({ tenant }: DashboardViewProps) {
+  const gpsEnabled = tenant.settings.modules.gps
   const [stats, setStats] = useState({
     active: 0,
     total: 0,
@@ -22,8 +30,9 @@ export function DashboardView({ tenant }: DashboardViewProps) {
     compliance: 0,
     driving: 0,
   })
+  const [fleetPositions, setFleetPositions] = useState<FleetPosition[]>([])
 
-  useEffect(() => {
+  const refreshStats = useCallback(() => {
     seedDemoCourses(tenant.id)
     seedDemoDrivers(tenant.id)
     seedDemoVehicles(tenant.id)
@@ -45,6 +54,20 @@ export function DashboardView({ tenant }: DashboardViewProps) {
 
     setStats({ active, total: courses.length, margin, compliance, driving })
   }, [tenant.id, tenant.name])
+
+  const refreshFleet = useCallback(() => {
+    if (!gpsEnabled) return
+    setFleetPositions(tickFleetSimulation(tenant.id))
+  }, [tenant.id, gpsEnabled])
+
+  useEffect(() => {
+    refreshStats()
+    if (gpsEnabled) {
+      setFleetPositions(seedDemoFleetPositions(tenant.id))
+    }
+  }, [refreshStats, refreshFleet, gpsEnabled])
+
+  useCloudSyncRefresh(tenant.id, 'fleet-positions', refreshFleet)
 
   const PLACEHOLDER_STATS = [
     { label: 'Aktywne kursy', value: String(stats.active), icon: Route, tone: 'text-primary' },
@@ -93,13 +116,23 @@ export function DashboardView({ tenant }: DashboardViewProps) {
           )}
         </Card>
 
-        <Card>
+        <Card className={gpsEnabled ? 'lg:col-span-2' : ''}>
           <CardHeader>
-            <CardTitle>Dziś w firmie</CardTitle>
-            <CardDescription>Podgląd operacyjny dla właściciela / dyspozytora</CardDescription>
+            <CardTitle>Flota na mapie</CardTitle>
+            <CardDescription>
+              {gpsEnabled
+                ? 'Pozycje pojazdów w czasie rzeczywistym (demo) · Dolny Śląsk / A4'
+                : 'Moduł GPS wyłączony w ustawieniach planu'}
+            </CardDescription>
           </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
-            Mapa floty, status kursów i ETA — moduł GPS (v0.8).
+          <CardContent>
+            {gpsEnabled ? (
+              <FleetMapPanel positions={fleetPositions} onRefresh={refreshFleet} />
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Włącz moduł GPS w planie abonamentu, aby zobaczyć mapę floty.
+              </p>
+            )}
           </CardContent>
         </Card>
       </div>

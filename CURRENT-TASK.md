@@ -1,26 +1,25 @@
 # CURRENT-TASK — TransFlow / Tajski-Trans
 
-**Ostatnia sesja:** 2026-05-30 · **v0.9.1**
+**Ostatnia sesja:** 2026-05-30 · **v0.10.0**
 
 ## Skończone ✅
 
-- [x] v0.8.4 — branding Tajski-Trans (tryb company, ukryty SaaS)
-- [x] v0.8.5 — naprawa zdjęć tła portalu
-- [x] v0.9.0 — asystent pomocy w każdym panelu (`panel-help.ts`)
-- [x] **v0.9.1 — PWA dla kierowcy:**
-  - Manifest + ikony (192/512, maskable, apple-touch)
-  - Service worker (Workbox, cache assetów + Unsplash + Supabase network-first)
-  - Baner instalacji (Android + instrukcja iOS Safari)
-  - Wskaźnik offline w panelu kierowcy
-  - Auto-update SW w produkcji
+- [x] v0.9.0 — asystent pomocy (`panel-help.ts`)
+- [x] v0.9.1 — PWA kierowcy (manifest, SW, baner instalacji)
+- [x] **v0.10.0 — Supabase Auth + RLS + mapa GPS:**
+  - Tabela `tenant_members` + RLS + trigger powiązania auth.users
+  - Logowanie emailem przez Supabase (fallback demo `demo2026`)
+  - Edge Function: JWT → dostęp tylko do kluczy swojego tenant
+  - Cloud sync wysyła JWT zamiast samego anon key
+  - Mapa floty (Leaflet/OSM) na pulpicie właściciela/dyspozytora
 
-## Następne kroki (plan)
+## Następne kroki
 
-1. **Supabase Auth + RLS** — prawdziwe logowanie zamiast demo
-2. **GPS / mapa floty** — lokalizacja pojazdów na pulpicie
+1. **Uruchomić migrację SQL** w Supabase (`20260530200000_auth_tenant_members.sql`)
+2. Telemetria GPS z PWA kierowcy (geolocation API)
 3. v1.0 — portal sprzedaży abonamentów (tryb `saas`)
 
 ## Zasady
 
-- **Nowa funkcja** → uzupełnij `src/lib/help/panel-help.ts`
-- **Sync:** najświeższy rekord wygrywa (LWW), nie cały plik z jednej przeglądarki
+- Nowa funkcja → `src/lib/help/panel-help.ts`
+- Sync: LWW per rekord; z Auth — JWT + RLS na Edge API

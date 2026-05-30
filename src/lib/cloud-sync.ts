@@ -3,6 +3,7 @@ import {
   supabaseAnonKey,
   supabaseFunctionsBase,
 } from '@/config/supabase'
+import { getSupabaseAccessToken } from '@/lib/auth/supabase-client'
 import {
   TENANT_DATA_KEYS,
   tenantStorageKey,
@@ -38,10 +39,12 @@ function setStatus(s: CloudSyncStatus, msg?: string) {
   statusListeners.forEach((cb) => cb(s, msg))
 }
 
-function apiHeaders(): Record<string, string> {
+async function apiHeaders(): Promise<Record<string, string>> {
+  const jwt = await getSupabaseAccessToken()
+  const bearer = jwt ?? supabaseAnonKey
   return {
     'Content-Type': 'application/json',
-    Authorization: `Bearer ${supabaseAnonKey}`,
+    Authorization: `Bearer ${bearer}`,
     apikey: supabaseAnonKey,
   }
 }
@@ -50,7 +53,7 @@ async function batchGet(keys: string[]): Promise<unknown[]> {
   if (keys.length === 0) return []
   const res = await fetch(`${supabaseFunctionsBase}/batch-get`, {
     method: 'POST',
-    headers: apiHeaders(),
+    headers: await apiHeaders(),
     body: JSON.stringify({ keys }),
   })
   if (!res.ok) throw new Error(`batch-get ${res.status}`)
@@ -62,7 +65,7 @@ async function batchSet(entries: { key: string; value: unknown }[]): Promise<voi
   if (entries.length === 0) return
   const res = await fetch(`${supabaseFunctionsBase}/batch-set`, {
     method: 'POST',
-    headers: apiHeaders(),
+    headers: await apiHeaders(),
     body: JSON.stringify({ entries }),
   })
   if (!res.ok) throw new Error(`batch-set ${res.status}`)
@@ -227,7 +230,7 @@ export async function pushKeyNow(storageKey: string): Promise<void> {
 export async function checkCloudHealth(): Promise<boolean> {
   if (!isSupabaseConfigured()) return false
   try {
-    const res = await fetch(`${supabaseFunctionsBase}/health`, { headers: apiHeaders() })
+    const res = await fetch(`${supabaseFunctionsBase}/health`, { headers: await apiHeaders() })
     return res.ok
   } catch {
     return false

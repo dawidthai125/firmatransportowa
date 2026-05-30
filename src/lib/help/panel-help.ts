@@ -36,6 +36,11 @@ function adminSteps(
           action: `${NAV_HINT} → Zgodność (tylko właściciel) lub Kierowcy / Flota`,
         },
         {
+          title: 'Mapa floty (GPS)',
+          description: 'Zielone markery = w trasie, pomarańczowe = załadunek. Kliknij marker po szczegóły.',
+          action: 'Sekcja „Flota na mapie” — przycisk Odśwież aktualizuje pozycje',
+        },
+        {
           title: 'Przejdź do szczegółów',
           description: 'Kliknij odpowiednią zakładkę w menu, żeby rozwiązać problem z alertu.',
           action: NAV_HINT,
