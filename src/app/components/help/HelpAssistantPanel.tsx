@@ -27,7 +27,7 @@ export function HelpAssistantPanel() {
     <>
       <button
         type="button"
-        className="fixed inset-0 z-40 bg-background/60 backdrop-blur-sm"
+        className="fixed inset-0 z-[105] bg-background/60 backdrop-blur-sm"
         aria-label="Zamknij pomoc"
         onClick={handleClose}
       />
@@ -37,7 +37,7 @@ export function HelpAssistantPanel() {
         aria-labelledby="help-panel-title"
         aria-modal="true"
         className={cn(
-          'fixed z-50 flex flex-col bg-background shadow-2xl',
+          'fixed z-[110] flex flex-col bg-background shadow-2xl',
           'inset-x-0 bottom-0 max-h-[88dvh] rounded-t-2xl border-t border-border',
           'md:inset-y-0 md:left-auto md:right-0 md:max-h-none md:w-full md:max-w-md md:rounded-none md:rounded-l-2xl md:border-l md:border-t-0',
         )}
