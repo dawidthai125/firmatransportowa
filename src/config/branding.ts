@@ -26,7 +26,7 @@ export interface CompanyBranding {
 export const COMPANY_BRANDING: CompanyBranding = {
   name: import.meta.env.VITE_COMPANY_NAME ?? 'Tajski-Trans Sp. z o.o.',
   shortName: import.meta.env.VITE_COMPANY_SHORT_NAME ?? 'Tajski-Trans',
-  slug: (import.meta.env.VITE_COMPANY_SLUG ?? 'TAAJSKI-TRANS').toUpperCase(),
+  slug: (import.meta.env.VITE_COMPANY_SLUG ?? 'TAAJSKI-TRANS').trim().toUpperCase(),
   tagline: 'Transport krajowy i międzynarodowy · flota · logistyka TSL',
   portalSubtitle: 'Panel pracowniczy firmy — wybierz swoją rolę i zaloguj się',
   region: 'Wrocław · Dolny Śląsk',

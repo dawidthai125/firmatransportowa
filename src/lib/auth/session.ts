@@ -42,7 +42,7 @@ export function clearSession(): void {
   sessionStorage.removeItem(SESSION_KEY)
 }
 
-export function roleToAppMode(role: UserRole): AppMode {
+export function roleToAppMode(role: UserRole | undefined): AppMode {
   switch (role) {
     case 'owner':
       return 'owner'
@@ -52,6 +52,8 @@ export function roleToAppMode(role: UserRole): AppMode {
       return 'driver'
     case 'mechanic':
       return 'mechanic'
+    default:
+      return 'login'
   }
 }
 

@@ -9,12 +9,13 @@ import {
 } from '@/lib/sync/sync-envelope'
 import type { Tenant, TenantDataKey } from './types'
 import { tenantStorageKey, tenantsRegistryKey } from './types'
+import { sanitizeTenantsRegistry } from './demo-data'
 
 export function loadTenantsRegistry(): Tenant[] {
   try {
     const raw = localStorage.getItem(tenantsRegistryKey())
     if (!raw) return []
-    return unwrapFromSync<Tenant[]>(JSON.parse(raw), [])
+    return sanitizeTenantsRegistry(unwrapFromSync<Tenant[]>(JSON.parse(raw), []))
   } catch {
     return []
   }

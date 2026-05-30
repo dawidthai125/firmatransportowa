@@ -125,7 +125,10 @@ export default function App() {
     return <SessionBootSplash />
   }
 
-  const onLogout = () => handleLogout(setMode)
+  const onLogout = () =>
+    handleLogout(setMode, () => {
+      setCurrentTenant(null)
+    })
 
   const helpProps = {
     tenantId: currentTenant.id,

@@ -21,13 +21,31 @@ function buildDemoTenant(): Tenant {
 
 export const DEMO_TENANT: Tenant = buildDemoTenant()
 
+function normalizeTenantRecord(t: Tenant): Tenant {
+  const demo = buildDemoTenant()
+  return {
+    ...demo,
+    ...t,
+    slug: (t.slug ?? demo.slug).trim() || demo.slug,
+    name: (t.name ?? demo.name).trim() || demo.name,
+    settings: {
+      ...demo.settings,
+      ...(t.settings ?? {}),
+      modules: {
+        ...demo.settings.modules,
+        ...(t.settings?.modules ?? {}),
+      },
+    },
+  }
+}
+
 function patchRegistryTenants(tenants: Tenant[]): Tenant[] {
   const demo = buildDemoTenant()
   const hasDemo = tenants.some((t) => t.id === demo.id)
   const next = hasDemo
     ? tenants.map((t) =>
         t.id === demo.id
-          ? {
+          ? normalizeTenantRecord({
               ...t,
               ...demo,
               settings: {
@@ -40,10 +58,10 @@ function patchRegistryTenants(tenants: Tenant[]): Tenant[] {
                   tachographImport: true,
                 },
               },
-            }
-          : t,
+            })
+          : normalizeTenantRecord(t),
       )
-    : [...tenants, demo]
+    : [...tenants.map(normalizeTenantRecord), demo]
   return next
 }
 
@@ -67,8 +85,11 @@ export function seedDemoTenantIfEmpty(): Tenant[] {
 }
 
 export function findTenantBySlug(tenants: Tenant[], slug: string): Tenant | undefined {
-  const normalized = slug.trim().toUpperCase()
-  const found = tenants.find((t) => t.slug.toUpperCase() === normalized)
+  const normalized = (slug ?? '').trim().toUpperCase()
+  if (!normalized && isCompanyDeployment()) {
+    return getDefaultTenant(tenants)
+  }
+  const found = tenants.find((t) => (t.slug ?? '').toUpperCase() === normalized)
   if (found) return found
 
   /** W trybie company jeden tenant — każdy wpis trafia do firmy */
@@ -86,4 +107,9 @@ export function findTenantBySlug(tenants: Tenant[], slug: string): Tenant | unde
 export function getDefaultTenant(tenants: Tenant[]): Tenant | undefined {
   const slug = isCompanyDeployment() ? COMPANY_BRANDING.slug : 'DEMO-TRANS'
   return findTenantBySlug(tenants, slug) ?? tenants.find((t) => t.id === 'tenant-demo-001')
+}
+
+/** Napraw brakujące slug/name po merge z chmury */
+export function sanitizeTenantsRegistry(tenants: Tenant[]): Tenant[] {
+  return patchRegistryTenants(tenants)
 }

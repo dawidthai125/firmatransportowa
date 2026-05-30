@@ -198,8 +198,12 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
   )
 }
 
-export function handleLogout(setMode: (mode: AppMode) => void) {
+export function handleLogout(
+  setMode: (mode: AppMode) => void,
+  onCleared?: () => void,
+) {
   void supabaseSignOut()
   clearSession()
+  onCleared?.()
   setMode('login')
 }
