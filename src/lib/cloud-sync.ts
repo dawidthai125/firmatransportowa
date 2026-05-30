@@ -39,6 +39,8 @@ function setStatus(s: CloudSyncStatus, msg?: string) {
   statusListeners.forEach((cb) => cb(s, msg))
 }
 
+const CLOUD_FETCH_TIMEOUT_MS = 12_000
+
 async function apiHeaders(): Promise<Record<string, string>> {
   const jwt = await getSupabaseAccessToken()
   const bearer = jwt ?? supabaseAnonKey
@@ -49,9 +51,31 @@ async function apiHeaders(): Promise<Record<string, string>> {
   }
 }
 
+async function fetchCloud(
+  path: string,
+  init: RequestInit,
+  timeoutMs = CLOUD_FETCH_TIMEOUT_MS,
+): Promise<Response> {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), timeoutMs)
+  try {
+    return await fetch(`${supabaseFunctionsBase}${path}`, {
+      ...init,
+      signal: controller.signal,
+    })
+  } catch (e) {
+    if (e instanceof DOMException && e.name === 'AbortError') {
+      throw new Error(`timeout ${timeoutMs}ms`)
+    }
+    throw e
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
 async function batchGet(keys: string[]): Promise<unknown[]> {
   if (keys.length === 0) return []
-  const res = await fetch(`${supabaseFunctionsBase}/batch-get`, {
+  const res = await fetchCloud('/batch-get', {
     method: 'POST',
     headers: await apiHeaders(),
     body: JSON.stringify({ keys }),
@@ -63,7 +87,7 @@ async function batchGet(keys: string[]): Promise<unknown[]> {
 
 async function batchSet(entries: { key: string; value: unknown }[]): Promise<void> {
   if (entries.length === 0) return
-  const res = await fetch(`${supabaseFunctionsBase}/batch-set`, {
+  const res = await fetchCloud('/batch-set', {
     method: 'POST',
     headers: await apiHeaders(),
     body: JSON.stringify({ entries }),
@@ -235,7 +259,7 @@ export async function pushKeyNow(storageKey: string): Promise<void> {
 export async function checkCloudHealth(): Promise<boolean> {
   if (!isSupabaseConfigured()) return false
   try {
-    const res = await fetch(`${supabaseFunctionsBase}/health`, { headers: await apiHeaders() })
+    const res = await fetchCloud('/health', { headers: await apiHeaders() }, 8000)
     return res.ok
   } catch {
     return false

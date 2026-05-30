@@ -13,6 +13,13 @@ if (import.meta.env.PROD) {
     onOfflineReady() {
       console.info('[PWA] Aplikacja gotowa do pracy offline')
     },
+    onNeedRefresh() {
+      console.info('[PWA] Nowa wersja — odświeżanie')
+      window.location.reload()
+    },
+    onRegisterError(error) {
+      console.warn('[PWA] Rejestracja SW nieudana', error)
+    },
   })
 }
 
