@@ -1,0 +1,45 @@
+# Deploy frontend na Vercel przy pushu na main (bez podpinania Git w UI Vercel)
+
+name: Deploy Vercel Production
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'CURRENT-TASK.md'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-vercel-transflow
+  cancel-in-progress: true
+
+env:
+  VERCEL_ORG_ID: team_Shg0MetflUcRu6VP37tXEKYK
+  VERCEL_PROJECT_ID: prj_xGEuiGDnQH6aRMQdQAxOXahCzsKA
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Pull Vercel env
+        run: npx vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Build with Vercel
+        run: npx vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Deploy to production
+        run: npx vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}

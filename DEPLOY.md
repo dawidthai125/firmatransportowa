@@ -1,6 +1,24 @@
 # Deploy TransFlow
 
-## Frontend — Vercel
+## Auto-deploy (GitHub Actions — już skonfigurowane)
+
+| Co | Workflow | Secret w GitHub |
+|----|----------|-----------------|
+| **Supabase** Edge Function | `deploy-supabase.yml` | ✅ `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_REF` |
+| **Vercel** frontend | `deploy-vercel.yml` | ⚠️ brakuje `VERCEL_TOKEN` — patrz niżej |
+
+### Jednorazowo: token Vercel (Ty, 1 min)
+
+1. https://vercel.com/account/tokens → **Create** (classic token)
+2. GitHub repo → **Settings → Secrets → Actions** → New secret:
+   - Name: `VERCEL_TOKEN`
+   - Value: wklej token
+
+Po tym każdy `git push main` = deploy Vercel + Supabase (gdy zmieni się kod).
+
+**Supabase Dashboard → Git:** nie jest wymagany — deploy idzie przez GitHub Actions do projektu `roiainuiyqenfpkqixpv`.
+
+## Frontend — Vercel (ręcznie / pierwszy deploy)
 
 **Produkcja:** https://firmatransportowa.vercel.app
 

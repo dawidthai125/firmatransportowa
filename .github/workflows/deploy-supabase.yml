@@ -11,6 +11,7 @@ on:
       - 'supabase/migrations/**'
       - 'supabase/config.toml'
       - '.github/workflows/deploy-supabase.yml'
+      - 'src/**'
   workflow_dispatch:
 
 concurrency:
