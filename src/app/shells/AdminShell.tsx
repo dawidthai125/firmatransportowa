@@ -1,3 +1,4 @@
+import { CloudStatusBadge } from '@/app/components/CloudStatusBadge'
 import { AppNav } from '@/app/components/AppNav'
 import { Button } from '@/app/components/ui/Button'
 import type { AdminView } from '@/lib/navigation'
@@ -42,9 +43,12 @@ export function AdminShell({
             </p>
           </div>
         </div>
-        <Button variant="ghost" size="icon" onClick={onLogout} aria-label="Wyloguj">
+        <div className="flex items-center gap-2">
+          <CloudStatusBadge />
+          <Button variant="ghost" size="icon" onClick={onLogout} aria-label="Wyloguj">
           <LogOut className="h-4 w-4" />
         </Button>
+        </div>
       </header>
 
       <div className="flex min-h-0 flex-1">

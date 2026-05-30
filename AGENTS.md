@@ -3,10 +3,12 @@
 ## START HERE
 
 ```text
-1. AGENTS.md             ← ten plik
-2. PROJECT-GUIDE.md      ← jak działa projekt
-3. docs/ARCHITECTURE.md  ← architektura multi-tenant + transport
-4. CURRENT-TASK.md       ← stan prac
+1. AGENTS.md
+2. PROJECT-GUIDE.md
+3. docs/ARCHITECTURE.md
+4. docs/SUPABASE-ARCHITECTURE.md   ← sync, klucze, Edge API
+5. SUPABASE-SETUP.md               ← setup NOWEGO projektu (NIE wgdom)
+6. CURRENT-TASK.md
 ```
 
 ## Zasady
@@ -28,10 +30,9 @@ npm run build
 - Kod firmy: `DEMO-TRANS`
 - Role: owner / dispatcher / driver
 
-## Kolejność rozwoju (Faza 1)
+## Supabase
 
-1. Model danych: `Course`, `Driver`, `Vehicle`, `DailyReport`
-2. CRUD kursów + kartoteka floty/kierowców
-3. Panel kierowcy — raport dzienny
-4. Supabase + sync (wzorzec `cloud-sync.ts` z wgdom)
-5. Compliance alerty (dokumenty, ADR)
+- **Osobny projekt** — NIE wgdom (limit / inna tabela KV)
+- Setup: `SUPABASE-SETUP.md`
+- Sync: `docs/SUPABASE-ARCHITECTURE.md`
+- Nie zmieniaj merge w `cloud-sync.ts` bez przeczytania docs

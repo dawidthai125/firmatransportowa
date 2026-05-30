@@ -6,7 +6,9 @@
 
 SaaS dla firm TSL (małe/średnie). Właściciel sprzedaje **abonament** — każdy klient to **tenant** z własnymi danymi, użytkownikami i włączonymi modułami.
 
-Faza obecna: **prototyp dla siebie + test u jednej firmy** — localStorage, bez backendu.
+Faza obecna: **v0.4** — localStorage + sync Supabase (osobny projekt) + deploy Vercel.
+
+> **Supabase:** NOWY projekt (nie wgdom). Setup → `SUPABASE-SETUP.md`, sync → `docs/SUPABASE-ARCHITECTURE.md`
 
 ---
 
@@ -54,12 +56,12 @@ localStorage:
   ...
 ```
 
-### Produkcja (docelowo)
+### Produkcja (v0.4+)
 
-- Supabase PostgreSQL: **`tenant_id` na każdej tabeli**
-- Row Level Security: użytkownik widzi tylko swój tenant
-- Edge Functions: billing, onboarding nowej firmy
-- KV / Storage per tenant (wzorzec wgdom)
+- **Osobny** projekt Supabase (tabela `kv_store_transflow`, Edge `transflow-api`)
+- Frontend na **Vercel** (`vercel.json`)
+- Sync offline-first: `src/lib/cloud-sync.ts`
+- Docelowo: Auth Supabase + RLS na tabelach relacyjnych
 
 ---
 
@@ -113,10 +115,8 @@ Szczegóły przepisów → osobny doc `docs/DOMAIN-TRANSPORT.md` (Faza 2).
 | UI | React 19, TypeScript, Vite 8 |
 | Style | Tailwind 4 |
 | Ikony | lucide-react |
-| Dane (dev) | localStorage, tenant-scoped |
-| Dane (prod) | Supabase + sync offline-first |
-| Mobile | PWA → Capacitor (jak wgdom) |
-| Hosting | Vercel |
+| Dane (prod) | Supabase KV + Edge `transflow-api` |
+| Hosting | **Vercel** |
 
 ---
 

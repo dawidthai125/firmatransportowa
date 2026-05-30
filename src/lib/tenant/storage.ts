@@ -1,5 +1,6 @@
 import type { Tenant, TenantDataKey } from './types'
 import { tenantStorageKey, tenantsRegistryKey } from './types'
+import { scheduleCloudPush } from '@/lib/cloud-sync'
 
 export function loadTenantsRegistry(): Tenant[] {
   try {
@@ -13,6 +14,7 @@ export function loadTenantsRegistry(): Tenant[] {
 
 export function saveTenantsRegistry(tenants: Tenant[]): void {
   localStorage.setItem(tenantsRegistryKey(), JSON.stringify(tenants))
+  scheduleCloudPush(tenantsRegistryKey())
 }
 
 export function readTenantData<T>(tenantId: string, key: TenantDataKey, fallback: T): T {
@@ -26,5 +28,7 @@ export function readTenantData<T>(tenantId: string, key: TenantDataKey, fallback
 }
 
 export function writeTenantData<T>(tenantId: string, key: TenantDataKey, value: T): void {
-  localStorage.setItem(tenantStorageKey(tenantId, key), JSON.stringify(value))
+  const storageKey = tenantStorageKey(tenantId, key)
+  localStorage.setItem(storageKey, JSON.stringify(value))
+  scheduleCloudPush(storageKey)
 }

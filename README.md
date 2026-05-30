@@ -3,14 +3,18 @@
 > System zarządzania firmą transportową (SaaS multi-tenant).  
 > Wzorowany na architekturze [wgdom](https://github.com/dawidthai125/wgdom), dostosowany do branży TSL.
 
-**Status:** v0.1.0 — szkielet layoutu + multi-tenant (dev)
+**Status:** v0.4.0 — Supabase sync + Vercel ready
 
 ## Szybki start
 
 ```bash
+cp .env.example .env   # NOWY projekt Supabase (nie wgdom!)
 npm install
 npm run dev
 ```
+
+Pełna konfiguracja chmury: **[SUPABASE-SETUP.md](./SUPABASE-SETUP.md)**  
+Deploy frontendu: **[DEPLOY.md](./DEPLOY.md)** (Vercel)
 
 Aplikacja: http://127.0.0.1:5174
 

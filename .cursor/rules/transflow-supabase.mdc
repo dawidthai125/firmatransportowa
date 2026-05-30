@@ -1,0 +1,16 @@
+---
+description: TransFlow — Supabase osobny projekt, sync, deploy
+globs:
+  - src/lib/cloud-sync.ts
+  - src/config/supabase.ts
+  - supabase/**
+alwaysApply: false
+---
+
+# TransFlow — chmura
+
+- **NIE** używaj projektu Supabase wgdom (`kv_store_0afb8820`).
+- TransFlow ma własny projekt: tabela `kv_store_transflow`, funkcja `transflow-api`.
+- Przed zmianą sync: przeczytaj `docs/SUPABASE-ARCHITECTURE.md`.
+- Po zmianie API Edge: zaktualizuj docs + `SUPABASE-SETUP.md`.
+- Env: tylko `VITE_*` w Vercel; token deploy w GitHub Secrets.
