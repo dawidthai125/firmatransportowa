@@ -1,4 +1,6 @@
 import { SystemCredit } from '@/app/components/SystemCredit'
+import { TajskiTransLogo } from '@/app/components/brand/TajskiTransLogo'
+import { InstallAppBanner } from '@/app/components/pwa/InstallAppBanner'
 import { Button } from '@/app/components/ui/Button'
 import { Input, Label } from '@/app/components/ui/Input'
 import { PortalPanelTile } from '@/app/components/transport/PortalPanelTile'
@@ -107,19 +109,24 @@ export function PortalHome({
                 </>
               )}
             </div>
-            <div className="flex flex-col items-center gap-4 lg:flex-row lg:items-center">
-              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-primary/60 shadow-lg shadow-primary/30">
-                <Truck className="h-9 w-9 text-primary-foreground" />
-              </div>
-              <div>
-                {companyMode ? (
-                  <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
-                    {COMPANY_BRANDING.shortName}
-                  </h1>
-                ) : (
+            <div className="flex flex-col items-center gap-4 lg:flex-row lg:items-center lg:gap-6">
+              {companyMode ? (
+                <TajskiTransLogo
+                  size="hero"
+                  showWordmark
+                  wordmarkClassName="text-center lg:text-left"
+                />
+              ) : (
+                <TajskiTransLogo size="xl" />
+              )}
+              <div className={companyMode ? 'text-center lg:text-left' : 'text-center lg:text-left'}>
+                {!companyMode && (
                   <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
                     Trans<span className="text-primary">Flow</span>
                   </h1>
+                )}
+                {companyMode && (
+                  <h1 className="sr-only">{COMPANY_BRANDING.shortName}</h1>
                 )}
                 <p className="mt-2 max-w-xl text-base font-medium text-foreground/90 sm:text-lg">
                   {tagline}
@@ -174,6 +181,9 @@ export function PortalHome({
       </section>
 
       <main className="relative mx-auto max-w-6xl px-4 py-8 sm:py-10">
+        {companyMode && tenant && (
+          <InstallAppBanner tenantId={tenant.id} className="mb-6 md:max-w-xl" />
+        )}
         {!companyMode && (
           <section className="glass-card mb-8 rounded-2xl p-5 sm:p-6">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-end">

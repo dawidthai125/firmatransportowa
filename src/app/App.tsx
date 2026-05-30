@@ -42,6 +42,7 @@ import {
 import { runScheduledAutomations } from '@/lib/automation/scheduler'
 import { HelpProvider } from '@/lib/help/help-context'
 import { useTenant } from '@/lib/tenant/context'
+import { usePwaBrandingEffect } from '@/lib/pwa/usePwaBrandingEffect'
 import { useEffect, useMemo, useState } from 'react'
 
 const OWNER_ONLY_ADMIN_VIEWS: AdminView[] = ['compliance', 'settings', 'tachograph']
@@ -71,6 +72,8 @@ function canAccessAdminView(view: AdminView, mode: AppMode): boolean {
 export default function App() {
   const { currentTenant, tenants, setCurrentTenant } = useTenant()
   const session = loadSession()
+
+  usePwaBrandingEffect(currentTenant?.id)
 
   useEffect(() => {
     if (!session || !currentTenant) return

@@ -10,7 +10,8 @@ import { ROLE_LABELS } from '@/lib/auth/session'
 import { getPanelTheme } from '@/lib/theme/transport-images'
 import type { Tenant } from '@/lib/tenant/types'
 import { cn } from '@/lib/utils'
-import { ArrowLeft, Truck } from 'lucide-react'
+import { TajskiTransMark } from '@/app/components/brand/TajskiTransLogo'
+import { ArrowLeft } from 'lucide-react'
 
 interface RoleAuthScreenProps {
   role: UserRole
@@ -64,7 +65,7 @@ export function RoleAuthScreen({
         <div className={cn('absolute inset-0 bg-gradient-to-t', theme.overlayClass)} aria-hidden />
         <div className="relative flex flex-1 flex-col justify-between p-10">
           <div className="flex items-center gap-2 text-foreground/90">
-            <Truck className="h-6 w-6 text-primary" />
+            <TajskiTransMark />
             <span className="font-semibold">
               {isCompanyDeployment() ? COMPANY_BRANDING.shortName : 'TransFlow'}
             </span>

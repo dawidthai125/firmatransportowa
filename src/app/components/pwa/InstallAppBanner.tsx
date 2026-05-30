@@ -1,16 +1,18 @@
 import { Button } from '@/app/components/ui/Button'
-import { COMPANY_BRANDING } from '@/config/branding'
+import { pwaDisplayName } from '@/lib/pwa/pwa-branding-resolve'
 import { usePwaInstall } from '@/lib/pwa/usePwaInstall'
 import { cn } from '@/lib/utils'
 import { Download, Share, Smartphone, X } from 'lucide-react'
 
 interface InstallAppBannerProps {
   className?: string
+  tenantId?: string
 }
 
-/** Baner instalacji PWA — głównie dla panelu kierowcy na telefonie */
-export function InstallAppBanner({ className }: InstallAppBannerProps) {
+/** Baner instalacji PWA — portal i panel kierowcy na telefonie */
+export function InstallAppBanner({ className, tenantId }: InstallAppBannerProps) {
   const { showBanner, canInstallNative, showIosHint, install, dismiss } = usePwaInstall()
+  const appName = pwaDisplayName(tenantId)
 
   if (!showBanner) return null
 
@@ -26,11 +28,11 @@ export function InstallAppBanner({ className }: InstallAppBannerProps) {
           <Smartphone className="h-5 w-5" />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="font-semibold leading-snug">Zainstaluj aplikację na telefonie</p>
+          <p className="font-semibold leading-snug">Zainstaluj {appName} na telefonie</p>
           <p className="mt-1 text-sm text-muted-foreground">
             {showIosHint
-              ? `Szybki dostęp do raportu i awarii — jak natywna apka ${COMPANY_BRANDING.shortName}.`
-              : `Dodaj skrót ${COMPANY_BRANDING.shortName} na ekran główny — raport i awaria jednym tapnięciem.`}
+              ? `Safari → Udostępnij → „Dodaj do ekranu początkowego” — szybki dostęp jak natywna apka.`
+              : `Dodaj skrót na ekran główny — raport i awaria jednym tapnięciem (Chrome, Firefox, Opera).`}
           </p>
 
           {showIosHint && (
@@ -41,7 +43,7 @@ export function InstallAppBanner({ className }: InstallAppBannerProps) {
               </li>
               <li className="flex items-center gap-2">
                 <Download className="h-3.5 w-3.5 shrink-0 text-primary" />
-                „Dodaj do ekranu początkowego”
+                „Dodaj do ekranu początkowego” — nazwa: {appName}
               </li>
             </ol>
           )}

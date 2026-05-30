@@ -2,7 +2,7 @@
 
 > System **wyłącznie dla firm TSL** — ułatwia pracę **właścicielowi** (flota, marże, compliance) i **kierowcy** (raport z kabiny, kurs, awaria).
 
-**Autor:** Dawid Thai Thanh · **Status:** v0.17.1
+**Autor:** Dawid Thai Thanh · **Status:** v0.17.2
 
 ## Szybki start
 

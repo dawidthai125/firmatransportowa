@@ -12,7 +12,8 @@ import type { Tenant } from '@/lib/tenant/types'
 import type { UserRole } from '@/lib/auth/session'
 import { ROLE_LABELS } from '@/lib/auth/session'
 import { cn } from '@/lib/utils'
-import { LogOut, Truck } from 'lucide-react'
+import { TajskiTransMark } from '@/app/components/brand/TajskiTransLogo'
+import { LogOut } from 'lucide-react'
 import type { ReactNode } from 'react'
 
 interface AdminShellProps {
@@ -41,9 +42,7 @@ export function AdminShell({
       <OfflineIndicator />
       <header className="relative z-30 flex shrink-0 items-center justify-between border-b border-border/80 bg-sidebar/95 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-md">
         <div className="flex min-w-0 items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary/30 to-primary/10 text-primary ring-1 ring-primary/20">
-            <Truck className="h-5 w-5" />
-          </div>
+          <TajskiTransMark />
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold">{tenant.name}</p>
             <p className="truncate text-xs text-muted-foreground">

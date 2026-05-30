@@ -5,6 +5,7 @@ import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
 const companyShort = process.env.VITE_COMPANY_SHORT_NAME ?? 'Tajski-Trans'
+const pwaAppName = process.env.VITE_PWA_APP_NAME ?? `${companyShort} Test`
 
 export default defineConfig({
   plugins: [
@@ -20,7 +21,7 @@ export default defineConfig({
         'pwa-512x512.png',
       ],
       manifest: {
-        name: `${companyShort} — TransFlow`,
+        name: pwaAppName,
         short_name: companyShort,
         description:
           'Zarządzanie transportem TSL — kursy, flota, raporty kierowców i zgłoszenia awarii.',

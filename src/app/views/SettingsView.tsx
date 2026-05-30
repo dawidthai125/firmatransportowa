@@ -20,7 +20,13 @@ import {
 } from '@/lib/tenant/plan-presets'
 import { useTenant } from '@/lib/tenant/context'
 import { cn } from '@/lib/utils'
-import { Plus, Settings, Trash2, Gauge, Satellite } from 'lucide-react'
+import { Plus, Settings, Trash2, Gauge, Satellite, Smartphone } from 'lucide-react'
+import {
+  applyPwaBrandingToDocument,
+  DEFAULT_PWA_BRANDING,
+  loadPwaBranding,
+  savePwaBranding,
+} from '@/lib/pwa/pwa-branding'
 import {
   loadFleetTelematicsConfig,
   saveFleetTelematicsConfig,
@@ -52,6 +58,8 @@ export function SettingsView({ tenant }: SettingsViewProps) {
   const [fleetGpsCfg, setFleetGpsCfg] = useState<FleetTelematicsConnectorConfig>(() =>
     loadFleetTelematicsConfig(tenant.id),
   )
+  const [pwaAppName, setPwaAppName] = useState(DEFAULT_PWA_BRANDING.appName)
+  const [pwaShortName, setPwaShortName] = useState(DEFAULT_PWA_BRANDING.shortName)
 
   const refresh = useCallback(() => {
     seedDemoCompanyDocuments(tenant.id)
@@ -61,6 +69,9 @@ export function SettingsView({ tenant }: SettingsViewProps) {
     setVerifierIds(data.repairWorkflow.verifierUserIds.join(', '))
     setTachoCfg(loadTachographConnectorConfig(tenant.id))
     setFleetGpsCfg(loadFleetTelematicsConfig(tenant.id))
+    const pwa = loadPwaBranding(tenant.id)
+    setPwaAppName(pwa.appName)
+    setPwaShortName(pwa.shortName)
   }, [tenant.id])
 
   useEffect(() => {
@@ -109,6 +120,16 @@ export function SettingsView({ tenant }: SettingsViewProps) {
       ...data,
       repairWorkflow: { ...data.repairWorkflow, verifierUserIds: ids },
     })
+  }
+
+  function savePwaBrandingSettings() {
+    const next = savePwaBranding(tenant.id, {
+      appName: pwaAppName.trim(),
+      shortName: pwaShortName.trim(),
+    })
+    setPwaAppName(next.appName)
+    setPwaShortName(next.shortName)
+    void applyPwaBrandingToDocument(next)
   }
 
   function addDocument() {
@@ -510,12 +531,59 @@ export function SettingsView({ tenant }: SettingsViewProps) {
         </CardContent>
       </Card>
 
+      {isCompanyDeployment() && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Smartphone className="h-5 w-5 text-primary" />
+              Aplikacja na telefon (PWA)
+            </CardTitle>
+            <CardDescription>
+              Nazwa pod ikoną na pulpicie — Chrome, Firefox, Opera, Safari (Android i iOS). Domyślnie:{' '}
+              {DEFAULT_PWA_BRANDING.appName}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="pwa-app-name">Pełna nazwa (instalacja)</Label>
+                <Input
+                  id="pwa-app-name"
+                  value={pwaAppName}
+                  onChange={(e) => setPwaAppName(e.target.value)}
+                  placeholder={DEFAULT_PWA_BRANDING.appName}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="pwa-short-name">Skrót pod ikoną</Label>
+                <Input
+                  id="pwa-short-name"
+                  value={pwaShortName}
+                  onChange={(e) => setPwaShortName(e.target.value)}
+                  placeholder={DEFAULT_PWA_BRANDING.shortName}
+                  maxLength={12}
+                />
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Kierowcy mogą dodać skrót z baneru na portalu lub w panelu. Zmiana wymaga ponownej instalacji
+              na telefonach, które już mają starą nazwę.
+            </p>
+            <Button size="sm" onClick={savePwaBrandingSettings}>
+              Zapisz branding PWA
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Mechanicy i weryfikacja awarii</CardTitle>
-          <CardDescription>
-            Właściciel zawsze może weryfikować. Wyznaczeni weryfikatorzy — ID użytkowników (np. user-dispatcher-demo).
-          </CardDescription>
+        <CardHeader className="flex flex-row items-center justify-between gap-2">
+          <div>
+            <CardTitle className="text-base">Mechanicy i weryfikacja awarii</CardTitle>
+            <CardDescription>
+              Właściciel zawsze może weryfikować. Wyznaczeni weryfikatorzy — ID użytkowników (np. user-dispatcher-demo).
+            </CardDescription>
+          </div>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="space-y-1.5">

@@ -36,6 +36,11 @@ export interface TenantSettingsData {
   repairWorkflow: RepairWorkflowSettings
   /** Kontakt operacyjny — kierowca dzwoni tu, nie do właściciela */
   operationsContact?: OperationsContact
+  /** Nazwa aplikacji PWA (ikona na pulpicie telefonu) */
+  pwaBranding?: {
+    appName?: string
+    shortName?: string
+  }
 }
 
 export interface OperationsContact {
@@ -64,6 +69,8 @@ export function loadTenantSettingsData(tenantId: string): TenantSettingsData {
     companyDocuments: raw.companyDocuments ?? [],
     mechanics: raw.mechanics ?? [],
     repairWorkflow: raw.repairWorkflow ?? { verifierUserIds: [] },
+    operationsContact: raw.operationsContact,
+    pwaBranding: raw.pwaBranding,
   }
 }
 
