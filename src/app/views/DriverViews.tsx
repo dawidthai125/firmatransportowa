@@ -7,11 +7,15 @@ import {
   dailyReportTotalCosts,
 } from '@/lib/domain/daily-report'
 import {
+  checkDailyDrivingLimit,
+  formatDrivingHours,
+} from '@/lib/domain/driving-time'
+import {
   getTodayReportForDriver,
   upsertDailyReport,
 } from '@/lib/domain/daily-reports-store'
 import { loadCourses, seedDemoCourses } from '@/lib/domain/courses-store'
-import { CheckCircle2, FileText, Fuel, MapPin, Route } from 'lucide-react'
+import { CheckCircle2, FileText, Fuel, MapPin, Route, AlertTriangle } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import type { Course } from '@/lib/domain/course'
 import type { DailyReport } from '@/lib/domain/daily-report'
@@ -162,6 +166,7 @@ export function DriverReportView({ tenantId, driverName }: DriverReportViewProps
   if (!report) return null
 
   const totalCosts = dailyReportTotalCosts(report)
+  const drivingCheck = checkDailyDrivingLimit(report.drivingMinutes ?? 0)
 
   return (
     <div className="space-y-4 pb-6">
@@ -177,6 +182,31 @@ export function DriverReportView({ tenantId, driverName }: DriverReportViewProps
           )}
         </p>
       </div>
+
+      {(drivingCheck.status !== 'ok' || drivingCheck.continuousRisk) && (
+        <Card className="border-warning/40 bg-warning/5">
+          <CardContent className="flex items-start gap-2 p-4 text-sm">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
+            <div>
+              {drivingCheck.status === 'exceeded' && (
+                <p className="font-medium text-danger">
+                  Przekroczono limit {formatDrivingHours(drivingCheck.limitMinutes)} jazdy dziennie
+                </p>
+              )}
+              {drivingCheck.status === 'warning' && (
+                <p className="font-medium text-warning">
+                  Pozostało {drivingCheck.remainingMinutes} min do limitu dziennej jazdy
+                </p>
+              )}
+              {drivingCheck.continuousRisk && (
+                <p className="text-muted-foreground">
+                  Powyżej 4,5 h jazdy — wymagana przerwa 45 min (561/2006)
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardContent className="space-y-3 p-4">

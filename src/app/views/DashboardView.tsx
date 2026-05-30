@@ -1,6 +1,9 @@
-import { buildComplianceAlerts } from '@/lib/domain/compliance'
+import { buildComplianceAlerts, buildCompanyComplianceAlerts } from '@/lib/domain/compliance'
 import { loadCourses, seedDemoCourses } from '@/lib/domain/courses-store'
 import { loadDrivers, seedDemoDrivers } from '@/lib/domain/drivers-store'
+import { loadDailyReports, seedDemoDailyReports } from '@/lib/domain/daily-reports-store'
+import { buildDrivingTimeAlerts } from '@/lib/domain/driving-time'
+import { seedDemoCompanyDocuments, loadTenantSettingsData } from '@/lib/domain/tenant-settings'
 import { loadVehicles, seedDemoVehicles } from '@/lib/domain/vehicles-store'
 import type { Tenant } from '@/lib/tenant/types'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/Card'
@@ -12,20 +15,36 @@ interface DashboardViewProps {
 }
 
 export function DashboardView({ tenant }: DashboardViewProps) {
-  const [stats, setStats] = useState({ active: 0, total: 0, margin: 0, compliance: 0 })
+  const [stats, setStats] = useState({
+    active: 0,
+    total: 0,
+    margin: 0,
+    compliance: 0,
+    driving: 0,
+  })
 
   useEffect(() => {
     seedDemoCourses(tenant.id)
     seedDemoDrivers(tenant.id)
     seedDemoVehicles(tenant.id)
+    seedDemoDailyReports(tenant.id)
+    seedDemoCompanyDocuments(tenant.id)
+
     const courses = loadCourses(tenant.id)
     const drivers = loadDrivers(tenant.id)
     const vehicles = loadVehicles(tenant.id)
+    const reports = loadDailyReports(tenant.id)
+    const companyDocs = loadTenantSettingsData(tenant.id).companyDocuments
+
     const active = courses.filter((c) => ['planned', 'loading', 'in_transit'].includes(c.status)).length
     const margin = courses.reduce((s, c) => s + c.freightPln - (c.routeCostsPln ?? 0), 0)
-    const compliance = buildComplianceAlerts(tenant.id, drivers, vehicles).length
-    setStats({ active, total: courses.length, margin, compliance })
-  }, [tenant.id])
+    const compliance =
+      buildComplianceAlerts(tenant.id, drivers, vehicles).length +
+      buildCompanyComplianceAlerts(tenant.id, tenant.name, companyDocs).length
+    const driving = buildDrivingTimeAlerts(tenant.id, reports).length
+
+    setStats({ active, total: courses.length, margin, compliance, driving })
+  }, [tenant.id, tenant.name])
 
   const PLACEHOLDER_STATS = [
     { label: 'Aktywne kursy', value: String(stats.active), icon: Route, tone: 'text-primary' },
@@ -33,6 +52,7 @@ export function DashboardView({ tenant }: DashboardViewProps) {
     { label: 'Marża łącznie', value: `${stats.margin.toLocaleString('pl-PL')} zł`, icon: Users, tone: 'text-success' },
     { label: 'Alerty compliance', value: String(stats.compliance), icon: AlertTriangle, tone: 'text-warning' },
   ]
+
   return (
     <div className="space-y-6">
       <div>
@@ -57,17 +77,23 @@ export function DashboardView({ tenant }: DashboardViewProps) {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
+        <Card className={stats.driving > 0 ? 'border-warning/40' : ''}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Clock className="h-4 w-4 text-warning" />
-              Wymaga uwagi
+              Czas jazdy (561/2006)
             </CardTitle>
-            <CardDescription>Dokumenty, serwisy, czasy pracy — moduł w budowie</CardDescription>
+            <CardDescription>
+              {stats.driving > 0
+                ? `${stats.driving} alertów — sprawdź moduł Rozliczenia`
+                : 'Brak przekroczeń w raportach kierowców'}
+            </CardDescription>
           </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
-            Tu pojawią się alerty: wygasające uprawnienia ADR, przeglądy, przekroczenia czasu jazdy.
-          </CardContent>
+          {stats.driving > 0 && (
+            <CardContent className="text-sm text-warning">
+              Kierowcy zbliżają się do limitu 9 h jazdy dziennie lub go przekroczyli.
+            </CardContent>
+          )}
         </Card>
 
         <Card>
@@ -76,7 +102,7 @@ export function DashboardView({ tenant }: DashboardViewProps) {
             <CardDescription>Podgląd operacyjny dla właściciela / dyspozytora</CardDescription>
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground">
-            Mapa floty, status kursów i ETA — kolejna faza rozwoju (moduł GPS).
+            Mapa floty, status kursów i ETA — moduł GPS (v0.8).
           </CardContent>
         </Card>
       </div>

@@ -1,5 +1,6 @@
 import { cn } from '@/lib/utils'
 import {
+  Calculator,
   FileText,
   Home,
   LayoutDashboard,
@@ -16,6 +17,7 @@ import type { NavItem } from '@/lib/navigation'
 const ICONS: Record<string, LucideIcon> = {
   'layout-dashboard': LayoutDashboard,
   route: Route,
+  calculator: Calculator,
   truck: Truck,
   users: Users,
   'shield-check': ShieldCheck,

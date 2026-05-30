@@ -8,7 +8,7 @@
 - Kursy, kierowcy, flota, compliance alerty
 - Supabase + Vercel + GitHub Actions
 
-## ✅ v0.5 — Raport kierowcy + międzynarodowy (obecna)
+## ✅ v0.5 — Raport kierowcy + międzynarodowy
 
 - [x] `docs/DOMAIN-TRANSPORT.md` — wiedza branżowa
 - [x] Kurs: scope kraj/UE/poza UE, CMR, kraje, opłaty EUR
@@ -16,12 +16,12 @@
 - [x] Panel raportów dla właściciela/dyspozytora
 - [x] Dokumenty firmy: licencja wspólnotowa, CKZ (compliance)
 
-## 🔜 v0.6 — Czas pracy i rozliczenia
+## ✅ v0.6 — Czas pracy i rozliczenia (obecna)
 
-- Kalkulator 561/2006 (ostrzeżenia przed przekroczeniem)
-- Podsumowanie tygodnia kierowcy
-- Marża per kurs / per klient
-- Eksport CSV dla księgowości
+- [x] Kalkulator 561/2006 (alerty w raporcie kierowcy + Rozliczenia)
+- [x] Podsumowanie tygodnia kierowcy
+- [x] Marża per klient (nadawca)
+- [x] Eksport CSV (raporty, tydzień, kursy, marże)
 
 ## 🔜 v0.7 — Auth i bezpieczeństwo
 

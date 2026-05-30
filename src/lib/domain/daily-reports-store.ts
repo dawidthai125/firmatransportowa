@@ -28,3 +28,53 @@ export function getTodayReportForDriver(
     (r) => r.driverName === driverName && r.date === today,
   )
 }
+
+export function seedDemoDailyReports(tenantId: string): DailyReport[] {
+  const existing = loadDailyReports(tenantId)
+  if (existing.length > 0) return existing
+
+  const now = new Date().toISOString()
+  const today = now.slice(0, 10)
+  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
+
+  const demo: DailyReport[] = [
+    {
+      id: 'report-demo-001',
+      tenantId,
+      date: yesterday,
+      driverName: 'Jan Kowalski',
+      courseReference: 'K/2026/001',
+      kmDriven: 420,
+      fuelLiters: 118,
+      fuelCostPln: 720,
+      tollPln: 45,
+      drivingMinutes: 555,
+      restMinutes: 90,
+      borderCrossings: 'Świecko → Forst',
+      shiftEnded: true,
+      shiftEndedAt: now,
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: 'report-demo-002',
+      tenantId,
+      date: today,
+      driverName: 'Piotr Nowak',
+      courseReference: 'K/2026/INT-01',
+      kmDriven: 310,
+      fuelLiters: 95,
+      fuelCostPln: 580,
+      tollEur: 42,
+      drivingMinutes: 515,
+      restMinutes: 60,
+      notes: 'Trasa międzynarodowa PL→DE',
+      shiftEnded: false,
+      createdAt: now,
+      updatedAt: now,
+    },
+  ]
+
+  saveDailyReports(tenantId, demo)
+  return demo
+}

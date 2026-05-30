@@ -12,6 +12,7 @@ import {
 } from '@/app/views/DriverViews'
 import { DriversView } from '@/app/views/DriversView'
 import { FleetView } from '@/app/views/FleetView'
+import { SettlementsView } from '@/app/views/SettlementsView'
 import { SettingsView } from '@/app/views/SettingsView'
 import type { AppMode } from '@/lib/auth/session'
 import { loadSession } from '@/lib/auth/session'
@@ -104,6 +105,9 @@ export default function App() {
       {adminView === 'dashboard' && <DashboardView tenant={currentTenant} />}
       {adminView === 'courses' && <CoursesView tenantId={currentTenant.id} />}
       {adminView === 'reports' && <DailyReportsView tenantId={currentTenant.id} />}
+      {adminView === 'settlements' && (
+        <SettlementsView tenantId={currentTenant.id} tenantSlug={currentTenant.slug} />
+      )}
       {adminView === 'fleet' && <FleetView tenantId={currentTenant.id} />}
       {adminView === 'drivers' && <DriversView tenantId={currentTenant.id} />}
       {adminView === 'compliance' && (
