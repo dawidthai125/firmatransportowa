@@ -1,5 +1,6 @@
 export type AdminView =
   | 'dashboard'
+  | 'features'
   | 'courses'
   | 'reports'
   | 'settlements'
@@ -28,6 +29,7 @@ export interface NavItem<T extends string = string> {
 
 export const OWNER_NAV: NavItem<AdminView>[] = [
   { id: 'dashboard', label: 'Pulpit', icon: 'layout-dashboard' },
+  { id: 'features', label: 'Funkcje', icon: 'layers' },
   { id: 'courses', label: 'Kursy', icon: 'route', module: 'courses' },
   { id: 'loads', label: 'Giełda ładunków', icon: 'search', module: 'loadBoard' },
   { id: 'reports', label: 'Raporty', icon: 'file-text', module: 'courses' },
@@ -45,6 +47,7 @@ export const OWNER_NAV: NavItem<AdminView>[] = [
 
 export const DISPATCHER_NAV: NavItem<AdminView>[] = [
   { id: 'dashboard', label: 'Pulpit', icon: 'layout-dashboard' },
+  { id: 'features', label: 'Funkcje', icon: 'layers' },
   { id: 'courses', label: 'Kursy', icon: 'route', module: 'courses' },
   { id: 'loads', label: 'Giełda', icon: 'search', module: 'loadBoard' },
   { id: 'reports', label: 'Raporty', icon: 'file-text', module: 'courses' },
@@ -66,6 +69,7 @@ export const MECHANIC_NAV: NavItem<MechanicView>[] = [{ id: 'home', label: 'Napr
 
 export const VIEW_TITLES: Record<AdminView, string> = {
   dashboard: 'Pulpit',
+  features: 'Funkcje aplikacji',
   courses: 'Kursy i zlecenia',
   loads: 'Giełda ładunków',
   reports: 'Raporty dzienne',

@@ -3,18 +3,77 @@ import { loadAllFreightOffers, seedDemoFreightOffers } from '@/lib/domain/freigh
 import { loadFreightPreferences, saveFreightPreferences } from '@/lib/domain/freight-preferences'
 import { readTenantData, writeTenantData } from '@/lib/tenant/storage'
 
+/** Zewnętrzne giełdy frachtu — demo symuluje API; produkcja: klucze w Supabase Edge */
+export type ExternalFreightConnectorKey =
+  | 'trans_eu'
+  | 'timocom'
+  | 'teleroute'
+  | 'cargo123'
+  | 'transporeon'
+  | 'wtransnet'
+  | 'b2pweb'
+  | 'freightlink'
+
 export interface FreightConnectorConfig {
-  /** Symulacja API — produkcja: klucze w Supabase Edge */
   transEuEnabled: boolean
   timocomEnabled: boolean
-  /** Ostatnia synchronizacja per źródło */
+  telerouteEnabled: boolean
+  cargo123Enabled: boolean
+  transporeonEnabled: boolean
+  wtransnetEnabled: boolean
+  b2pwebEnabled: boolean
+  freightlinkEnabled: boolean
   lastSyncBySource: Partial<Record<FreightSource, string>>
 }
+
+export const FREIGHT_CONNECTOR_META: {
+  key: ExternalFreightConnectorKey
+  label: string
+  configKey: keyof Omit<FreightConnectorConfig, 'lastSyncBySource'>
+  offersPerSync: number
+}[] = [
+  { key: 'trans_eu', label: 'Trans.eu', configKey: 'transEuEnabled', offersPerSync: 2 },
+  { key: 'timocom', label: 'TimoCom', configKey: 'timocomEnabled', offersPerSync: 2 },
+  { key: 'teleroute', label: 'Teleroute', configKey: 'telerouteEnabled', offersPerSync: 2 },
+  { key: 'cargo123', label: '123cargo', configKey: 'cargo123Enabled', offersPerSync: 1 },
+  { key: 'transporeon', label: 'Transporeon', configKey: 'transporeonEnabled', offersPerSync: 1 },
+  { key: 'wtransnet', label: 'Wtransnet', configKey: 'wtransnetEnabled', offersPerSync: 2 },
+  { key: 'b2pweb', label: 'B2PWeb', configKey: 'b2pwebEnabled', offersPerSync: 1 },
+  { key: 'freightlink', label: 'Freightlink', configKey: 'freightlinkEnabled', offersPerSync: 1 },
+]
 
 const DEFAULT_CONNECTOR: FreightConnectorConfig = {
   transEuEnabled: true,
   timocomEnabled: true,
+  telerouteEnabled: true,
+  cargo123Enabled: true,
+  transporeonEnabled: true,
+  wtransnetEnabled: true,
+  b2pwebEnabled: true,
+  freightlinkEnabled: true,
   lastSyncBySource: {},
+}
+
+const SOURCE_PREFIX: Record<ExternalFreightConnectorKey, string> = {
+  trans_eu: 'TE',
+  timocom: 'TC',
+  teleroute: 'TL',
+  cargo123: '123C',
+  transporeon: 'TP',
+  wtransnet: 'WT',
+  b2pweb: 'B2P',
+  freightlink: 'FL',
+}
+
+const SOURCE_SHIPPER: Record<ExternalFreightConnectorKey, string> = {
+  trans_eu: 'Trans.eu Live Feed',
+  timocom: 'TimoCom Live Feed',
+  teleroute: 'Teleroute Marketplace',
+  cargo123: '123cargo API',
+  transporeon: 'Transporeon Shipper',
+  wtransnet: 'Wtransnet PL',
+  b2pweb: 'B2PWeb Exchange',
+  freightlink: 'Freightlink EU',
 }
 
 export function loadFreightConnectorConfig(tenantId: string): FreightConnectorConfig {
@@ -26,20 +85,18 @@ export function saveFreightConnectorConfig(tenantId: string, cfg: FreightConnect
   writeTenantData(tenantId, 'freight-connectors', cfg)
 }
 
-/** Generuje świeże oferty symulując pull z API giełdy */
 function synthesizeConnectorOffers(
   tenantId: string,
-  source: FreightSource,
+  source: ExternalFreightConnectorKey,
   count: number,
 ): FreightOffer[] {
   const now = new Date().toISOString()
-  const templates: Omit<FreightOffer, 'id' | 'tenantId' | 'postedAt' | 'reference'>[] = [
+  const templates: Omit<FreightOffer, 'id' | 'tenantId' | 'postedAt' | 'reference' | 'source'>[] = [
     {
-      source,
-      loadCity: 'Wrocław',
+      loadCity: source === 'wtransnet' ? 'Wrocław' : 'Legnica',
       loadCountry: 'PL',
-      unloadCity: 'Drezno',
-      unloadCountry: 'DE',
+      unloadCity: source === 'cargo123' ? 'Poznań' : 'Drezno',
+      unloadCountry: source === 'cargo123' ? 'PL' : 'DE',
       loadDate: new Date(Date.now() + 86400000).toISOString().slice(0, 10),
       bodyType: 'curtain',
       loadType: 'ftl',
@@ -54,40 +111,40 @@ function synthesizeConnectorOffers(
       distanceKm: 350,
       paymentDays: 21,
       shipperRating: 4.3,
-      cargoDescription: 'Sync API — palety przemysłowe',
-      shipperName: source === 'trans_eu' ? 'Trans.eu Live Feed' : 'TimoCom Live Feed',
+      cargoDescription: `Sync ${SOURCE_SHIPPER[source]} — palety przemysłowe`,
+      shipperName: SOURCE_SHIPPER[source],
     },
     {
-      source,
-      loadCity: 'Legnica',
+      loadCity: 'Łódź',
       loadCountry: 'PL',
-      unloadCity: 'Lipsk',
+      unloadCity: 'Berlin',
       unloadCountry: 'DE',
       loadDate: new Date(Date.now() + 86400000 * 2).toISOString().slice(0, 10),
-      bodyType: 'curtain',
-      loadType: 'ltl',
+      bodyType: source === 'transporeon' ? 'box' : 'curtain',
+      loadType: source === 'b2pweb' ? 'ltl' : 'ftl',
       scope: 'international_eu',
-      weightKg: 7200,
-      ldm: 5,
+      weightKg: source === 'b2pweb' ? 7200 : 19800,
+      ldm: source === 'b2pweb' ? 5 : 13.6,
       adr: false,
-      liftRequired: false,
-      freightPln: 0,
-      freightEur: 480,
-      ratePerKmPln: 3.7,
-      distanceKm: 280,
+      liftRequired: source === 'freightlink',
+      freightPln: source === 'wtransnet' ? 4800 : 0,
+      freightEur: source === 'wtransnet' ? undefined : 890,
+      ratePerKmPln: 3.9,
+      distanceKm: 420,
       paymentDays: 30,
-      shipperRating: 4.0,
-      cargoDescription: 'Sync API — LTL B2B',
-      shipperName: source === 'trans_eu' ? 'Trans.eu Partner' : 'TimoCom Partner',
+      shipperRating: 4.1,
+      cargoDescription: `Sync ${SOURCE_SHIPPER[source]} — ${source === 'transporeon' ? 'retail FTL' : 'B2B'}`,
+      shipperName: `${SOURCE_SHIPPER[source]} Partner`,
     },
   ]
 
   const suffix = Date.now().toString(36).slice(-4).toUpperCase()
   return templates.slice(0, count).map((t, i) => ({
     ...t,
+    source,
     id: `fo-sync-${source}-${suffix}-${i}`,
     tenantId,
-    reference: `${source === 'trans_eu' ? 'TE' : 'TC'}-LIVE/${suffix}/${i + 1}`,
+    reference: `${SOURCE_PREFIX[source]}-LIVE/${suffix}/${i + 1}`,
     postedAt: now,
   }))
 }
@@ -107,26 +164,16 @@ export function syncFreightConnectors(tenantId: string): SyncResult {
   const toAdd: FreightOffer[] = []
   const sources: FreightSource[] = []
 
-  if (cfg.transEuEnabled) {
-    sources.push('trans_eu')
-    for (const o of synthesizeConnectorOffers(tenantId, 'trans_eu', 2)) {
+  for (const meta of FREIGHT_CONNECTOR_META) {
+    if (!cfg[meta.configKey]) continue
+    sources.push(meta.key)
+    for (const o of synthesizeConnectorOffers(tenantId, meta.key, meta.offersPerSync)) {
       if (!refs.has(o.reference)) {
         toAdd.push(o)
         refs.add(o.reference)
       }
     }
-    cfg.lastSyncBySource.trans_eu = new Date().toISOString()
-  }
-
-  if (cfg.timocomEnabled) {
-    sources.push('timocom')
-    for (const o of synthesizeConnectorOffers(tenantId, 'timocom', 1)) {
-      if (!refs.has(o.reference)) {
-        toAdd.push(o)
-        refs.add(o.reference)
-      }
-    }
-    cfg.lastSyncBySource.timocom = new Date().toISOString()
+    cfg.lastSyncBySource[meta.key] = new Date().toISOString()
   }
 
   if (toAdd.length > 0) {

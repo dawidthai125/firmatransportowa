@@ -1,12 +1,14 @@
 # TransFlow — architektura
 
-> **Wersja:** 0.1.0 · **Ostatnia aktualizacja:** 2026-05-30
+> **Wersja:** 0.17.3 · **Ostatnia aktualizacja:** 2026-05-30  
+> **Pełna mapa dla agentów AI:** [`docs/SYSTEM-OVERVIEW.md`](SYSTEM-OVERVIEW.md)  
+> **Rejestr funkcji (kod):** [`src/lib/catalog/app-features.ts`](../src/lib/catalog/app-features.ts)
 
 ## 1. Wizja produktu
 
 SaaS dla firm TSL (małe/średnie). Właściciel sprzedaje **abonament** — każdy klient to **tenant** z własnymi danymi, użytkownikami i włączonymi modułami.
 
-Faza obecna: **v0.4** — localStorage + sync Supabase (osobny projekt) + deploy Vercel.
+Faza obecna: **v0.17** — localStorage + sync Supabase + Vercel + PWA Tajski-Trans.
 
 > **Supabase:** NOWY projekt (nie wgdom). Setup → `SUPABASE-SETUP.md`, sync → `docs/SUPABASE-ARCHITECTURE.md`
 
@@ -125,11 +127,12 @@ Szczegóły przepisów → osobny doc `docs/DOMAIN-TRANSPORT.md` (Faza 2).
 ```
 LoginScreen (kod firmy + rola)
     │
-    ├─ owner / dispatcher → AdminShell (sidebar + bottom nav mobile)
-    └─ driver → DriverShell (bottom nav, mobile-first)
+    ├─ owner / dispatcher → AdminShell (sidebar + menu mobile + zakładka Funkcje)
+    ├─ driver → DriverShell (bottom nav, mobile-first)
+    └─ mechanic → MechanicShell
 ```
 
-Pliki: `src/app/shells/`, `src/app/views/`, `src/lib/navigation.ts`
+Pliki: `src/app/shells/`, `src/app/views/`, `src/lib/navigation.ts`, `src/lib/catalog/app-features.ts`
 
 ---
 

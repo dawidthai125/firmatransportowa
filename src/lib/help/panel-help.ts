@@ -56,6 +56,39 @@ function adminSteps(
         { label: 'Awarie', hint: 'Zgłoszenia od kierowców' },
       ],
     },
+    features: {
+      title: 'Katalog funkcji aplikacji',
+      summary:
+        'Pełna lista modułów systemu zarządzania firmą transportową — opisy, role, status. Aktualizowany wraz z rozwojem produktu.',
+      steps: [
+        {
+          title: 'Przeglądaj obszary',
+          description:
+            'Funkcje pogrupowane: panel admina, kierowca, mechanik, platforma, integracje API.',
+          action: 'Przewiń sekcje na tym ekranie',
+        },
+        {
+          title: 'Szukaj i filtruj',
+          description: 'Wpisz słowo kluczowe lub filtruj: Dostępne / Beta / Planowane.',
+          action: 'Pasek wyszukiwania u góry',
+        },
+        {
+          title: 'Przejdź do modułu',
+          description: 'Przy funkcjach panelu admina — przycisk „Otwórz moduł” przenosi do zakładki.',
+          action: 'Karta funkcji → Otwórz moduł',
+        },
+        {
+          title: 'Dla developerów',
+          description:
+            'Źródło prawdy: src/lib/catalog/app-features.ts oraz docs/SYSTEM-OVERVIEW.md dla agentów AI.',
+          action: 'Stopka ekranu — ścieżki plików',
+        },
+      ],
+      related: [
+        { label: 'Pulpit', hint: 'Operacje na co dzień' },
+        { label: 'Firma', hint: 'Ustawienia i integracje' },
+      ],
+    },
     courses: {
       title: 'Kursy i zlecenia',
       summary: 'Tworzenie tras, przypisywanie kierowcy i pojazdu, koszty i status kursu.',
@@ -609,32 +642,33 @@ function driverHelp(view: DriverView): PanelHelpContent {
 function mechanicHelp(): PanelHelpContent {
   return {
     title: 'Naprawy floty',
-    summary: 'Zlecenia po weryfikacji biura — terminy, kontakt z kierowcą, zamknięcie naprawy.',
+    summary:
+      'Zlecenia po weryfikacji biura — diagnoza, części, status naprawy. Opis widzi kierowca i biuro; koszt tylko właściciel.',
     steps: [
       {
         title: 'Wybierz zlecenie',
-        description: 'Lista po lewej — kierowca, pojazd, opis, zdjęcia.',
-        action: 'Kliknij wiersz na liście napraw',
+        description: 'Lista zleceń — kierowca, pojazd, opis usterki, zdjęcia.',
+        action: 'Kliknij kartę na liście napraw',
       },
       {
-        title: 'Ustal termin',
-        description: 'Data i godzina wizyty w warsztacie.',
-        action: 'Pole terminu → „Zapisz termin”',
+        title: 'Opisz naprawę',
+        description: 'Diagnoza, wymienione części i wykonane prace — widoczne u kierowcy i w biurze.',
+        action: 'Sekcja „Opis naprawy” → Zapisz opis',
       },
       {
-        title: 'Poproś o kontakt',
-        description: 'Gdy brakuje info od kierowcy.',
-        action: 'Wiadomość → „Wyślij prośbę o kontakt”',
+        title: 'Koszt (opcjonalnie)',
+        description: 'Kwota naprawy — zobaczy tylko właściciel w panelu Awarie.',
+        action: 'Pole „Koszt naprawy (zł)”',
       },
       {
-        title: 'Rozpocznij naprawę',
-        description: 'Status zmienia się na „W naprawie”.',
-        action: '„Rozpoczęto naprawę”',
+        title: 'Status: w trakcie / naprawiony',
+        description: '„W trakcie naprawy” lub „Naprawiony” — kierowca widzi status na pulpicie.',
+        action: 'Przyciski statusu pod opisem naprawy',
       },
       {
-        title: 'Zakończ',
-        description: 'Po zakończeniu prac zamknij zlecenie.',
-        action: '„Naprawa zakończona” / „Oznacz jako zakończone”',
+        title: 'Termin i kontakt',
+        description: 'Ustal wizytę lub poproś kierowcę o telefon.',
+        action: 'Sekcja terminu / prośba o kontakt',
       },
     ],
     tips: ['Nowe zlecenia pojawiają się po weryfikacji w panelu Awarie (biuro).'],

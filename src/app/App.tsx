@@ -19,6 +19,7 @@ import { DriverItdView } from '@/app/views/DriverItdView'
 import { FreightBoardView } from '@/app/views/FreightBoardView'
 import { ItdAdminView } from '@/app/views/ItdAdminView'
 import { FilesView } from '@/app/views/FilesView'
+import { FeaturesView } from '@/app/views/FeaturesView'
 import { FleetView } from '@/app/views/FleetView'
 import { MechanicHomeView } from '@/app/views/MechanicViews'
 import { RepairsView } from '@/app/views/RepairsView'
@@ -262,6 +263,12 @@ export default function App() {
         )}
         {adminAllowed && adminView === 'dashboard' && (
           <DashboardView tenant={currentTenant} onNavigate={setAdminView} />
+        )}
+        {adminAllowed && adminView === 'features' && (
+          <FeaturesView
+            modules={currentTenant.settings.modules}
+            onNavigate={setAdminView}
+          />
         )}
         {adminAllowed && adminView === 'courses' && <CoursesView tenantId={currentTenant.id} />}
         {adminAllowed && adminView === 'loads' && (

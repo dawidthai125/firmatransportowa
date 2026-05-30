@@ -7,6 +7,7 @@ import {
   HardDrive,
   Home,
   LayoutDashboard,
+  Layers,
   Route,
   Search,
   Settings,
@@ -22,6 +23,7 @@ import type { NavItem } from '@/lib/navigation'
 
 const ICONS: Record<string, LucideIcon> = {
   'layout-dashboard': LayoutDashboard,
+  layers: Layers,
   route: Route,
   search: Search,
   calculator: Calculator,
@@ -46,6 +48,9 @@ interface AppNavProps<T extends string> {
   layout: 'sidebar' | 'bottom'
   /** Dolna belka zawsze widoczna (panel kierowcy / mechanika — brak sidebara na desktop) */
   bottomAlwaysVisible?: boolean
+  /** Sidebar widoczny mimo md (drawer mobile admin) */
+  forceVisible?: boolean
+  className?: string
 }
 
 export function AppNav<T extends string>({
@@ -54,6 +59,8 @@ export function AppNav<T extends string>({
   onChange,
   layout,
   bottomAlwaysVisible = false,
+  forceVisible = false,
+  className,
 }: AppNavProps<T>) {
   if (layout === 'bottom') {
     return (
@@ -61,6 +68,7 @@ export function AppNav<T extends string>({
         className={cn(
           'flex shrink-0 overflow-x-auto border-t border-border bg-sidebar px-1 pb-[env(safe-area-inset-bottom)] pt-1',
           !bottomAlwaysVisible && 'md:hidden',
+          className,
         )}
       >
         {items.map((item) => {
@@ -86,7 +94,13 @@ export function AppNav<T extends string>({
   }
 
   return (
-    <nav className="hidden w-56 shrink-0 flex-col gap-1 border-r border-border bg-sidebar p-3 md:flex">
+    <nav
+      className={cn(
+        'hidden w-56 shrink-0 flex-col gap-1 border-r border-border bg-sidebar p-3 md:flex',
+        forceVisible && 'flex w-full border-r-0 md:hidden',
+        className,
+      )}
+    >
       {items.map((item) => {
         const Icon = ICONS[item.icon] ?? LayoutDashboard
         const isActive = active === item.id

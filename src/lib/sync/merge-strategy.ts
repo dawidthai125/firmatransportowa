@@ -2,6 +2,7 @@ import type { AutomationRule, AutomationSettings } from '@/lib/automation/rules'
 import type { FreightConnectorConfig } from '@/lib/domain/freight-connectors'
 import type { FleetTelematicsConnectorConfig } from '@/lib/domain/fleet-telematics-connectors'
 import type { TachographConnectorConfig } from '@/lib/domain/tachograph-connectors'
+import type { RepairReport } from '@/lib/domain/repair-report'
 import type { FreightSearchPreferences } from '@/lib/domain/freight-preferences'
 import type { ItdPlaybookSection, ItdTenantData } from '@/lib/domain/itd-types'
 import type { TenantSettingsData } from '@/lib/domain/tenant-settings'
@@ -93,6 +94,8 @@ function mergeCompanyDocuments(
 }
 
 function mergeTenantSettings(local: TenantSettingsData, cloud: TenantSettingsData): TenantSettingsData {
+  const localPwa = local.pwaBranding ?? {}
+  const cloudPwa = cloud.pwaBranding ?? {}
   return {
     companyDocuments: mergeCompanyDocuments(local.companyDocuments, cloud.companyDocuments),
     mechanics: mergeRecordsByNewest(local.mechanics, cloud.mechanics).map((m) => ({
@@ -114,7 +117,50 @@ function mergeTenantSettings(local: TenantSettingsData, cloud: TenantSettingsDat
       defaultMechanicId:
         local.repairWorkflow?.defaultMechanicId ?? cloud.repairWorkflow?.defaultMechanicId,
     },
+    operationsContact: local.operationsContact ?? cloud.operationsContact,
+    pwaBranding: {
+      appName: localPwa.appName?.trim() || cloudPwa.appName?.trim(),
+      shortName: localPwa.shortName?.trim() || cloudPwa.shortName?.trim(),
+    },
   }
+}
+
+/** Scal zgłoszenia awarii — LWW + łączenie pól opisu naprawy z obu stron */
+function mergeRepairReportRecord(local: RepairReport, cloud: RepairReport): RepairReport {
+  const preferLocal = recordTimestamp(local) >= recordTimestamp(cloud)
+  const base = preferLocal ? local : cloud
+  const other = preferLocal ? cloud : local
+  return {
+    ...base,
+    diagnosis: base.diagnosis?.trim() || other.diagnosis,
+    partsReplaced: base.partsReplaced?.trim() || other.partsReplaced,
+    repairSummary: base.repairSummary?.trim() || other.repairSummary,
+    repairCostPln: base.repairCostPln ?? other.repairCostPln,
+    mechanicNotes: base.mechanicNotes?.trim() || other.mechanicNotes,
+    mechanicMessage: base.mechanicMessage?.trim() || other.mechanicMessage,
+    scheduledRepairAt: maxIso(base.scheduledRepairAt, other.scheduledRepairAt) || base.scheduledRepairAt || other.scheduledRepairAt,
+    completedAt: maxIso(base.completedAt, other.completedAt) || base.completedAt || other.completedAt,
+    updatedAt: maxIso(local.updatedAt, cloud.updatedAt),
+  }
+}
+
+function mergeRepairReports(
+  local: RepairReport[],
+  cloud: RepairReport[],
+  localTombstones?: Record<string, string>,
+  cloudTombstones?: Record<string, string>,
+): RepairReport[] {
+  const map = new Map<string, RepairReport>()
+  let tombstones: Record<string, string> = { ...(cloudTombstones ?? {}), ...(localTombstones ?? {}) }
+
+  for (const item of cloud) {
+    map.set(item.id, item)
+  }
+  for (const item of local) {
+    const prev = map.get(item.id)
+    map.set(item.id, prev ? mergeRepairReportRecord(item, prev) : item)
+  }
+  return applyTombstones([...map.values()], tombstones)
 }
 
 function applyCompanyTenantBranding(t: Tenant): Tenant {
@@ -201,6 +247,12 @@ function mergeFreightConnectors(
   return {
     transEuEnabled: newer.transEuEnabled ?? older.transEuEnabled ?? true,
     timocomEnabled: newer.timocomEnabled ?? older.timocomEnabled ?? true,
+    telerouteEnabled: newer.telerouteEnabled ?? older.telerouteEnabled ?? true,
+    cargo123Enabled: newer.cargo123Enabled ?? older.cargo123Enabled ?? true,
+    transporeonEnabled: newer.transporeonEnabled ?? older.transporeonEnabled ?? true,
+    wtransnetEnabled: newer.wtransnetEnabled ?? older.wtransnetEnabled ?? true,
+    b2pwebEnabled: newer.b2pwebEnabled ?? older.b2pwebEnabled ?? true,
+    freightlinkEnabled: newer.freightlinkEnabled ?? older.freightlinkEnabled ?? true,
     lastSyncBySource: lastSync as FreightConnectorConfig['lastSyncBySource'],
   }
 }
@@ -381,6 +433,14 @@ export function mergeSyncEnvelopes(
       cloudEnv.updatedAt,
     )
     return wrapForSync(payload, maxIso(localEnv.updatedAt, cloudEnv.updatedAt))
+  }
+
+  if (dataKey === 'repair-reports') {
+    const l = Array.isArray(localEnv.payload) ? (localEnv.payload as RepairReport[]) : []
+    const c = Array.isArray(cloudEnv.payload) ? (cloudEnv.payload as RepairReport[]) : []
+    const payload = mergeRepairReports(l, c, localEnv.tombstones, cloudEnv.tombstones)
+    const tombstones = mergeEnvelopeTombstones(localEnv, cloudEnv)
+    return wrapMergedEnvelope(payload, maxIso(localEnv.updatedAt, cloudEnv.updatedAt), tombstones)
   }
 
   const payload = mergePayload(

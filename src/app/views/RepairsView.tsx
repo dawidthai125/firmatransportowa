@@ -2,6 +2,7 @@ import { Button } from '@/app/components/ui/Button'
 import { Card, CardContent } from '@/app/components/ui/Card'
 import { Input, Label, Select } from '@/app/components/ui/Input'
 import { RepairPhotoGallery } from '@/app/components/RepairPhotoGallery'
+import { RepairWorkDetails } from '@/app/components/repairs/RepairWorkDetails'
 import {
   REPAIR_SEVERITY_LABELS,
   REPAIR_STATUS_COLORS,
@@ -193,6 +194,8 @@ export function RepairsView({ tenantId, userId, userRole }: RepairsViewProps) {
             {selected.mechanicMessage && (
               <p className="text-sm text-muted-foreground">Wiadomość mechanika: {selected.mechanicMessage}</p>
             )}
+
+            <RepairWorkDetails report={selected} showCost={userRole === 'owner'} />
           </CardContent>
         </Card>
       )}

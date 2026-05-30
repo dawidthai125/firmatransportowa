@@ -42,6 +42,14 @@ export interface RepairReport {
   scheduledRepairAt?: string
   mechanicMessage?: string
   mechanicNotes?: string
+  /** Diagnoza — co było zepsute (widoczne kierowca + admin + mechanik) */
+  diagnosis?: string
+  /** Lista wymienionych części */
+  partsReplaced?: string
+  /** Opis wykonanych prac po naprawie */
+  repairSummary?: string
+  /** Koszt naprawy PLN — tylko właściciel w UI */
+  repairCostPln?: number
   completedAt?: string
   updatedAt: string
 }

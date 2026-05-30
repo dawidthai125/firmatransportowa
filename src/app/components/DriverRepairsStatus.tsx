@@ -1,3 +1,4 @@
+import { RepairWorkDetails } from '@/app/components/repairs/RepairWorkDetails'
 import { Card, CardContent } from '@/app/components/ui/Card'
 import {
   REPAIR_STATUS_COLORS,
@@ -83,6 +84,7 @@ export function DriverRepairsStatus({ tenantId, driverName, compact }: DriverRep
             {r.mechanicName && r.status !== 'submitted' && (
               <p className="text-xs text-muted-foreground">Warsztat: {r.mechanicName}</p>
             )}
+            <RepairWorkDetails report={r} />
           </CardContent>
         </Card>
       ))}

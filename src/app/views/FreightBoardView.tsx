@@ -12,6 +12,7 @@ import {
 } from '@/lib/domain/freight-offer'
 import { searchFreightOffers } from '@/lib/domain/freight-board-store'
 import {
+  FREIGHT_CONNECTOR_META,
   importEmailLead,
   loadFreightConnectorConfig,
   saveFreightConnectorConfig,
@@ -97,8 +98,9 @@ export function FreightBoardView({ tenantId, onNavigateToCourses }: FreightBoard
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
-        Agregacja ofert: Trans.eu, TimoCom, Teleroute, 123cargo, Transporeon, e-mail i sieć partnerska.
-        Filtry odzwierciedlają typowe preferencje polskich firm TSL.
+        Agregacja ofert: Trans.eu, TimoCom, Teleroute, 123cargo, Transporeon, Wtransnet, B2PWeb,
+        Freightlink, e-mail i sieć partnerska. Filtry odzwierciedlają typowe preferencje polskich firm
+        TSL.
       </p>
 
       {courseCreated && (
@@ -118,45 +120,33 @@ export function FreightBoardView({ tenantId, onNavigateToCourses }: FreightBoard
         <CardHeader className="pb-2">
           <CardTitle className="text-base">Synchronizacja giełd (API)</CardTitle>
           <CardDescription>
-            Trans.eu + TimoCom — demo symuluje live feed; produkcja: klucze w Edge Function
+            8 platform frachtowych — demo symuluje live feed; produkcja: klucze API w Edge Function
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          <div className="flex flex-wrap gap-4 text-sm">
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={connectorCfg.transEuEnabled}
-                onChange={(e) => {
-                  const next = { ...connectorCfg, transEuEnabled: e.target.checked }
-                  saveFreightConnectorConfig(tenantId, next)
-                  setConnectorCfg(next)
-                }}
-              />
-              Trans.eu
-              {connectorCfg.lastSyncBySource.trans_eu && (
-                <span className="text-xs text-muted-foreground">
-                  · {new Date(connectorCfg.lastSyncBySource.trans_eu).toLocaleString('pl-PL')}
-                </span>
-              )}
-            </label>
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={connectorCfg.timocomEnabled}
-                onChange={(e) => {
-                  const next = { ...connectorCfg, timocomEnabled: e.target.checked }
-                  saveFreightConnectorConfig(tenantId, next)
-                  setConnectorCfg(next)
-                }}
-              />
-              TimoCom
-              {connectorCfg.lastSyncBySource.timocom && (
-                <span className="text-xs text-muted-foreground">
-                  · {new Date(connectorCfg.lastSyncBySource.timocom).toLocaleString('pl-PL')}
-                </span>
-              )}
-            </label>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {FREIGHT_CONNECTOR_META.map((meta) => (
+              <label
+                key={meta.key}
+                className="flex flex-wrap items-center gap-2 rounded-lg border border-border/60 bg-muted/20 px-3 py-2 text-sm"
+              >
+                <input
+                  type="checkbox"
+                  checked={connectorCfg[meta.configKey]}
+                  onChange={(e) => {
+                    const next = { ...connectorCfg, [meta.configKey]: e.target.checked }
+                    saveFreightConnectorConfig(tenantId, next)
+                    setConnectorCfg(next)
+                  }}
+                />
+                <span className="font-medium">{meta.label}</span>
+                {connectorCfg.lastSyncBySource[meta.key] && (
+                  <span className="w-full text-xs text-muted-foreground sm:w-auto">
+                    · {new Date(connectorCfg.lastSyncBySource[meta.key]!).toLocaleString('pl-PL')}
+                  </span>
+                )}
+              </label>
+            ))}
           </div>
           <Button
             size="sm"

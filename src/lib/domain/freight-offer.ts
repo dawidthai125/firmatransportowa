@@ -5,6 +5,9 @@ export type FreightSource =
   | 'teleroute'
   | 'cargo123'
   | 'transporeon'
+  | 'wtransnet'
+  | 'b2pweb'
+  | 'freightlink'
   | 'email_lead'
   | 'partner_network'
   | 'internal_board'
@@ -69,6 +72,9 @@ export const FREIGHT_SOURCE_LABELS: Record<FreightSource, string> = {
   teleroute: 'Teleroute',
   cargo123: '123cargo',
   transporeon: 'Transporeon',
+  wtransnet: 'Wtransnet',
+  b2pweb: 'B2PWeb',
+  freightlink: 'Freightlink',
   email_lead: 'Lead e-mail',
   partner_network: 'Sieć partnerska',
   internal_board: 'Giełda wewnętrzna',

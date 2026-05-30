@@ -10,7 +10,8 @@ import type { DriverView, NavItem } from '@/lib/navigation'
 import { DRIVER_NAV } from '@/lib/navigation'
 import type { Tenant } from '@/lib/tenant/types'
 import { cn } from '@/lib/utils'
-import { TajskiTransMark } from '@/app/components/brand/TajskiTransLogo'
+import { TajskiTransHeaderBrand, TajskiTransMark } from '@/app/components/brand/TajskiTransLogo'
+import { isCompanyDeployment } from '@/config/branding'
 import { LogOut, ArrowLeft } from 'lucide-react'
 import type { ReactNode } from 'react'
 
@@ -47,11 +48,17 @@ export function DriverShell({
       <OfflineIndicator />
       <header className="relative z-30 flex shrink-0 items-center justify-between border-b border-border/80 bg-sidebar/95 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-md">
         <div className="flex min-w-0 items-center gap-3">
-          <TajskiTransMark className="ring-success/25" />
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold">{driverName}</p>
-            <p className="truncate text-xs text-muted-foreground">{tenant.name} · Kierowca</p>
-          </div>
+          {isCompanyDeployment() ? (
+            <TajskiTransHeaderBrand subtitle={driverName} />
+          ) : (
+            <>
+              <TajskiTransMark className="ring-success/25" />
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold">{driverName}</p>
+                <p className="truncate text-xs text-muted-foreground">{tenant.name} · Kierowca</p>
+              </div>
+            </>
+          )}
         </div>
         <div className="flex items-center gap-1">
           <DriverNotificationsBell

@@ -2,6 +2,7 @@ import { Button } from '@/app/components/ui/Button'
 import { Card, CardContent } from '@/app/components/ui/Card'
 import { Input, Label } from '@/app/components/ui/Input'
 import { RepairPhotoGallery } from '@/app/components/RepairPhotoGallery'
+import { RepairWorkDetails } from '@/app/components/repairs/RepairWorkDetails'
 import {
   REPAIR_SEVERITY_LABELS,
   REPAIR_STATUS_COLORS,
@@ -9,16 +10,19 @@ import {
   type RepairReport,
 } from '@/lib/domain/repair-report'
 import {
+  filterMechanicReports,
   loadRepairReports,
   mechanicCompleteRepair,
   mechanicMarkInRepair,
   mechanicRequestDriverContact,
+  mechanicSaveRepairWork,
   mechanicScheduleRepair,
   seedDemoRepairReports,
+  type MechanicRepairWorkInput,
 } from '@/lib/domain/repair-reports-store'
 import { useCloudSyncRefresh } from '@/lib/sync/useCloudSyncRefresh'
 import { cn } from '@/lib/utils'
-import { Calendar, MessageCircle, Phone, Wrench } from 'lucide-react'
+import { Calendar, MessageCircle, Phone, Save, Wrench } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 
 interface MechanicRepairsViewProps {
@@ -27,21 +31,46 @@ interface MechanicRepairsViewProps {
   mechanicName: string
 }
 
+function workFromReport(r: RepairReport): MechanicRepairWorkInput {
+  return {
+    diagnosis: r.diagnosis ?? '',
+    partsReplaced: r.partsReplaced ?? '',
+    repairSummary: r.repairSummary ?? '',
+    repairCostPln: r.repairCostPln,
+  }
+}
+
 export function MechanicRepairsView({ tenantId, mechanicId, mechanicName }: MechanicRepairsViewProps) {
   const [reports, setReports] = useState<RepairReport[]>([])
   const [selected, setSelected] = useState<RepairReport | null>(null)
   const [scheduleDate, setScheduleDate] = useState('')
   const [scheduleTime, setScheduleTime] = useState('09:00')
   const [contactMsg, setContactMsg] = useState('')
-  const [notes, setNotes] = useState('')
+  const [scheduleNotes, setScheduleNotes] = useState('')
+  const [work, setWork] = useState<MechanicRepairWorkInput>({
+    diagnosis: '',
+    partsReplaced: '',
+    repairSummary: '',
+    repairCostPln: undefined,
+  })
+
+  const applyList = useCallback(
+    (all: RepairReport[], keepSelectedId?: string) => {
+      const mine = filterMechanicReports(all, mechanicId)
+      setReports(mine)
+      if (keepSelectedId) {
+        setSelected(mine.find((r) => r.id === keepSelectedId) ?? null)
+      }
+    },
+    [mechanicId],
+  )
 
   const refresh = useCallback(() => {
     seedDemoRepairReports(tenantId)
     const all = loadRepairReports(tenantId)
-    const mine = all.filter(
-      (r) => r.mechanicId === mechanicId && !['submitted', 'rejected'].includes(r.status),
-    )
+    const mine = filterMechanicReports(all, mechanicId)
     setReports(mine)
+    setSelected((prev) => (prev ? mine.find((r) => r.id === prev.id) ?? null : null))
   }, [tenantId, mechanicId])
 
   useEffect(() => {
@@ -50,33 +79,77 @@ export function MechanicRepairsView({ tenantId, mechanicId, mechanicName }: Mech
 
   useCloudSyncRefresh(tenantId, 'repair-reports', refresh)
 
-  const active = reports.filter((r) => !['completed', 'rejected'].includes(r.status))
+  useEffect(() => {
+    if (selected) {
+      setWork(workFromReport(selected))
+      if (selected.scheduledRepairAt) {
+        const d = new Date(selected.scheduledRepairAt)
+        setScheduleDate(d.toISOString().slice(0, 10))
+        setScheduleTime(d.toISOString().slice(11, 16))
+      }
+    }
+  }, [selected?.id, selected?.updatedAt])
+
+  const active = reports.filter((r) => !['completed'].includes(r.status))
+
+  function runUpdate(fn: () => RepairReport[], selectedId: string) {
+    const all = fn()
+    applyList(all, selectedId)
+  }
 
   function handleSchedule() {
     if (!selected || !scheduleDate) return
     const iso = `${scheduleDate}T${scheduleTime}:00`
-    setReports(mechanicScheduleRepair(tenantId, selected.id, iso, notes || undefined))
-    setSelected(null)
+    runUpdate(
+      () => mechanicScheduleRepair(tenantId, selected.id, iso, scheduleNotes || undefined),
+      selected.id,
+    )
   }
 
   function handleContact() {
     if (!selected || !contactMsg.trim()) return
-    setReports(mechanicRequestDriverContact(tenantId, selected.id, contactMsg.trim()))
-    setSelected(null)
+    runUpdate(() => mechanicRequestDriverContact(tenantId, selected.id, contactMsg.trim()), selected.id)
     setContactMsg('')
   }
+
+  function handleSaveWork() {
+    if (!selected) return
+    runUpdate(() => mechanicSaveRepairWork(tenantId, selected.id, work), selected.id)
+  }
+
+  function handleInRepair() {
+    if (!selected) return
+    runUpdate(() => mechanicMarkInRepair(tenantId, selected.id, work), selected.id)
+  }
+
+  function handleComplete() {
+    if (!selected) return
+    runUpdate(() => mechanicCompleteRepair(tenantId, selected.id, work), selected.id)
+  }
+
+  const canEditWork =
+    selected &&
+    ['at_mechanic', 'scheduled', 'awaiting_driver', 'in_repair'].includes(selected.status)
 
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
-        {mechanicName} · {active.length} aktywnych zleceń · ustal termin lub skontaktuj się z kierowcą
+        {mechanicName} · {active.length} aktywnych zleceń · opis naprawy widzą kierowca i biuro
       </p>
+
+      {!mechanicId && (
+        <Card className="border-warning/40">
+          <CardContent className="p-3 text-sm text-warning">
+            Brak powiązania z kartoteką mechanika — wyloguj się i zaloguj ponownie jako mechanik.
+          </CardContent>
+        </Card>
+      )}
 
       <div className="space-y-2">
         {reports.length === 0 ? (
           <Card>
             <CardContent className="p-6 text-center text-sm text-muted-foreground">
-              Brak przypisanych zgłoszeń
+              Brak przypisanych zgłoszeń — dyspozytor musi zweryfikować awarię i wysłać do warsztatu.
             </CardContent>
           </Card>
         ) : (
@@ -89,10 +162,16 @@ export function MechanicRepairsView({ tenantId, mechanicId, mechanicName }: Mech
               <CardContent className="flex flex-wrap items-center gap-3 p-4">
                 <Wrench className="h-5 w-5 text-primary" />
                 <div className="min-w-0 flex-1">
-                  <p className="font-medium">{r.reference} · {r.vehicleRegistration}</p>
-                  <p className="text-sm text-muted-foreground">{r.title} · {r.driverName}</p>
+                  <p className="font-medium">
+                    {r.reference} · {r.vehicleRegistration}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {r.title} · {r.driverName}
+                  </p>
                 </div>
-                <span className={cn('rounded-full px-2 py-0.5 text-xs font-medium', REPAIR_STATUS_COLORS[r.status])}>
+                <span
+                  className={cn('rounded-full px-2 py-0.5 text-xs font-medium', REPAIR_STATUS_COLORS[r.status])}
+                >
                   {REPAIR_STATUS_LABELS[r.status]}
                 </span>
               </CardContent>
@@ -119,6 +198,78 @@ export function MechanicRepairsView({ tenantId, mechanicId, mechanicName }: Mech
             </div>
             <RepairPhotoGallery photos={selected.photos} />
 
+            {selected.status === 'completed' && (
+              <RepairWorkDetails report={selected} showCost={false} />
+            )}
+
+            {canEditWork && (
+              <div className="space-y-3 border-t border-border pt-4">
+                <p className="text-sm font-medium">Opis naprawy (widoczny dla kierowcy i biura)</p>
+                <div className="space-y-2">
+                  <Label htmlFor="repair-diagnosis">Co było zepsute / diagnoza</Label>
+                  <textarea
+                    id="repair-diagnosis"
+                    className="min-h-[72px] w-full rounded-lg border border-border bg-background p-3 text-sm"
+                    value={work.diagnosis ?? ''}
+                    onChange={(e) => setWork((w) => ({ ...w, diagnosis: e.target.value }))}
+                    placeholder="Np. uszkodzona sprzęgło, wyciek oleju ze skrzyni"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="repair-parts">Wymienione części</Label>
+                  <textarea
+                    id="repair-parts"
+                    className="min-h-[60px] w-full rounded-lg border border-border bg-background p-3 text-sm"
+                    value={work.partsReplaced ?? ''}
+                    onChange={(e) => setWork((w) => ({ ...w, partsReplaced: e.target.value }))}
+                    placeholder="Np. tarcza sprzęgła, łożysko wału, filtr oleju"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="repair-summary">Wykonane prace</Label>
+                  <textarea
+                    id="repair-summary"
+                    className="min-h-[72px] w-full rounded-lg border border-border bg-background p-3 text-sm"
+                    value={work.repairSummary ?? ''}
+                    onChange={(e) => setWork((w) => ({ ...w, repairSummary: e.target.value }))}
+                    placeholder="Krótki opis naprawy po zakończeniu"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="repair-cost">Koszt naprawy (zł) — tylko właściciel zobaczy w biurze</Label>
+                  <Input
+                    id="repair-cost"
+                    type="number"
+                    min={0}
+                    step={0.01}
+                    value={work.repairCostPln ?? ''}
+                    onChange={(e) =>
+                      setWork((w) => ({
+                        ...w,
+                        repairCostPln: e.target.value === '' ? undefined : Number(e.target.value),
+                      }))
+                    }
+                    placeholder="Np. 4200"
+                  />
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  <Button type="button" variant="secondary" className="gap-1.5" onClick={handleSaveWork}>
+                    <Save className="h-4 w-4" />
+                    Zapisz opis
+                  </Button>
+                  {selected.status !== 'in_repair' && (
+                    <Button type="button" className="gap-1.5" onClick={handleInRepair}>
+                      W trakcie naprawy
+                    </Button>
+                  )}
+                  <Button type="button" variant="default" className="gap-1.5 bg-success hover:bg-success/90" onClick={handleComplete}>
+                    Naprawiony
+                  </Button>
+                </div>
+              </div>
+            )}
+
             {['at_mechanic', 'awaiting_driver'].includes(selected.status) && (
               <div className="space-y-4 border-t border-border pt-4">
                 <div>
@@ -132,9 +283,9 @@ export function MechanicRepairsView({ tenantId, mechanicId, mechanicName }: Mech
                   </div>
                   <Input
                     className="mt-2"
-                    placeholder="Notatka (np. części do zamówienia)"
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="Notatka wewnętrzna (np. części do zamówienia)"
+                    value={scheduleNotes}
+                    onChange={(e) => setScheduleNotes(e.target.value)}
                   />
                   <Button className="mt-2 w-full" onClick={handleSchedule}>
                     Zapisz termin
@@ -158,23 +309,6 @@ export function MechanicRepairsView({ tenantId, mechanicId, mechanicName }: Mech
                 </div>
               </div>
             )}
-
-            {selected.status === 'scheduled' && (
-              <div className="flex flex-wrap gap-2 border-t border-border pt-4">
-                <Button onClick={() => setReports(mechanicMarkInRepair(tenantId, selected.id))}>
-                  Rozpoczęto naprawę
-                </Button>
-                <Button variant="secondary" onClick={() => setReports(mechanicCompleteRepair(tenantId, selected.id))}>
-                  Naprawa zakończona
-                </Button>
-              </div>
-            )}
-
-            {selected.status === 'in_repair' && (
-              <Button className="w-full" onClick={() => setReports(mechanicCompleteRepair(tenantId, selected.id))}>
-                Oznacz jako zakończone
-              </Button>
-            )}
           </CardContent>
         </Card>
       )}
@@ -182,6 +316,6 @@ export function MechanicRepairsView({ tenantId, mechanicId, mechanicName }: Mech
   )
 }
 
-export function MechanicHomeView({ tenantId, mechanicId, mechanicName }: MechanicRepairsViewProps) {
-  return <MechanicRepairsView tenantId={tenantId} mechanicId={mechanicId} mechanicName={mechanicName} />
+export function MechanicHomeView(props: MechanicRepairsViewProps) {
+  return <MechanicRepairsView {...props} />
 }

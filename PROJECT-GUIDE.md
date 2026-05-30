@@ -21,9 +21,12 @@ Model biznesowy: **SaaS multi-tenant** — każda firma to osobny tenant (abonam
 
 | Rola | Shell | Widoki |
 |------|-------|--------|
-| `owner` | AdminShell | Pulpit, Kursy, Flota, Kierowcy, Zgodność, Firma |
-| `dispatcher` | AdminShell | Pulpit, Kursy, Flota, Kierowcy |
-| `driver` | DriverShell | Start, Kursy, Raport, Profil |
+| `owner` | AdminShell | Pulpit, **Funkcje**, Kursy, Giełda, Flota, … |
+| `dispatcher` | AdminShell | Pulpit, **Funkcje**, Kursy, Giełda, Flota, … |
+| `driver` | DriverShell | Start, Kursy, Raport, Awaria, ITD, Profil |
+| `mechanic` | MechanicShell | Naprawy |
+
+**Katalog wszystkich funkcji:** `src/lib/catalog/app-features.ts` + zakładka admin **Funkcje** + `docs/SYSTEM-OVERVIEW.md`
 
 ---
 

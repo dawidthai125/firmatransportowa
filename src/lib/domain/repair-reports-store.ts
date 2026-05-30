@@ -14,6 +14,14 @@ export function loadRepairReportsForDriver(tenantId: string, driverName: string)
   return loadRepairReports(tenantId).filter((r) => r.driverName.trim().toLowerCase() === key)
 }
 
+/** Zlecenia przypisane do mechanika (bez oczekujących weryfikacji) */
+export function filterMechanicReports(reports: RepairReport[], mechanicId?: string): RepairReport[] {
+  if (!mechanicId) return []
+  return reports.filter(
+    (r) => r.mechanicId === mechanicId && !['submitted', 'rejected'].includes(r.status),
+  )
+}
+
 export function saveRepairReports(tenantId: string, reports: RepairReport[]): void {
   writeTenantData(tenantId, 'repair-reports', reports)
 }
@@ -161,22 +169,66 @@ export function mechanicRequestDriverContact(
   return next
 }
 
-export function mechanicMarkInRepair(tenantId: string, reportId: string): RepairReport[] {
+export interface MechanicRepairWorkInput {
+  diagnosis?: string
+  partsReplaced?: string
+  repairSummary?: string
+  /** Tylko właściciel widzi w panelu — mechanik może wpisać */
+  repairCostPln?: number
+}
+
+function applyMechanicWork(report: RepairReport, work: MechanicRepairWorkInput): RepairReport {
+  const cost =
+    work.repairCostPln != null && !Number.isNaN(work.repairCostPln)
+      ? Math.max(0, work.repairCostPln)
+      : undefined
+  return {
+    ...report,
+    diagnosis: work.diagnosis?.trim() || report.diagnosis,
+    partsReplaced: work.partsReplaced?.trim() || report.partsReplaced,
+    repairSummary: work.repairSummary?.trim() || report.repairSummary,
+    repairCostPln: cost ?? report.repairCostPln,
+    updatedAt: new Date().toISOString(),
+  }
+}
+
+/** Zapis opisu naprawy bez zmiany statusu */
+export function mechanicSaveRepairWork(
+  tenantId: string,
+  reportId: string,
+  work: MechanicRepairWorkInput,
+): RepairReport[] {
   const report = loadRepairReports(tenantId).find((r) => r.id === reportId)
   if (!report) return loadRepairReports(tenantId)
+  return upsertRepairReport(tenantId, applyMechanicWork(report, work))
+}
+
+export function mechanicMarkInRepair(
+  tenantId: string,
+  reportId: string,
+  work?: MechanicRepairWorkInput,
+): RepairReport[] {
+  const report = loadRepairReports(tenantId).find((r) => r.id === reportId)
+  if (!report) return loadRepairReports(tenantId)
+  const base = work ? applyMechanicWork(report, work) : report
   return upsertRepairReport(tenantId, {
-    ...report,
+    ...base,
     status: 'in_repair',
     updatedAt: new Date().toISOString(),
   })
 }
 
-export function mechanicCompleteRepair(tenantId: string, reportId: string): RepairReport[] {
+export function mechanicCompleteRepair(
+  tenantId: string,
+  reportId: string,
+  work?: MechanicRepairWorkInput,
+): RepairReport[] {
   const report = loadRepairReports(tenantId).find((r) => r.id === reportId)
   if (!report) return loadRepairReports(tenantId)
   const now = new Date().toISOString()
+  const base = work ? applyMechanicWork(report, work) : report
   const updated = {
-    ...report,
+    ...base,
     status: 'completed' as const,
     completedAt: now,
     updatedAt: now,

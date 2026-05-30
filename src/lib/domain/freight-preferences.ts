@@ -44,7 +44,18 @@ export interface FreightSearchPreferences {
 }
 
 export const DEFAULT_FREIGHT_PREFERENCES: Omit<FreightSearchPreferences, 'updatedAt'> = {
-  sources: ['trans_eu', 'timocom', 'teleroute', 'cargo123', 'email_lead', 'partner_network'],
+  sources: [
+    'trans_eu',
+    'timocom',
+    'teleroute',
+    'cargo123',
+    'transporeon',
+    'wtransnet',
+    'b2pweb',
+    'freightlink',
+    'email_lead',
+    'partner_network',
+  ],
   scopes: ['domestic', 'international_eu'],
   bodyTypes: ['curtain', 'box'],
   loadTypes: ['ftl', 'ltl'],

@@ -83,3 +83,26 @@ export function TajskiTransMark({ className }: { className?: string }) {
     />
   )
 }
+
+/** Logo + nazwa firmy w nagłówku panelu (mobile i desktop) */
+export function TajskiTransHeaderBrand({
+  className,
+  subtitle,
+}: {
+  className?: string
+  subtitle?: string
+}) {
+  return (
+    <div className={cn('flex min-w-0 items-center gap-2.5', className)}>
+      <TajskiTransMark className="h-9 w-9 shrink-0 rounded-lg" />
+      <div className="min-w-0 leading-tight">
+        <p className="truncate text-sm font-bold tracking-tight text-foreground">Tajski-Trans</p>
+        {subtitle ? (
+          <p className="truncate text-[10px] text-muted-foreground">{subtitle}</p>
+        ) : (
+          <p className="truncate text-[10px] text-muted-foreground">Transport · TSL</p>
+        )}
+      </div>
+    </div>
+  )
+}
