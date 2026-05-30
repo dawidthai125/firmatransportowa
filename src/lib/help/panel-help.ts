@@ -309,6 +309,12 @@ function driverHelp(view: DriverView): PanelHelpContent {
       summary: 'Twój aktywny kurs, szybkie akcje i status awarii.',
       steps: [
         {
+          title: 'Zainstaluj aplikację (telefon)',
+          description:
+            'Dodaj skrót na ekran główny — szybszy dostęp z kabiny bez wpisywania adresu w przeglądarce.',
+          action: 'Baner „Zainstaluj aplikację” u góry lub Safari → Udostępnij → Dodaj do ekranu początkowego',
+        },
+        {
           title: 'Sprawdź aktywny kurs',
           description: 'Karta u góry — trasa, status, numer zlecenia.',
           action: 'Karta kursu na pulpicie',

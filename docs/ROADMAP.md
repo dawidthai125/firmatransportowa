@@ -36,7 +36,7 @@
 - [x] Portal kafelkowy + motyw transportowy TSL
 - [x] Powiadomienia automatyzacji dla całego flow awarii
 - [x] Kierowca widzi status swoich zgłoszeń
-- [ ] PWA + instalacja na telefon
+- [x] PWA + instalacja na telefon (v0.9.1)
 - [ ] GPS / ETA (mapa floty)
 
 ## 🔜 v0.9 — Integracje branżowe

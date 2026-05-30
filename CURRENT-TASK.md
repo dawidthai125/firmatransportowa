@@ -1,24 +1,26 @@
-# CURRENT-TASK — TransFlow
+# CURRENT-TASK — TransFlow / Tajski-Trans
 
-**Ostatnia sesja:** 2026-05-30 · **v0.8.2**
+**Ostatnia sesja:** 2026-05-30 · **v0.9.1**
 
 ## Skończone ✅
 
-- [x] v0.8.1 — spójność modułu awarii, status u kierowcy
-- [x] **v0.8.2 — Bezpieczny sync wielu użytkowników:**
-  - Merge LWW per rekord (`updatedAt`) — kierowcy, kursy, awarie, flota
-  - Push read-modify-write (pobierz chmurę → scal → zapisz)
-  - Pull nigdy nie nadpisuje ślepo lokalnych danych
-  - Envelope `{ v, updatedAt, payload }` w localStorage/KV
-  - Pull przy powrocie do karty (visibility)
-  - UI odświeża się po merge (`useCloudSyncRefresh`)
+- [x] v0.8.4 — branding Tajski-Trans (tryb company, ukryty SaaS)
+- [x] v0.8.5 — naprawa zdjęć tła portalu
+- [x] v0.9.0 — asystent pomocy w każdym panelu (`panel-help.ts`)
+- [x] **v0.9.1 — PWA dla kierowcy:**
+  - Manifest + ikony (192/512, maskable, apple-touch)
+  - Service worker (Workbox, cache assetów + Unsplash + Supabase network-first)
+  - Baner instalacji (Android + instrukcja iOS Safari)
+  - Wskaźnik offline w panelu kierowcy
+  - Auto-update SW w produkcji
 
-## Następne kroki
+## Następne kroki (plan)
 
-1. PWA na telefon kierowcy
-2. Supabase Auth + RLS
-3. GPS / mapa floty
+1. **Supabase Auth + RLS** — prawdziwe logowanie zamiast demo
+2. **GPS / mapa floty** — lokalizacja pojazdów na pulpicie
+3. v1.0 — portal sprzedaży abonamentów (tryb `saas`)
 
-## Sync — zasada
+## Zasady
 
-Wielu adminów/kierowców/mechaników: **najświeższy rekord wygrywa**, nie cały plik z jednej przeglądarki.
+- **Nowa funkcja** → uzupełnij `src/lib/help/panel-help.ts`
+- **Sync:** najświeższy rekord wygrywa (LWW), nie cały plik z jednej przeglądarki

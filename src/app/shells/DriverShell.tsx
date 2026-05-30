@@ -1,5 +1,7 @@
 import { AppNav } from '@/app/components/AppNav'
 import { HelpButton } from '@/app/components/help/HelpButton'
+import { InstallAppBanner } from '@/app/components/pwa/InstallAppBanner'
+import { OfflineIndicator } from '@/app/components/pwa/OfflineIndicator'
 import { PanelThemeBanner } from '@/app/components/transport/PanelThemeBanner'
 import { Button } from '@/app/components/ui/Button'
 import type { DriverView } from '@/lib/navigation'
@@ -36,6 +38,7 @@ export function DriverShell({
 }: DriverShellProps) {
   return (
     <div className="app-shell bg-background">
+      <OfflineIndicator />
       <header className="flex shrink-0 items-center justify-between border-b border-border/80 bg-sidebar/95 px-4 py-3 backdrop-blur-md">
         <div className="flex min-w-0 items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-success/30 to-success/10 text-success ring-1 ring-success/25">
@@ -55,6 +58,7 @@ export function DriverShell({
       </header>
 
       <main className={cn('scroll-area flex-1 p-4')}>
+        <InstallAppBanner />
         <PanelThemeBanner
           role="driver"
           title={DRIVER_VIEW_TITLES[view]}
