@@ -15,8 +15,7 @@ import { storePreviewableFile } from '@/lib/files/files-store'
 import type { AutomationActionType } from '@/lib/automation/rules'
 import type { AutomationEvent } from '@/lib/automation/events'
 import { pushNotification } from '@/lib/automation/notifications-store'
-import { pushKeyNow } from '@/lib/cloud-sync'
-import { tenantStorageKey } from '@/lib/tenant/types'
+import { pushTenantKeysNow } from '@/lib/cloud-sync'
 
 export interface ActionContext {
   tenantId: string
@@ -115,10 +114,7 @@ async function actionSaveWeeklyCsv(ctx: ActionContext): Promise<void> {
 }
 
 async function actionFlushSync(ctx: ActionContext): Promise<void> {
-  const keys = ['daily-reports', 'courses', 'files'] as const
-  for (const k of keys) {
-    await pushKeyNow(tenantStorageKey(ctx.tenantId, k))
-  }
+  await pushTenantKeysNow(ctx.tenantId, ['daily-reports', 'courses', 'files'])
 }
 
 export function runComplianceCheckNotifications(ctx: ActionContext): void {

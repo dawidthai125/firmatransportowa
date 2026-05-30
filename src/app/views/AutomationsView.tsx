@@ -19,6 +19,7 @@ interface AutomationsViewProps {
 export function AutomationsView({ tenantId, tenantSlug, tenantName }: AutomationsViewProps) {
   const [rules, setRules] = useState<AutomationRule[]>([])
   const [running, setRunning] = useState(false)
+  const [runError, setRunError] = useState<string | null>(null)
 
   const refresh = useCallback(() => {
     setRules(loadAutomationSettings(tenantId).rules)
@@ -34,11 +35,14 @@ export function AutomationsView({ tenantId, tenantSlug, tenantName }: Automation
 
   async function runNow() {
     setRunning(true)
+    setRunError(null)
     try {
       const settings = loadAutomationSettings(tenantId)
       saveAutomationSettings(tenantId, { ...settings, lastDailyRun: undefined, lastWeeklyRun: undefined })
       await runScheduledAutomations({ tenantId, tenantSlug, tenantName })
       refresh()
+    } catch (e) {
+      setRunError(e instanceof Error ? e.message : 'Błąd harmonogramu lub sync chmury')
     } finally {
       setRunning(false)
     }
@@ -65,6 +69,12 @@ export function AutomationsView({ tenantId, tenantSlug, tenantName }: Automation
           {running ? 'Uruchamiam…' : 'Uruchom harmonogram teraz'}
         </button>
       </div>
+
+      {runError && (
+        <p className="rounded-lg border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">
+          {runError}
+        </p>
+      )}
 
       <Card>
         <CardHeader>

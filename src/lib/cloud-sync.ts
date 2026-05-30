@@ -8,6 +8,7 @@ import {
   TENANT_DATA_KEYS,
   tenantStorageKey,
   tenantsRegistryKey,
+  type TenantDataKey,
 } from '@/lib/tenant/types'
 import {
   loadTenantsRegistry,
@@ -194,7 +195,59 @@ export function scheduleCloudPush(storageKey: string): void {
   if (!isSupabaseConfigured()) return
   pendingPushKeys.add(storageKey)
   if (pushTimer) clearTimeout(pushTimer)
-  pushTimer = setTimeout(flushCloudPush, 2000)
+  pushTimer = setTimeout(() => {
+    void flushCloudPush()
+  }, 2000)
+}
+
+/** Wymuś push oczekujących kluczy (np. po automatyzacji / harmonogramie) */
+export async function flushCloudPushNow(): Promise<void> {
+  if (pushTimer) {
+    clearTimeout(pushTimer)
+    pushTimer = null
+  }
+  await flushCloudPush()
+}
+
+/** Czekaj aż bieżąca operacja sync (pull/push) się zakończy */
+export async function awaitCloudSyncIdle(): Promise<void> {
+  await syncChain
+}
+
+/** Push wielu kluczy jednego tenanta w jednej transakcji sync */
+export async function pushTenantKeysNow(tenantId: string, dataKeys: TenantDataKey[]): Promise<void> {
+  if (!isSupabaseConfigured()) return
+  const keys = dataKeys.map((k) => tenantStorageKey(tenantId, k))
+  return withSyncLock(async () => {
+    setStatus('syncing')
+    try {
+      const cloudValues = await batchGet(keys)
+      const entries: { key: string; value: unknown }[] = []
+
+      for (let i = 0; i < keys.length; i++) {
+        const key = keys[i]
+        const localRaw = readRawStorageEntry(key)
+        if (localRaw == null) continue
+
+        const parsed = parseTenantStorageKey(key)
+        if (!parsed) {
+          entries.push({ key, value: localRaw })
+          continue
+        }
+
+        const merged = mergeSyncEnvelopes(parsed.dataKey, localRaw, cloudValues[i], null)
+        writeTenantDataEnvelope(key, merged)
+        entries.push({ key, value: merged })
+      }
+
+      if (entries.length > 0) await batchSet(entries)
+      setStatus('ok')
+    } catch (e) {
+      console.error('[TransFlow] push tenant keys failed', e)
+      setStatus('error', e instanceof Error ? e.message : 'Push error')
+      throw e
+    }
+  })
 }
 
 /** Push z read-modify-write — pobiera chmurę, scala, dopiero wtedy zapisuje */
@@ -216,18 +269,24 @@ async function flushCloudPush(): Promise<void> {
         const localRaw = readRawStorageEntry(key)
         if (localRaw == null) continue
 
-        const parsed = parseTenantStorageKey(key)
-        if (!parsed) {
+        try {
+          const parsed = parseTenantStorageKey(key)
+          if (!parsed) {
+            entries.push({ key, value: localRaw })
+            mergedKeys.push(key)
+            continue
+          }
+
+          const prevJson = JSON.stringify(localRaw)
+          const merged = mergeSyncEnvelopes(parsed.dataKey, localRaw, cloudValues[i], null)
+          writeTenantDataEnvelope(key, merged)
+          entries.push({ key, value: merged })
+          if (JSON.stringify(merged) !== prevJson) mergedKeys.push(key)
+        } catch (mergeErr) {
+          console.error('[TransFlow] merge failed for', key, mergeErr)
           entries.push({ key, value: localRaw })
           mergedKeys.push(key)
-          continue
         }
-
-        const prevJson = JSON.stringify(localRaw)
-        const merged = mergeSyncEnvelopes(parsed.dataKey, localRaw, cloudValues[i], null)
-        writeTenantDataEnvelope(key, merged)
-        entries.push({ key, value: merged })
-        if (JSON.stringify(merged) !== prevJson) mergedKeys.push(key)
       }
 
       if (entries.length > 0) await batchSet(entries)
@@ -245,19 +304,28 @@ export async function pushKeyNow(storageKey: string): Promise<void> {
   if (!isSupabaseConfigured()) return
 
   return withSyncLock(async () => {
-    const localRaw = readRawStorageEntry(storageKey)
-    if (localRaw == null) return
+    setStatus('syncing')
+    try {
+      const localRaw = readRawStorageEntry(storageKey)
+      if (localRaw == null) return
 
-    const parsed = parseTenantStorageKey(storageKey)
-    if (!parsed) {
-      await batchSet([{ key: storageKey, value: localRaw }])
-      return
+      const parsed = parseTenantStorageKey(storageKey)
+      if (!parsed) {
+        await batchSet([{ key: storageKey, value: localRaw }])
+        setStatus('ok')
+        return
+      }
+
+      const [cloudVal] = await batchGet([storageKey])
+      const merged = mergeSyncEnvelopes(parsed.dataKey, localRaw, cloudVal, null)
+      writeTenantDataEnvelope(storageKey, merged)
+      await batchSet([{ key: storageKey, value: merged }])
+      setStatus('ok')
+    } catch (e) {
+      console.error('[TransFlow] pushKeyNow failed', storageKey, e)
+      setStatus('error', e instanceof Error ? e.message : 'Push error')
+      throw e
     }
-
-    const [cloudVal] = await batchGet([storageKey])
-    const merged = mergeSyncEnvelopes(parsed.dataKey, localRaw, cloudVal, null)
-    writeTenantDataEnvelope(storageKey, merged)
-    await batchSet([{ key: storageKey, value: merged }])
   })
 }
 

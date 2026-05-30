@@ -1,6 +1,7 @@
 import { createAutomationEvent } from '@/lib/automation/events'
 import { emitAutomationEvent } from '@/lib/automation/engine'
 import { loadAutomationSettings, saveAutomationSettings } from '@/lib/automation/rules'
+import { flushCloudPushNow } from '@/lib/cloud-sync'
 
 function todayIso(): string {
   return new Date().toISOString().slice(0, 10)
@@ -43,4 +44,6 @@ export async function runScheduledAutomations(ctx: {
       lastWeeklyRun: weekStart,
     })
   }
+
+  await flushCloudPushNow()
 }

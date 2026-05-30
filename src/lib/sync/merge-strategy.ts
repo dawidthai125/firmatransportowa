@@ -61,15 +61,21 @@ function mergeAutomationSettings(
   cloudAt: string,
 ): AutomationSettings {
   const preferLocal = Date.parse(localAt) >= Date.parse(cloudAt)
-  const first = preferLocal ? local : cloud
-  const second = preferLocal ? cloud : local
+  const localSafe: AutomationSettings = { ...local, rules: local.rules ?? [] }
+  const cloudSafe: AutomationSettings = { ...cloud, rules: cloud.rules ?? [] }
+  const first = preferLocal ? localSafe : cloudSafe
+  const second = preferLocal ? cloudSafe : localSafe
   const rulesMap = new Map<string, AutomationRule>()
   for (const r of first.rules) rulesMap.set(r.id, r)
   for (const r of second.rules) rulesMap.set(r.id, r)
   return {
     rules: [...rulesMap.values()],
-    lastDailyRun: maxIso(local.lastDailyRun, cloud.lastDailyRun),
-    lastWeeklyRun: maxIso(local.lastWeeklyRun, cloud.lastWeeklyRun),
+    lastDailyRun: preferLocal
+      ? localSafe.lastDailyRun
+      : maxIso(localSafe.lastDailyRun, cloudSafe.lastDailyRun),
+    lastWeeklyRun: preferLocal
+      ? localSafe.lastWeeklyRun
+      : maxIso(localSafe.lastWeeklyRun, cloudSafe.lastWeeklyRun),
   }
 }
 

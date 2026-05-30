@@ -72,7 +72,7 @@ const DEFAULT_RULES: AutomationRule[] = [
     description: 'W poniedziałek zapis CSV raportów do biblioteki Pliki',
     enabled: true,
     trigger: 'schedule.weekly',
-    actions: ['save_weekly_csv_to_library', 'push_notification'],
+    actions: ['save_weekly_csv_to_library', 'push_notification', 'flush_sync_now'],
   },
   {
     id: 'rule-repair-submitted',
