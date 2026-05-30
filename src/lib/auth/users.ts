@@ -5,31 +5,26 @@ export interface TenantUserRecord {
   email: string
   role: 'owner' | 'dispatcher' | 'driver' | 'mechanic'
   displayName: string
-  /** Powiązanie z kartoteką mechanika (role mechanic) */
   mechanicId?: string
-  /** PIN kierowcy (dev) — docelowo hash w Supabase */
   pin?: string
 }
 
-export const DEMO_TENANT_USERS: TenantUserRecord[] = [
+const BASE_USERS: Omit<TenantUserRecord, 'email'>[] = [
   {
     id: 'user-owner-demo',
     tenantId: 'tenant-demo-001',
-    email: 'wlasciciel@demo-trans.pl',
     role: 'owner',
-    displayName: 'Właściciel Demo',
+    displayName: 'Jan Tajski',
   },
   {
     id: 'user-dispatcher-demo',
     tenantId: 'tenant-demo-001',
-    email: 'dyspozytor@demo-trans.pl',
     role: 'dispatcher',
-    displayName: 'Dyspozytor Demo',
+    displayName: 'Anna Dyspozytor',
   },
   {
     id: 'user-driver-demo',
     tenantId: 'tenant-demo-001',
-    email: 'jan.kowalski@demo-trans.pl',
     role: 'driver',
     displayName: 'Jan Kowalski',
     pin: '1234',
@@ -37,11 +32,25 @@ export const DEMO_TENANT_USERS: TenantUserRecord[] = [
   {
     id: 'user-mechanic-demo',
     tenantId: 'tenant-demo-001',
-    email: 'mechanik@demo-trans.pl',
     role: 'mechanic',
     displayName: 'Tomasz Mechanik',
     mechanicId: 'mechanic-demo-001',
   },
+]
+
+function withEmails(domain: 'tajski-trans.pl' | 'demo-trans.pl'): TenantUserRecord[] {
+  const map: Record<string, string> = {
+    owner: `wlasciciel@${domain}`,
+    dispatcher: `dyspozytor@${domain}`,
+    driver: `jan.kowalski@${domain}`,
+    mechanic: `mechanik@${domain}`,
+  }
+  return BASE_USERS.map((u) => ({ ...u, email: map[u.role] }))
+}
+
+export const DEMO_TENANT_USERS: TenantUserRecord[] = [
+  ...withEmails('tajski-trans.pl'),
+  ...withEmails('demo-trans.pl'),
 ]
 
 export function findDemoUserByEmail(tenantId: string, email: string): TenantUserRecord | undefined {
@@ -51,7 +60,6 @@ export function findDemoUserByEmail(tenantId: string, email: string): TenantUser
   )
 }
 
-/** Dev: hasło demo dla wszystkich kont testowych */
 export const DEMO_PASSWORD = 'demo2026'
 
 export function validateDemoCredentials(

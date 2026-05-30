@@ -10,6 +10,7 @@ import {
   type CompanyDocumentType,
 } from '@/lib/domain/tenant-settings'
 import { EXPIRY_STATUS_COLORS, expiryStatus, formatExpiryDate } from '@/lib/domain/compliance'
+import { COMPANY_BRANDING, isCompanyDeployment } from '@/config/branding'
 import type { Tenant } from '@/lib/tenant/types'
 import { cn } from '@/lib/utils'
 import { Plus, Settings, Trash2 } from 'lucide-react'
@@ -111,34 +112,42 @@ export function SettingsView({ tenant }: SettingsViewProps) {
             <Settings className="h-5 w-5 text-primary" />
             {tenant.name}
           </CardTitle>
-          <CardDescription>Kod firmy: {tenant.slug}</CardDescription>
+          <CardDescription>
+            {isCompanyDeployment() ? COMPANY_BRANDING.region : `Kod firmy: ${tenant.slug}`}
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
           <div className="grid gap-2 sm:grid-cols-2">
-            <InfoRow label="Plan" value={tenant.plan} />
-            <InfoRow label="Status" value={tenant.status} />
+            {!isCompanyDeployment() && (
+              <>
+                <InfoRow label="Plan" value={tenant.plan} />
+                <InfoRow label="Status" value={tenant.status} />
+              </>
+            )}
             <InfoRow label="Zakres transportu" value={scopeLabel} />
             <InfoRow label="Waluta" value={settings.currency} />
             <InfoRow label="Strefa czasowa" value={settings.timezone} />
-            <InfoRow label="Tenant ID" value={tenant.id} />
+            {!isCompanyDeployment() && <InfoRow label="Tenant ID" value={tenant.id} />}
           </div>
 
-          <div className="pt-2">
-            <p className="mb-2 font-medium text-foreground">Aktywne moduły (abonament)</p>
-            <div className="flex flex-wrap gap-2">
-              {Object.entries(settings.modules).map(([key, enabled]) => (
-                <span
-                  key={key}
-                  className={cn(
-                    'rounded-full px-2.5 py-0.5 text-xs font-medium',
-                    enabled ? 'bg-success/15 text-success' : 'bg-muted text-muted-foreground',
-                  )}
-                >
-                  {key}
-                </span>
-              ))}
+          {!isCompanyDeployment() && (
+            <div className="pt-2">
+              <p className="mb-2 font-medium text-foreground">Aktywne moduły (abonament)</p>
+              <div className="flex flex-wrap gap-2">
+                {Object.entries(settings.modules).map(([key, enabled]) => (
+                  <span
+                    key={key}
+                    className={cn(
+                      'rounded-full px-2.5 py-0.5 text-xs font-medium',
+                      enabled ? 'bg-success/15 text-success' : 'bg-muted text-muted-foreground',
+                    )}
+                  >
+                    {key}
+                  </span>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </CardContent>
       </Card>
 

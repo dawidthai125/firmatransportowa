@@ -1,3 +1,4 @@
+import { getDisplayProductName } from '@/config/branding'
 import type { Course } from '@/lib/domain/course'
 import type { DailyReport } from '@/lib/domain/daily-report'
 import { dailyReportTotalCosts } from '@/lib/domain/daily-report'
@@ -103,8 +104,9 @@ export function buildSettlementPdfFile(
   summaries: DriverWeeklySummary[],
   weekStart: string,
 ): PreviewableFile {
+  const product = getDisplayProductName()
   const lines = [
-    `TransFlow — podsumowanie tygodnia`,
+    `${product} — podsumowanie tygodnia`,
     `Firma: ${tenantName}`,
     `Tydzień od: ${weekStart}`,
     `Wygenerowano: ${new Date().toLocaleString('pl-PL')}`,
@@ -133,11 +135,12 @@ export function buildSettlementHtmlFile(
   clientMargins: ClientMarginSummary[],
   weekStart: string,
 ): PreviewableFile {
+  const product = getDisplayProductName()
   const html = `<!DOCTYPE html>
 <html lang="pl">
 <head>
   <meta charset="utf-8"/>
-  <title>TransFlow — rozliczenie ${weekStart}</title>
+  <title>${product} — rozliczenie ${weekStart}</title>
   <style>
     body { font-family: system-ui, sans-serif; max-width: 900px; margin: 2rem auto; padding: 0 1rem; color: #111; }
     h1 { font-size: 1.25rem; }
@@ -148,7 +151,7 @@ export function buildSettlementHtmlFile(
   </style>
 </head>
 <body>
-  <h1>TransFlow — rozliczenie tygodnia</h1>
+  <h1>${product} — rozliczenie tygodnia</h1>
   <p><strong>${tenantName}</strong> · tydzień od ${weekStart}</p>
   <h2>Kierowcy</h2>
   <table>
@@ -168,7 +171,7 @@ export function buildSettlementHtmlFile(
       `).join('')}
     </tbody>
   </table>
-  <p style="color:#666;font-size:0.75rem">Wygenerowano ${new Date().toLocaleString('pl-PL')} · TransFlow</p>
+  <p style="color:#666;font-size:0.75rem">Wygenerowano ${new Date().toLocaleString('pl-PL')} · ${product}</p>
 </body>
 </html>`
 

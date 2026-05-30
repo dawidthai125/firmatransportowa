@@ -2,6 +2,7 @@ import { Button } from '@/app/components/ui/Button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/Card'
 import { Input, Label } from '@/app/components/ui/Input'
 import { TransportImageBg } from '@/app/components/transport/TransportImageBg'
+import { COMPANY_BRANDING, isCompanyDeployment } from '@/config/branding'
 import { DEMO_EMAIL_BY_ROLE, PORTAL_PANELS } from '@/lib/auth/portal-panels'
 import { DEMO_PASSWORD } from '@/lib/auth/users'
 import type { UserRole } from '@/lib/auth/session'
@@ -62,7 +63,9 @@ export function RoleAuthScreen({
         <div className="relative flex flex-1 flex-col justify-between p-10">
           <div className="flex items-center gap-2 text-foreground/90">
             <Truck className="h-6 w-6 text-primary" />
-            <span className="font-semibold">TransFlow</span>
+            <span className="font-semibold">
+              {isCompanyDeployment() ? COMPANY_BRANDING.shortName : 'TransFlow'}
+            </span>
           </div>
           <div>
             <p className="text-xs font-semibold uppercase tracking-widest text-foreground/60">

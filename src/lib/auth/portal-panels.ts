@@ -1,4 +1,5 @@
 import type { UserRole } from '@/lib/auth/session'
+import { isCompanyDeployment } from '@/config/branding'
 import { Headset, LayoutDashboard, Truck, Wrench, type LucideIcon } from 'lucide-react'
 
 export interface PortalPanel {
@@ -55,8 +56,16 @@ export const PORTAL_PANELS: PortalPanel[] = [
 ]
 
 export const DEMO_EMAIL_BY_ROLE: Record<UserRole, string> = {
-  owner: 'wlasciciel@demo-trans.pl',
-  dispatcher: 'dyspozytor@demo-trans.pl',
-  driver: 'jan.kowalski@demo-trans.pl',
-  mechanic: 'mechanik@demo-trans.pl',
+  owner: isCompanyDeployment() ? 'wlasciciel@tajski-trans.pl' : 'wlasciciel@demo-trans.pl',
+  dispatcher: isCompanyDeployment() ? 'dyspozytor@tajski-trans.pl' : 'dyspozytor@demo-trans.pl',
+  driver: isCompanyDeployment() ? 'jan.kowalski@tajski-trans.pl' : 'jan.kowalski@demo-trans.pl',
+  mechanic: isCompanyDeployment() ? 'mechanik@tajski-trans.pl' : 'mechanik@demo-trans.pl',
 }
+
+/** Stare adresy demo — nadal działają po rebrandingu */
+export const LEGACY_DEMO_EMAILS = [
+  'wlasciciel@demo-trans.pl',
+  'dyspozytor@demo-trans.pl',
+  'jan.kowalski@demo-trans.pl',
+  'mechanik@demo-trans.pl',
+] as const

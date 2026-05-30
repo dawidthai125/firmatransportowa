@@ -1,4 +1,5 @@
 import type { DatedDocument } from '@/lib/domain/compliance'
+import { isCompanyDeployment } from '@/config/branding'
 import { readTenantData, writeTenantData } from '@/lib/tenant/storage'
 
 export type CompanyDocumentType =
@@ -83,7 +84,7 @@ export function seedDemoCompanyDocuments(tenantId: string): TenantSettingsData {
             id: 'mechanic-demo-001',
             name: 'Tomasz Mechanik',
             phone: '+48 600 500 600',
-            email: 'mechanik@demo-trans.pl',
+            email: isCompanyDeployment() ? 'mechanik@tajski-trans.pl' : 'mechanik@demo-trans.pl',
             workshop: 'Warsztat Trans Serwis, Wrocław',
             active: true,
           },

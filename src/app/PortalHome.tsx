@@ -2,8 +2,19 @@ import { Button } from '@/app/components/ui/Button'
 import { Input, Label } from '@/app/components/ui/Input'
 import { PortalPanelTile } from '@/app/components/transport/PortalPanelTile'
 import { TransportImageBg } from '@/app/components/transport/TransportImageBg'
+import {
+  COMPANY_BRANDING,
+  getDisplayProductName,
+  isCompanyDeployment,
+} from '@/config/branding'
 import type { AuthSession } from '@/lib/auth/session'
 import { PORTAL_PANELS } from '@/lib/auth/portal-panels'
+import {
+  COMPANY_DRIVER_PROPS,
+  COMPANY_OWNER_PROPS,
+  companyPortalSubtitle,
+  COMPANY_PORTAL_TAGLINE,
+} from '@/lib/theme/company-messaging'
 import {
   DRIVER_VALUE_PROPS,
   OWNER_VALUE_PROPS,
@@ -21,6 +32,7 @@ import {
   CheckCircle2,
   Container,
   Globe2,
+  MapPin,
   Route,
   ShieldCheck,
   Truck,
@@ -52,6 +64,13 @@ export function PortalHome({
   onSelectPanel,
   onContinueSession,
 }: PortalHomeProps) {
+  const companyMode = isCompanyDeployment()
+  const ownerProps = companyMode ? COMPANY_OWNER_PROPS : OWNER_VALUE_PROPS
+  const driverProps = companyMode ? COMPANY_DRIVER_PROPS : DRIVER_VALUE_PROPS
+  const tagline = companyMode ? COMPANY_PORTAL_TAGLINE : PRODUCT_TAGLINE
+  const subtitle = companyMode ? companyPortalSubtitle() : PORTAL_SUBTITLE
+  const panelsEnabled = companyMode ? Boolean(tenant) : Boolean(tenant)
+
   return (
     <div className="relative min-h-full pb-8">
       <TransportImageBg
@@ -60,7 +79,6 @@ export function PortalHome({
         overlayClass="from-background via-background/92 to-background"
       />
 
-      {/* Hero */}
       <section className="relative overflow-hidden border-b border-border/60">
         <TransportImageBg
           src={TRANSPORT_PORT_IMAGE}
@@ -74,21 +92,36 @@ export function PortalHome({
         <div className="relative mx-auto max-w-6xl px-4 pb-10 pt-10 sm:pb-14 sm:pt-14">
           <div className="flex flex-col items-center text-center lg:items-start lg:text-left">
             <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-medium text-primary backdrop-blur-sm">
-              <Globe2 className="h-3.5 w-3.5" />
-              System dla polskich firm transportowych · TSL
+              {companyMode ? (
+                <>
+                  <MapPin className="h-3.5 w-3.5" />
+                  {COMPANY_BRANDING.region}
+                </>
+              ) : (
+                <>
+                  <Globe2 className="h-3.5 w-3.5" />
+                  System dla polskich firm transportowych · TSL
+                </>
+              )}
             </div>
             <div className="flex flex-col items-center gap-4 lg:flex-row lg:items-center">
               <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-primary/60 shadow-lg shadow-primary/30">
                 <Truck className="h-9 w-9 text-primary-foreground" />
               </div>
               <div>
-                <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
-                  Trans<span className="text-primary">Flow</span>
-                </h1>
+                {companyMode ? (
+                  <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
+                    {COMPANY_BRANDING.shortName}
+                  </h1>
+                ) : (
+                  <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
+                    Trans<span className="text-primary">Flow</span>
+                  </h1>
+                )}
                 <p className="mt-2 max-w-xl text-base font-medium text-foreground/90 sm:text-lg">
-                  {PRODUCT_TAGLINE}
+                  {tagline}
                 </p>
-                <p className="mt-1 max-w-xl text-sm text-muted-foreground">{PORTAL_SUBTITLE}</p>
+                <p className="mt-1 max-w-xl text-sm text-muted-foreground">{subtitle}</p>
               </div>
             </div>
           </div>
@@ -99,7 +132,7 @@ export function PortalHome({
                 Dla właściciela firmy
               </p>
               <ul className="space-y-1.5 text-sm text-muted-foreground">
-                {OWNER_VALUE_PROPS.map((item) => (
+                {ownerProps.map((item) => (
                   <li key={item} className="flex gap-2">
                     <span className="text-primary">·</span>
                     {item}
@@ -112,7 +145,7 @@ export function PortalHome({
                 Dla kierowcy ciężarówki
               </p>
               <ul className="space-y-1.5 text-sm text-muted-foreground">
-                {DRIVER_VALUE_PROPS.map((item) => (
+                {driverProps.map((item) => (
                   <li key={item} className="flex gap-2">
                     <span className="text-success">·</span>
                     {item}
@@ -138,44 +171,47 @@ export function PortalHome({
       </section>
 
       <main className="relative mx-auto max-w-6xl px-4 py-8 sm:py-10">
-        {/* Company code */}
-        <section className="glass-card mb-8 rounded-2xl p-5 sm:p-6">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end">
-            <div className="flex-1 space-y-2">
-              <Label htmlFor="portal-company" className="flex items-center gap-2 text-base">
-                <Building2 className="h-4 w-4 text-primary" />
-                Kod firmy transportowej
-              </Label>
-              <Input
-                id="portal-company"
-                value={companyCode}
-                onChange={(e) => onCompanyCodeChange(e.target.value.toUpperCase())}
-                placeholder="np. DEMO-TRANS"
-                autoComplete="organization"
-                className="h-11 border-primary/20 bg-background/60 text-base backdrop-blur-sm"
-              />
-              <p className="text-xs text-muted-foreground">
-                Każda firma ma osobny tenant — dane kierowców, floty i kursów są izolowane.
-              </p>
-            </div>
-            {tenant && (
-              <div className="flex items-center gap-2 rounded-xl border border-success/30 bg-success/10 px-4 py-3">
-                <CheckCircle2 className="h-5 w-5 shrink-0 text-success" />
-                <div>
-                  <p className="text-xs text-muted-foreground">Połączono z</p>
-                  <p className="font-semibold text-success">{tenant.name}</p>
-                </div>
+        {!companyMode && (
+          <section className="glass-card mb-8 rounded-2xl p-5 sm:p-6">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-end">
+              <div className="flex-1 space-y-2">
+                <Label htmlFor="portal-company" className="flex items-center gap-2 text-base">
+                  <Building2 className="h-4 w-4 text-primary" />
+                  Kod firmy transportowej
+                </Label>
+                <Input
+                  id="portal-company"
+                  value={companyCode}
+                  onChange={(e) => onCompanyCodeChange(e.target.value.toUpperCase())}
+                  placeholder="np. DEMO-TRANS"
+                  autoComplete="organization"
+                  className="h-11 border-primary/20 bg-background/60 text-base backdrop-blur-sm"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Każda firma ma osobny tenant — dane kierowców, floty i kursów są izolowane.
+                </p>
               </div>
-            )}
-          </div>
-          {companyError && <p className="mt-3 text-sm text-danger">{companyError}</p>}
-        </section>
+              {tenant && (
+                <div className="flex items-center gap-2 rounded-xl border border-success/30 bg-success/10 px-4 py-3">
+                  <CheckCircle2 className="h-5 w-5 shrink-0 text-success" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Połączono z</p>
+                    <p className="font-semibold text-success">{tenant.name}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+            {companyError && <p className="mt-3 text-sm text-danger">{companyError}</p>}
+          </section>
+        )}
 
         <div className="mb-6 flex items-end justify-between gap-4">
           <div>
             <h2 className="text-xl font-semibold sm:text-2xl">Wybierz panel</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Osobny interfejs dla właściciela, dyspozytora, kierowcy i mechanika
+              {companyMode
+                ? 'Zaloguj się jako właściciel, dyspozytor, kierowca lub mechanik'
+                : 'Osobny interfejs dla właściciela, dyspozytora, kierowcy i mechanika'}
             </p>
           </div>
         </div>
@@ -185,7 +221,7 @@ export function PortalHome({
             <PortalPanelTile
               key={panel.role}
               panel={panel}
-              disabled={!tenant}
+              disabled={!panelsEnabled}
               isActiveSession={session?.user.role === panel.role}
               onClick={() =>
                 session?.user.role === panel.role
@@ -212,10 +248,24 @@ export function PortalHome({
       </main>
 
       <footer className="relative border-t border-border/60 px-4 py-5 text-center">
-        <p className="text-xs text-muted-foreground">
-          TransFlow v0.8 · demo: <strong className="text-foreground/80">DEMO-TRANS</strong> · hasło:{' '}
-          <strong className="text-foreground/80">demo2026</strong>
-        </p>
+        {companyMode ? (
+          <>
+            <p className="text-xs text-muted-foreground">
+              © {new Date().getFullYear()} {COMPANY_BRANDING.name}
+            </p>
+            {import.meta.env.DEV && (
+              <p className="mt-1 text-[10px] text-muted-foreground/70">
+                Dev: email demo · hasło <strong className="text-foreground/70">demo2026</strong>
+              </p>
+            )}
+          </>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            {getDisplayProductName()} v0.8 · demo:{' '}
+            <strong className="text-foreground/80">DEMO-TRANS</strong> · hasło:{' '}
+            <strong className="text-foreground/80">demo2026</strong>
+          </p>
+        )}
         <p className="mt-1 text-[10px] text-muted-foreground/70">
           Zdjęcia: Unsplash · transport drogowy, logistyka, warsztat
         </p>

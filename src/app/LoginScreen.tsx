@@ -10,7 +10,8 @@ import {
 } from '@/lib/auth/session'
 import { DEMO_EMAIL_BY_ROLE } from '@/lib/auth/portal-panels'
 import { findDemoUserByEmail, validateDemoCredentials } from '@/lib/auth/users'
-import { findTenantBySlug } from '@/lib/tenant/demo-data'
+import { findTenantBySlug, getDefaultTenant } from '@/lib/tenant/demo-data'
+import { isCompanyDeployment, resolveDefaultTenantSlug } from '@/config/branding'
 import { useTenant } from '@/lib/tenant/context'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { AppMode } from '@/lib/auth/session'
@@ -24,7 +25,7 @@ type PortalStep = 'home' | 'auth'
 export function LoginScreen({ onLogin }: LoginScreenProps) {
   const { tenants, setCurrentTenant } = useTenant()
   const [step, setStep] = useState<PortalStep>('home')
-  const [companyCode, setCompanyCode] = useState('DEMO-TRANS')
+  const [companyCode, setCompanyCode] = useState(() => resolveDefaultTenantSlug())
   const [selectedRole, setSelectedRole] = useState<UserRole>('owner')
   const [displayName, setDisplayName] = useState('Jan Kowalski')
   const [email, setEmail] = useState(DEMO_EMAIL_BY_ROLE.owner)
@@ -34,10 +35,12 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
   const [companyError, setCompanyError] = useState('')
   const [session, setSession] = useState(() => loadSession())
 
-  const tenant = useMemo(
-    () => findTenantBySlug(tenants, companyCode) ?? null,
-    [tenants, companyCode],
-  )
+  const tenant = useMemo(() => {
+    if (isCompanyDeployment()) {
+      return getDefaultTenant(tenants) ?? null
+    }
+    return findTenantBySlug(tenants, companyCode) ?? null
+  }, [tenants, companyCode])
 
   useEffect(() => {
     if (tenant) {
@@ -47,6 +50,7 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
   }, [tenant, setCurrentTenant])
 
   useEffect(() => {
+    if (isCompanyDeployment()) return
     if (!companyCode.trim()) {
       setCompanyError('')
       return
@@ -95,7 +99,7 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
     setError('')
 
     if (!tenant) {
-      setError('Najpierw podaj prawidłowy kod firmy.')
+      setError(isCompanyDeployment() ? 'Błąd konfiguracji firmy.' : 'Najpierw podaj prawidłowy kod firmy.')
       return
     }
 
