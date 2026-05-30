@@ -53,7 +53,7 @@ export function PortalHome({
   onContinueSession,
 }: PortalHomeProps) {
   return (
-    <div className="relative min-h-dvh">
+    <div className="relative min-h-full pb-8">
       <TransportImageBg
         src={TRANSPORT_HERO_IMAGE}
         alt="Ciężarówki na autostradzie — logistyka drogowa"

@@ -48,7 +48,7 @@ export function RoleAuthScreen({
   const needsName = (role === 'driver' || role === 'mechanic') && !useEmailLogin
 
   return (
-    <div className="relative flex min-h-dvh">
+    <div className="relative flex min-h-full w-full">
       <TransportImageBg
         src={theme.image}
         alt={theme.imageAlt}
