@@ -8,6 +8,8 @@ interface PortalPanelTileProps {
   panel: PortalPanel
   disabled?: boolean
   isActiveSession?: boolean
+  /** Okres testów — wejście bez ekranu logowania */
+  openAccess?: boolean
   onClick: () => void
 }
 
@@ -15,6 +17,7 @@ export function PortalPanelTile({
   panel,
   disabled,
   isActiveSession,
+  openAccess,
   onClick,
 }: PortalPanelTileProps) {
   const theme = getPanelTheme(panel.role)
@@ -70,7 +73,11 @@ export function PortalPanelTile({
 
         <div className="mt-4 flex items-center justify-between border-t border-white/10 pt-3">
           <span className="text-sm font-semibold text-foreground group-hover:text-primary">
-            {isActiveSession ? 'Kontynuuj sesję' : 'Wejdź do panelu'}
+            {openAccess
+              ? 'Wejdź bez logowania'
+              : isActiveSession
+                ? 'Kontynuuj sesję'
+                : 'Wejdź do panelu'}
           </span>
           <ArrowRight className="h-4 w-4 text-foreground/70 transition-transform group-hover:translate-x-1 group-hover:text-primary" />
         </div>

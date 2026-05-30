@@ -14,6 +14,7 @@ import { signInWithEmail } from '@/lib/auth/supabase-auth'
 import { supabaseSignOut } from '@/lib/auth/supabase-client'
 import { findTenantBySlug, getDefaultTenant } from '@/lib/tenant/demo-data'
 import { isCompanyDeployment, resolveDefaultTenantSlug } from '@/config/branding'
+import { isOpenTestAccess } from '@/config/test-access'
 import { useTenant } from '@/lib/tenant/context'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { AppMode } from '@/lib/auth/session'
@@ -74,8 +75,43 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
     [onLogin],
   )
 
+  function buildDemoSession(tenantId: string, role: UserRole, name: string) {
+    const mechanicId = role === 'mechanic' ? 'mechanic-demo-001' : undefined
+    return {
+      user: {
+        id: `user-${role}-demo`,
+        displayName: role === 'driver' || role === 'mechanic' ? name : ROLE_LABELS[role],
+        role,
+        tenantId,
+        mechanicId,
+      },
+      tenantId,
+      loggedInAt: new Date().toISOString(),
+      authMethod: 'demo' as const,
+    }
+  }
+
+  function demoDisplayName(role: UserRole): string {
+    if (role === 'driver') return 'Jan Kowalski'
+    if (role === 'mechanic') return 'Tomasz Mechanik'
+    return ROLE_LABELS[role]
+  }
+
+  function enterDemoDirect(role: UserRole) {
+    if (!tenant) return
+    const built = buildDemoSession(tenant.id, role, demoDisplayName(role))
+    saveSession(built)
+    setSession(built)
+    setCurrentTenant(tenant)
+    enterPanel(role)
+  }
+
   function openPanel(role: UserRole) {
     if (!tenant || tenant.status !== 'active') return
+    if (isOpenTestAccess()) {
+      enterDemoDirect(role)
+      return
+    }
     setSelectedRole(role)
     setEmail(DEMO_EMAIL_BY_ROLE[role])
     setPassword('')
@@ -88,6 +124,10 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
 
   function handleContinue(role: UserRole) {
     if (!tenant) return
+    if (isOpenTestAccess()) {
+      enterDemoDirect(role)
+      return
+    }
     const current = loadSession()
     if (current && current.user.role === role && current.tenantId === tenant.id) {
       setCurrentTenant(tenant)
@@ -142,22 +182,6 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
       enterPanel(built.user.role)
     } finally {
       setSubmitting(false)
-    }
-  }
-
-  function buildDemoSession(tenantId: string, role: UserRole, name: string) {
-    const mechanicId = role === 'mechanic' ? 'mechanic-demo-001' : undefined
-    return {
-      user: {
-        id: `user-${role}-demo`,
-        displayName: role === 'driver' || role === 'mechanic' ? name : ROLE_LABELS[role],
-        role,
-        tenantId,
-        mechanicId,
-      },
-      tenantId,
-      loggedInAt: new Date().toISOString(),
-      authMethod: 'demo' as const,
     }
   }
 

@@ -8,6 +8,7 @@ import {
   isCompanyDeployment,
 } from '@/config/branding'
 import { APP_VERSION } from '@/config/version'
+import { isOpenTestAccess } from '@/config/test-access'
 import type { AuthSession } from '@/lib/auth/session'
 import { PORTAL_PANELS } from '@/lib/auth/portal-panels'
 import {
@@ -37,6 +38,7 @@ import {
   Route,
   ShieldCheck,
   Truck,
+  FlaskConical,
 } from 'lucide-react'
 
 interface PortalHomeProps {
@@ -66,6 +68,7 @@ export function PortalHome({
   onContinueSession,
 }: PortalHomeProps) {
   const companyMode = isCompanyDeployment()
+  const openTestAccess = isOpenTestAccess()
   const ownerProps = companyMode ? COMPANY_OWNER_PROPS : OWNER_VALUE_PROPS
   const driverProps = companyMode ? COMPANY_DRIVER_PROPS : DRIVER_VALUE_PROPS
   const tagline = companyMode ? COMPANY_PORTAL_TAGLINE : PRODUCT_TAGLINE
@@ -208,12 +211,33 @@ export function PortalHome({
           <div>
             <h2 className="text-xl font-semibold sm:text-2xl">Wybierz panel</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              {companyMode
-                ? 'Zaloguj się jako właściciel, dyspozytor, kierowca lub mechanik'
-                : 'Osobny interfejs dla właściciela, dyspozytora, kierowcy i mechanika'}
+              {openTestAccess
+                ? 'Kliknij kafelek — wejście od razu, bez hasła (okres testów)'
+                : companyMode
+                  ? 'Zaloguj się jako właściciel, dyspozytor, kierowca lub mechanik'
+                  : 'Osobny interfejs dla właściciela, dyspozytora, kierowcy i mechanika'}
             </p>
           </div>
         </div>
+
+        {openTestAccess && (
+          <div
+            className="mb-6 flex gap-3 rounded-2xl border border-warning/35 bg-warning/10 p-4 sm:p-5"
+            role="status"
+          >
+            <FlaskConical className="mt-0.5 h-5 w-5 shrink-0 text-warning" aria-hidden />
+            <div className="space-y-1 text-sm">
+              <p className="font-semibold text-foreground">
+                Aktualnie trwają testy systemu
+              </p>
+              <p className="text-muted-foreground leading-relaxed">
+                Logowanie nie jest wymagane — wybierz dowolny panel poniżej, aby od razu
+                przetestować funkcje. Po zakończeniu testów dostęp zostanie zabezpieczony
+                hasłem.
+              </p>
+            </div>
+          </div>
+        )}
 
         <div className="grid gap-5 sm:grid-cols-2">
           {PORTAL_PANELS.map((panel) => (
@@ -222,6 +246,7 @@ export function PortalHome({
               panel={panel}
               disabled={!panelsEnabled}
               isActiveSession={session?.user.role === panel.role}
+              openAccess={openTestAccess}
               onClick={() =>
                 session?.user.role === panel.role
                   ? onContinueSession(panel.role)
