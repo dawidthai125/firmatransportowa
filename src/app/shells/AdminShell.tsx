@@ -1,3 +1,4 @@
+import { AutomationNotifications } from '@/app/components/AutomationNotifications'
 import { CloudStatusBadge } from '@/app/components/CloudStatusBadge'
 import { AppNav } from '@/app/components/AppNav'
 import { Button } from '@/app/components/ui/Button'
@@ -45,6 +46,7 @@ export function AdminShell({
         </div>
         <div className="flex items-center gap-2">
           <CloudStatusBadge />
+          <AutomationNotifications tenantId={tenant.id} onNavigate={onViewChange} />
           <Button variant="ghost" size="icon" onClick={onLogout} aria-label="Wyloguj">
           <LogOut className="h-4 w-4" />
         </Button>

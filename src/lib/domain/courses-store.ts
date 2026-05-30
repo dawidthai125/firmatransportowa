@@ -1,3 +1,4 @@
+import { fireAutomation } from '@/lib/automation/bridge'
 import type { Course } from '@/lib/domain/course'
 import { readTenantData, writeTenantData } from '@/lib/tenant/storage'
 
@@ -26,6 +27,10 @@ export function upsertCourse(tenantId: string, course: Course): Course[] {
   if (idx >= 0) next[idx] = course
   else next.unshift(course)
   saveCourses(tenantId, next)
+  fireAutomation(tenantId, 'course.saved', { course })
+  if (course.scope !== 'domestic') {
+    fireAutomation(tenantId, 'course.international', { course })
+  }
   return next
 }
 

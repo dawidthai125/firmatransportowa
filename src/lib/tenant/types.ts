@@ -65,6 +65,7 @@ export type TenantDataKey =
   | 'compliance-alerts'
   | 'settings'
   | 'files'
+  | 'automation'
 
 export const TENANT_DATA_KEYS: TenantDataKey[] = [
   'drivers',
@@ -74,6 +75,7 @@ export const TENANT_DATA_KEYS: TenantDataKey[] = [
   'compliance-alerts',
   'settings',
   'files',
+  'automation',
 ]
 
 export function tenantStorageKey(tenantId: string, key: TenantDataKey): string {

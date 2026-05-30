@@ -39,6 +39,19 @@ app.post(`${PREFIX}/batch-set`, async (c) => {
   return c.json({ ok: true, count: entries.length })
 })
 
+app.post(`${PREFIX}/automation/webhook`, async (c) => {
+  const secret = Deno.env.get('TRANSFLOW_WEBHOOK_SECRET')
+  const auth = c.req.header('Authorization')
+  if (secret && auth !== `Bearer ${secret}`) {
+    return c.json({ error: 'unauthorized' }, 401)
+  }
+  const body = await c.req.json().catch(() => ({}))
+  const tenantId = typeof body?.tenantId === 'string' ? body.tenantId : null
+  const event = typeof body?.event === 'string' ? body.event : 'webhook.received'
+  console.log('[automation/webhook]', event, tenantId)
+  return c.json({ ok: true, received: event, tenantId, at: new Date().toISOString() })
+})
+
 app.get(`${PREFIX}/ping`, (c) => c.json({ pong: true }))
 
 Deno.serve(app.fetch)

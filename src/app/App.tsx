@@ -1,6 +1,7 @@
 import { LoginScreen, handleLogout } from '@/app/LoginScreen'
 import { AdminShell } from '@/app/shells/AdminShell'
 import { DriverShell } from '@/app/shells/DriverShell'
+import { AutomationsView } from '@/app/views/AutomationsView'
 import { ComplianceView } from '@/app/views/ComplianceView'
 import { CoursesView } from '@/app/views/CoursesView'
 import { DailyReportsView } from '@/app/views/DailyReportsView'
@@ -23,6 +24,7 @@ import {
   type AdminView,
   type DriverView,
 } from '@/lib/navigation'
+import { runScheduledAutomations } from '@/lib/automation/scheduler'
 import { useTenant } from '@/lib/tenant/context'
 import { useEffect, useMemo, useState } from 'react'
 
@@ -36,6 +38,15 @@ function filterNavByModules(
 export default function App() {
   const { currentTenant, tenants, setCurrentTenant } = useTenant()
   const session = loadSession()
+
+  useEffect(() => {
+    if (!session || !currentTenant) return
+    void runScheduledAutomations({
+      tenantId: currentTenant.id,
+      tenantSlug: currentTenant.slug,
+      tenantName: currentTenant.name,
+    })
+  }, [session, currentTenant])
 
   useEffect(() => {
     if (!session || currentTenant) return
@@ -114,6 +125,13 @@ export default function App() {
         />
       )}
       {adminView === 'files' && <FilesView tenantId={currentTenant.id} />}
+      {adminView === 'automations' && (
+        <AutomationsView
+          tenantId={currentTenant.id}
+          tenantSlug={currentTenant.slug}
+          tenantName={currentTenant.name}
+        />
+      )}
       {adminView === 'fleet' && <FleetView tenantId={currentTenant.id} />}
       {adminView === 'drivers' && <DriversView tenantId={currentTenant.id} />}
       {adminView === 'compliance' && (

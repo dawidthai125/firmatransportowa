@@ -1,5 +1,6 @@
 import { cn } from '@/lib/utils'
 import {
+  Bot,
   Calculator,
   FileText,
   FolderOpen,
@@ -19,6 +20,7 @@ const ICONS: Record<string, LucideIcon> = {
   'layout-dashboard': LayoutDashboard,
   route: Route,
   calculator: Calculator,
+  bot: Bot,
   'folder-open': FolderOpen,
   truck: Truck,
   users: Users,

@@ -1,3 +1,4 @@
+import { fireAutomation } from '@/lib/automation/bridge'
 import type { DailyReport } from '@/lib/domain/daily-report'
 import { readTenantData, writeTenantData } from '@/lib/tenant/storage'
 
@@ -16,6 +17,10 @@ export function upsertDailyReport(tenantId: string, report: DailyReport): DailyR
   if (idx >= 0) next[idx] = report
   else next.unshift(report)
   saveDailyReports(tenantId, next)
+  fireAutomation(tenantId, 'daily_report.saved', { report })
+  if (report.shiftEnded) {
+    fireAutomation(tenantId, 'daily_report.shift_ended', { report })
+  }
   return next
 }
 

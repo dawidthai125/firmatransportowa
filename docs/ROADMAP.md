@@ -23,13 +23,12 @@
 - [x] Marża per klient
 - [x] Eksport CSV
 
-## ✅ v0.7 — Pliki + Auth (obecna)
+## ✅ v0.7 — Pliki + Auth + Automatyzacja
 
-- [x] Dedykowane viewery: CSV, PDF, obraz, tekst, JSON, HTML, binarny
-- [x] Podgląd przed pobraniem + zapis do biblioteki
-- [x] Moduł **Pliki** (import CMR/PDF/CSV)
-- [x] Logowanie emailem (demo — hasło `demo2026`)
-- [ ] Supabase Auth + RLS (w toku)
+- [x] Viewery plików (CSV, PDF, HTML…)
+- [x] Logowanie emailem (demo)
+- [x] **Silnik automatyzacji** — reguły, powiadomienia, harmonogram
+- [ ] Supabase Auth + RLS
 
 ## 🔜 v0.8 — Operacje w terenie
 
