@@ -1,4 +1,7 @@
+import { buildComplianceAlerts } from '@/lib/domain/compliance'
 import { loadCourses, seedDemoCourses } from '@/lib/domain/courses-store'
+import { loadDrivers, seedDemoDrivers } from '@/lib/domain/drivers-store'
+import { loadVehicles, seedDemoVehicles } from '@/lib/domain/vehicles-store'
 import type { Tenant } from '@/lib/tenant/types'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/Card'
 import { AlertTriangle, Clock, Route, Truck, Users } from 'lucide-react'
@@ -9,22 +12,26 @@ interface DashboardViewProps {
 }
 
 export function DashboardView({ tenant }: DashboardViewProps) {
-  const [stats, setStats] = useState({ active: 0, total: 0, margin: 0, adr: 0 })
+  const [stats, setStats] = useState({ active: 0, total: 0, margin: 0, compliance: 0 })
 
   useEffect(() => {
     seedDemoCourses(tenant.id)
+    seedDemoDrivers(tenant.id)
+    seedDemoVehicles(tenant.id)
     const courses = loadCourses(tenant.id)
+    const drivers = loadDrivers(tenant.id)
+    const vehicles = loadVehicles(tenant.id)
     const active = courses.filter((c) => ['planned', 'loading', 'in_transit'].includes(c.status)).length
     const margin = courses.reduce((s, c) => s + c.freightPln - (c.routeCostsPln ?? 0), 0)
-    const adr = courses.filter((c) => c.adr && c.status !== 'completed' && c.status !== 'cancelled').length
-    setStats({ active, total: courses.length, margin, adr })
+    const compliance = buildComplianceAlerts(tenant.id, drivers, vehicles).length
+    setStats({ active, total: courses.length, margin, compliance })
   }, [tenant.id])
 
   const PLACEHOLDER_STATS = [
     { label: 'Aktywne kursy', value: String(stats.active), icon: Route, tone: 'text-primary' },
     { label: 'Wszystkie zlecenia', value: String(stats.total), icon: Truck, tone: 'text-accent-foreground' },
     { label: 'Marża łącznie', value: `${stats.margin.toLocaleString('pl-PL')} zł`, icon: Users, tone: 'text-success' },
-    { label: 'Aktywne ADR', value: String(stats.adr), icon: AlertTriangle, tone: 'text-warning' },
+    { label: 'Alerty compliance', value: String(stats.compliance), icon: AlertTriangle, tone: 'text-warning' },
   ]
   return (
     <div className="space-y-6">

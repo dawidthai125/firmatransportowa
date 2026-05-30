@@ -148,3 +148,23 @@ Pliki: `src/app/shells/`, `src/app/views/`, `src/lib/navigation.ts`
 
 ### v0.4
 - GPS, giełda ładunków, tachograf
+
+---
+
+## 9. Kiedy potrzebny Supabase?
+
+| Etap | localStorage wystarczy | Supabase potrzebny |
+|------|------------------------|-------------------|
+| **Teraz (v0.1–0.3)** | ✅ Ty sam, jedna przeglądarka, prototyp UI | ❌ Nie |
+| **Test u Ciebie** | ✅ Kilka modułów, demo dane, jeden komputer | ❌ Opcjonalnie |
+| **Test u firmy (pilot)** | ⚠️ Ograniczone — dane tylko w jednej przeglądarce | ✅ **Tak** — wspólna baza, login hasłem |
+| **Wiele urządzeń** | ❌ Brak syncu telefon ↔ biuro | ✅ **Tak** |
+| **Produkcja / abonament** | ❌ | ✅ **Tak** — auth, RLS, backup, Edge Functions |
+
+**Praktycznie:** daj mi dostęp do Supabase, gdy będziesz chciał:
+1. Udostępnić aplikację **innej firmie** (kierowca na telefonie + biuro na PC),
+2. **Nie stracić danych** po wyczyszczeniu przeglądarki,
+3. Wdrożyć **prawdziwe logowanie** (email/hasło per użytkownik),
+4. Wystawić aplikację na **domenę** (Vercel + Supabase jak wgdom).
+
+Do tego momentu pracujemy lokalnie — **zero kosztów, zero konfiguracji chmury**.

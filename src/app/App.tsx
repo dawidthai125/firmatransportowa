@@ -94,9 +94,9 @@ export default function App() {
     >
       {adminView === 'dashboard' && <DashboardView tenant={currentTenant} />}
       {adminView === 'courses' && <CoursesView tenantId={currentTenant.id} />}
-      {adminView === 'fleet' && <FleetView />}
-      {adminView === 'drivers' && <DriversView />}
-      {adminView === 'compliance' && <ComplianceView />}
+      {adminView === 'fleet' && <FleetView tenantId={currentTenant.id} />}
+      {adminView === 'drivers' && <DriversView tenantId={currentTenant.id} />}
+      {adminView === 'compliance' && <ComplianceView tenantId={currentTenant.id} />}
       {adminView === 'settings' && mode === 'owner' && <SettingsView tenant={currentTenant} />}
       {adminView === 'settings' && mode === 'dispatcher' && <DashboardView tenant={currentTenant} />}
     </AdminShell>
