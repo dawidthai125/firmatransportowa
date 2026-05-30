@@ -3,6 +3,7 @@ export type AdminView =
   | 'courses'
   | 'reports'
   | 'settlements'
+  | 'files'
   | 'fleet'
   | 'drivers'
   | 'compliance'
@@ -23,6 +24,7 @@ export const OWNER_NAV: NavItem<AdminView>[] = [
   { id: 'courses', label: 'Kursy', icon: 'route', module: 'courses' },
   { id: 'reports', label: 'Raporty', icon: 'file-text', module: 'courses' },
   { id: 'settlements', label: 'Rozliczenia', icon: 'calculator', module: 'courses' },
+  { id: 'files', label: 'Pliki', icon: 'folder-open', module: 'courses' },
   { id: 'fleet', label: 'Flota', icon: 'truck', module: 'fleet' },
   { id: 'drivers', label: 'Kierowcy', icon: 'users', module: 'drivers' },
   { id: 'compliance', label: 'Zgodność', icon: 'shield-check', module: 'compliance' },
@@ -34,6 +36,7 @@ export const DISPATCHER_NAV: NavItem<AdminView>[] = [
   { id: 'courses', label: 'Kursy', icon: 'route', module: 'courses' },
   { id: 'reports', label: 'Raporty', icon: 'file-text', module: 'courses' },
   { id: 'settlements', label: 'Rozliczenia', icon: 'calculator', module: 'courses' },
+  { id: 'files', label: 'Pliki', icon: 'folder-open', module: 'courses' },
   { id: 'fleet', label: 'Flota', icon: 'truck', module: 'fleet' },
   { id: 'drivers', label: 'Kierowcy', icon: 'users', module: 'drivers' },
 ]
@@ -50,6 +53,7 @@ export const VIEW_TITLES: Record<AdminView, string> = {
   courses: 'Kursy i zlecenia',
   reports: 'Raporty dzienne',
   settlements: 'Rozliczenia i czas jazdy',
+  files: 'Pliki i dokumenty',
   fleet: 'Flota pojazdów',
   drivers: 'Kierowcy',
   compliance: 'Zgodność i dokumenty',

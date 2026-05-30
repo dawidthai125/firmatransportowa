@@ -9,6 +9,7 @@ import {
   ROLE_LABELS,
   type UserRole,
 } from '@/lib/auth/session'
+import { DEMO_PASSWORD, findDemoUserByEmail, validateDemoCredentials } from '@/lib/auth/users'
 import { findTenantBySlug } from '@/lib/tenant/demo-data'
 import { useTenant } from '@/lib/tenant/context'
 import { Truck } from 'lucide-react'
@@ -24,6 +25,9 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
   const [companyCode, setCompanyCode] = useState('DEMO-TRANS')
   const [role, setRole] = useState<UserRole>('owner')
   const [displayName, setDisplayName] = useState('Jan Kowalski')
+  const [email, setEmail] = useState('wlasciciel@demo-trans.pl')
+  const [password, setPassword] = useState('')
+  const [useEmailLogin, setUseEmailLogin] = useState(false)
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -52,20 +56,62 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
       return
     }
 
-    const session = {
-      user: {
-        id: `user-${role}-demo`,
-        displayName: role === 'driver' ? displayName : ROLE_LABELS[role],
-        role,
-        tenantId: tenant.id,
-      },
-      tenantId: tenant.id,
-      loggedInAt: new Date().toISOString(),
+    const session = useEmailLogin
+      ? buildEmailSession(tenant.id, email, password, role)
+      : buildDemoSession(tenant.id, role, displayName)
+
+    if (!session) {
+      setError(
+        useEmailLogin
+          ? 'Nieprawidłowy email lub hasło. Demo: hasło demo2026'
+          : 'Błąd logowania',
+      )
+      return
     }
 
     saveSession(session)
     setCurrentTenant(tenant)
-    onLogin(roleToAppMode(role))
+    onLogin(roleToAppMode(session.user.role))
+  }
+
+  function buildDemoSession(tenantId: string, role: UserRole, name: string) {
+    return {
+      user: {
+        id: `user-${role}-demo`,
+        displayName: role === 'driver' ? name : ROLE_LABELS[role],
+        role,
+        tenantId,
+      },
+      tenantId,
+      loggedInAt: new Date().toISOString(),
+      authMethod: 'demo' as const,
+    }
+  }
+
+  function buildEmailSession(
+    tenantId: string,
+    userEmail: string,
+    userPassword: string,
+    selectedRole: UserRole,
+  ) {
+    const user = validateDemoCredentials(tenantId, userEmail, userPassword)
+    if (!user) return null
+    if (user.role !== selectedRole) {
+      const match = findDemoUserByEmail(tenantId, userEmail)
+      if (!match || match.role !== selectedRole) return null
+    }
+    return {
+      user: {
+        id: user.id,
+        displayName: user.displayName,
+        role: user.role,
+        tenantId,
+      },
+      tenantId,
+      loggedInAt: new Date().toISOString(),
+      email: user.email,
+      authMethod: 'demo' as const,
+    }
   }
 
   return (
@@ -105,7 +151,7 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
               </Select>
             </div>
 
-            {role === 'driver' && (
+            {role === 'driver' && !useEmailLogin && (
               <div className="space-y-2">
                 <Label htmlFor="name">Imię i nazwisko kierowcy</Label>
                 <Input
@@ -115,6 +161,48 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
                   placeholder="Jan Kowalski"
                 />
               </div>
+            )}
+
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={useEmailLogin}
+                onChange={(e) => {
+                  setUseEmailLogin(e.target.checked)
+                  if (e.target.checked) {
+                    if (role === 'owner') setEmail('wlasciciel@demo-trans.pl')
+                    else if (role === 'dispatcher') setEmail('dyspozytor@demo-trans.pl')
+                    else setEmail('jan.kowalski@demo-trans.pl')
+                  }
+                }}
+                className="h-4 w-4 rounded border-border"
+              />
+              Logowanie emailem (v0.7 — demo hasło: {DEMO_PASSWORD})
+            </label>
+
+            {useEmailLogin && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    autoComplete="username"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="password">Hasło</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    autoComplete="current-password"
+                  />
+                </div>
+              </>
             )}
 
             {error && <p className="text-sm text-danger">{error}</p>}

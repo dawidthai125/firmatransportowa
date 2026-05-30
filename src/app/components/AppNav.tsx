@@ -2,6 +2,7 @@ import { cn } from '@/lib/utils'
 import {
   Calculator,
   FileText,
+  FolderOpen,
   Home,
   LayoutDashboard,
   Route,
@@ -18,6 +19,7 @@ const ICONS: Record<string, LucideIcon> = {
   'layout-dashboard': LayoutDashboard,
   route: Route,
   calculator: Calculator,
+  'folder-open': FolderOpen,
   truck: Truck,
   users: Users,
   'shield-check': ShieldCheck,

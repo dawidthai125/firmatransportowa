@@ -16,18 +16,20 @@
 - [x] Panel raportów dla właściciela/dyspozytora
 - [x] Dokumenty firmy: licencja wspólnotowa, CKZ (compliance)
 
-## ✅ v0.6 — Czas pracy i rozliczenia (obecna)
+## ✅ v0.6 — Czas pracy i rozliczenia
 
-- [x] Kalkulator 561/2006 (alerty w raporcie kierowcy + Rozliczenia)
+- [x] Kalkulator 561/2006
 - [x] Podsumowanie tygodnia kierowcy
-- [x] Marża per klient (nadawca)
-- [x] Eksport CSV (raporty, tydzień, kursy, marże)
+- [x] Marża per klient
+- [x] Eksport CSV
 
-## 🔜 v0.7 — Auth i bezpieczeństwo
+## ✅ v0.7 — Pliki + Auth (obecna)
 
-- Supabase Auth (email/hasło per użytkownik)
-- RLS / prawdziwe tenant isolation w DB
-- PIN kierowcy (jak wgdom worker)
+- [x] Dedykowane viewery: CSV, PDF, obraz, tekst, JSON, HTML, binarny
+- [x] Podgląd przed pobraniem + zapis do biblioteki
+- [x] Moduł **Pliki** (import CMR/PDF/CSV)
+- [x] Logowanie emailem (demo — hasło `demo2026`)
+- [ ] Supabase Auth + RLS (w toku)
 
 ## 🔜 v0.8 — Operacje w terenie
 

@@ -1,18 +1,18 @@
 # CURRENT-TASK — TransFlow
 
-**Ostatnia sesja:** 2026-05-30 · **v0.6.0**
+**Ostatnia sesja:** 2026-05-30 · **v0.7.0**
 
 ## Skończone ✅
 
-- [x] v0.5 — raporty kierowcy, kursy międzynarodowe, dokumenty firmy
-- [x] **v0.6 — Rozliczenia i 561/2006:**
-  - Moduł **Rozliczenia** — alerty czasu jazdy, tydzień kierowców, marże per klient
-  - Ostrzeżenia w formularzu raportu kierowcy
-  - Eksport CSV (raporty, tydzień, kursy, marże)
-  - Demo raporty z alertami 561/2006
+- [x] v0.5–0.6 — raporty, międzynarodowe, rozliczenia, 561/2006
+- [x] **v0.7 — Podgląd plików + auth demo:**
+  - Viewery per typ (CSV, PDF, HTML, obraz, JSON, binarny)
+  - Eksport → podgląd → pobierz / zapisz do biblioteki
+  - Moduł **Pliki** + import
+  - Logowanie emailem (demo: `demo2026`)
 
-## Następne kroki (v0.7+)
+## Następne kroki
 
-1. Supabase Auth (email/hasło, RLS)
-2. PWA + GPS / ETA
-3. RMPD/SENT — przypomnienie rejestracji
+1. Supabase Auth (prawdziwe hasła, RLS)
+2. Supabase Storage dla dużych PDF
+3. PWA + GPS

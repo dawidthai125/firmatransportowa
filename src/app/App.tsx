@@ -11,6 +11,7 @@ import {
   DriverReportView,
 } from '@/app/views/DriverViews'
 import { DriversView } from '@/app/views/DriversView'
+import { FilesView } from '@/app/views/FilesView'
 import { FleetView } from '@/app/views/FleetView'
 import { SettlementsView } from '@/app/views/SettlementsView'
 import { SettingsView } from '@/app/views/SettingsView'
@@ -106,8 +107,13 @@ export default function App() {
       {adminView === 'courses' && <CoursesView tenantId={currentTenant.id} />}
       {adminView === 'reports' && <DailyReportsView tenantId={currentTenant.id} />}
       {adminView === 'settlements' && (
-        <SettlementsView tenantId={currentTenant.id} tenantSlug={currentTenant.slug} />
+        <SettlementsView
+          tenantId={currentTenant.id}
+          tenantSlug={currentTenant.slug}
+          tenantName={currentTenant.name}
+        />
       )}
+      {adminView === 'files' && <FilesView tenantId={currentTenant.id} />}
       {adminView === 'fleet' && <FleetView tenantId={currentTenant.id} />}
       {adminView === 'drivers' && <DriversView tenantId={currentTenant.id} />}
       {adminView === 'compliance' && (

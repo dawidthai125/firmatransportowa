@@ -19,22 +19,27 @@ import {
   type ClientMarginSummary,
   type DriverWeeklySummary,
 } from '@/lib/domain/settlements'
+import { useFilePreview } from '@/app/components/file-preview/FilePreviewProvider'
 import {
-  exportClientMarginsCsv,
-  exportCoursesCsv,
-  exportDailyReportsCsv,
-  exportWeeklySummariesCsv,
-} from '@/lib/export/csv'
+  buildClientMarginsCsvFile,
+  buildCoursesCsvFile,
+  buildDailyReportsCsvFile,
+  buildSettlementHtmlFile,
+  buildSettlementPdfFile,
+  buildWeeklySummariesCsvFile,
+} from '@/lib/export/documents'
 import { cn } from '@/lib/utils'
-import { AlertTriangle, Clock, Download, TrendingUp, Users } from 'lucide-react'
+import { AlertTriangle, Clock, Eye, FileText, TrendingUp, Users } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 interface SettlementsViewProps {
   tenantId: string
   tenantSlug: string
+  tenantName: string
 }
 
-export function SettlementsView({ tenantId, tenantSlug }: SettlementsViewProps) {
+export function SettlementsView({ tenantId, tenantSlug, tenantName }: SettlementsViewProps) {
+  const { openPreview } = useFilePreview()
   const [weekStart, setWeekStart] = useState(() => getWeekStart(new Date().toISOString().slice(0, 10)))
   const [reports, setReports] = useState<DailyReport[]>([])
   const [drivers, setDrivers] = useState<Driver[]>([])
@@ -79,27 +84,86 @@ export function SettlementsView({ tenantId, tenantSlug }: SettlementsViewProps) 
         <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
           <div>
             <CardTitle className="flex items-center gap-2 text-base">
-              <Download className="h-4 w-4 text-primary" />
-              Eksport dla księgowości
+              <FileText className="h-4 w-4 text-primary" />
+              Eksport i podgląd
             </CardTitle>
-            <CardDescription>Pliki CSV (separator średnik, UTF-8)</CardDescription>
+            <CardDescription>
+              Otwórz w dedykowanym viewerze (CSV / PDF / HTML) — pobierz stamtąd
+            </CardDescription>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button size="sm" variant="secondary" onClick={() => exportDailyReportsCsv(reports, tenantSlug)}>
-              Raporty dzienne
+            <Button
+              size="sm"
+              variant="secondary"
+              className="gap-1"
+              onClick={() =>
+                openPreview(buildDailyReportsCsvFile(reports, tenantSlug), { tenantId, allowSave: true })
+              }
+            >
+              <Eye className="h-3.5 w-3.5" />
+              Raporty CSV
             </Button>
             <Button
               size="sm"
               variant="secondary"
-              onClick={() => exportWeeklySummariesCsv(weeklySummaries, tenantSlug, weekStart)}
+              className="gap-1"
+              onClick={() =>
+                openPreview(buildWeeklySummariesCsvFile(weeklySummaries, tenantSlug, weekStart), {
+                  tenantId,
+                  allowSave: true,
+                })
+              }
             >
-              Tydzień kierowców
+              <Eye className="h-3.5 w-3.5" />
+              Tydzień CSV
             </Button>
-            <Button size="sm" variant="secondary" onClick={() => exportCoursesCsv(courses, tenantSlug)}>
-              Kursy
+            <Button
+              size="sm"
+              variant="secondary"
+              className="gap-1"
+              onClick={() => openPreview(buildCoursesCsvFile(courses, tenantSlug), { tenantId, allowSave: true })}
+            >
+              <Eye className="h-3.5 w-3.5" />
+              Kursy CSV
             </Button>
-            <Button size="sm" variant="secondary" onClick={() => exportClientMarginsCsv(clientMargins, tenantSlug)}>
-              Marże klientów
+            <Button
+              size="sm"
+              variant="secondary"
+              className="gap-1"
+              onClick={() =>
+                openPreview(buildClientMarginsCsvFile(clientMargins, tenantSlug), { tenantId, allowSave: true })
+              }
+            >
+              <Eye className="h-3.5 w-3.5" />
+              Marże CSV
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              className="gap-1"
+              onClick={() =>
+                openPreview(buildSettlementPdfFile(tenantName, weeklySummaries, weekStart), {
+                  tenantId,
+                  allowSave: true,
+                })
+              }
+            >
+              <Eye className="h-3.5 w-3.5" />
+              PDF tydzień
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              className="gap-1"
+              onClick={() =>
+                openPreview(buildSettlementHtmlFile(tenantName, weeklySummaries, clientMargins, weekStart), {
+                  tenantId,
+                  allowSave: true,
+                })
+              }
+            >
+              <Eye className="h-3.5 w-3.5" />
+              Raport HTML
             </Button>
           </div>
         </CardHeader>

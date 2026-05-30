@@ -13,6 +13,9 @@ export interface AuthSession {
   user: SessionUser
   tenantId: string
   loggedInAt: string
+  /** v0.7 — email użytkownika (Supabase Auth) */
+  email?: string
+  authMethod: 'demo' | 'supabase'
 }
 
 const SESSION_KEY = 'ft-session'
@@ -21,7 +24,9 @@ export function loadSession(): AuthSession | null {
   try {
     const raw = sessionStorage.getItem(SESSION_KEY)
     if (!raw) return null
-    return JSON.parse(raw) as AuthSession
+    const parsed = JSON.parse(raw) as AuthSession
+    if (!parsed.authMethod) parsed.authMethod = 'demo'
+    return parsed
   } catch {
     return null
   }

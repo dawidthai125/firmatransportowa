@@ -119,7 +119,7 @@ export async function pullAllFromCloud(): Promise<void> {
         try {
           const localVal = JSON.parse(localRaw)
           const dataKey = TENANT_DATA_KEYS.find((dk) => key.endsWith(`-${dk}`))
-          if (dataKey && ['drivers', 'vehicles', 'courses', 'daily-reports'].includes(dataKey)) {
+          if (dataKey && ['drivers', 'vehicles', 'courses', 'daily-reports', 'files'].includes(dataKey)) {
             merged = mergeJsonArray(localVal, cloudVal)
           } else {
             merged = cloudVal
