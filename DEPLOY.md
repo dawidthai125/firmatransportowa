@@ -2,7 +2,9 @@
 
 ## Frontend — Vercel
 
-1. Połącz repo GitHub z [Vercel](https://vercel.com)
+**Produkcja:** https://firmatransportowa.vercel.app
+
+1. Połącz repo GitHub z [Vercel](https://vercel.com) (opcjonalnie — auto-deploy przy push)
 2. Ustaw zmienne środowiskowe (patrz `SUPABASE-SETUP.md` krok 5)
 3. Każdy push na `main` → auto-deploy
 
