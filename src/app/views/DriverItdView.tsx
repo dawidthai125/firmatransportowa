@@ -1,5 +1,6 @@
 import { ItdHotspotsMap } from '@/app/components/itd/ItdHotspotsMap'
 import { Button } from '@/app/components/ui/Button'
+import { FileUploadField } from '@/app/components/ui/FileUploadField'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/Card'
 import { Input, Label, Select } from '@/app/components/ui/Input'
 import { findDriverByDisplayName, resolveDriverVehicle } from '@/lib/domain/driver-profile'
@@ -34,7 +35,7 @@ export function DriverItdView({ tenantId, driverName }: DriverItdViewProps) {
   const refresh = useCallback(() => {
     seedItdData(tenantId)
     setPlaybook(loadItdPlaybook(tenantId))
-    setHotspots(loadItdHotspots(tenantId))
+    setHotspots(loadItdHotspots(tenantId, 'driver'))
   }, [tenantId])
 
   useEffect(() => {
@@ -204,6 +205,7 @@ function DriverRecordForm({
   const [outcome, setOutcome] = useState<ItdControlOutcome>('clean')
   const [finePln, setFinePln] = useState('')
   const [protocolNumber, setProtocolNumber] = useState('')
+  const [attachmentFileId, setAttachmentFileId] = useState<string | undefined>()
   const [attachmentName, setAttachmentName] = useState('')
 
   function submit(e: React.FormEvent) {
@@ -218,6 +220,7 @@ function DriverRecordForm({
       finePln: finePln ? Number(finePln) : undefined,
       protocolNumber: protocolNumber || undefined,
       attachmentName: attachmentName || undefined,
+      attachmentFileId,
     })
     onDone()
   }
@@ -247,11 +250,18 @@ function DriverRecordForm({
         <Input value={protocolNumber} onChange={(e) => setProtocolNumber(e.target.value)} />
       </div>
       <div>
-        <Label>Nazwa pliku / zdjęcia</Label>
-        <Input
-          placeholder="protokol-itd-2026.pdf"
-          value={attachmentName}
-          onChange={(e) => setAttachmentName(e.target.value)}
+        <Label>Skan protokołu (PDF / zdjęcie)</Label>
+        <FileUploadField
+          tenantId={tenantId}
+          tags={['itd', 'protocol']}
+          onUploaded={(id, name) => {
+            setAttachmentFileId(id)
+            setAttachmentName(name)
+          }}
+          onClear={() => {
+            setAttachmentFileId(undefined)
+            setAttachmentName('')
+          }}
         />
       </div>
       <Button type="submit" className="w-full">

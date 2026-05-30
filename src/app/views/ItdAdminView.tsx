@@ -1,5 +1,7 @@
 import { ItdHotspotsMap } from '@/app/components/itd/ItdHotspotsMap'
+import { useFilePreview } from '@/app/components/file-preview/FilePreviewProvider'
 import { Button } from '@/app/components/ui/Button'
+import { FileUploadField } from '@/app/components/ui/FileUploadField'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/Card'
 import { Input, Label, Select } from '@/app/components/ui/Input'
 import { defaultItdPlaybook } from '@/lib/domain/itd-playbook-default'
@@ -11,15 +13,13 @@ import {
   loadItdHotspots,
   loadItdPlaybook,
   loadItdRecords,
+  moderateItdHotspot,
   saveItdPlaybook,
   seedItdData,
   updatePlaybookSection,
 } from '@/lib/domain/itd-store'
-import {
-  ITD_OUTCOME_LABELS,
-  type ItdControlOutcome,
-  type ItdPlaybookSection,
-} from '@/lib/domain/itd-types'
+import { ITD_OUTCOME_LABELS, type ItdControlOutcome, type ItdControlRecord, type ItdHotspot, type ItdPlaybookSection } from '@/lib/domain/itd-types'
+import { loadTenantFiles, storedToPreviewable } from '@/lib/files/files-store'
 import { cn } from '@/lib/utils'
 import { AlertTriangle, BookOpen, Check, FileText, MapPin, ShieldAlert } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
@@ -45,7 +45,7 @@ export function ItdAdminView({ tenantId, userRole, userName }: ItdAdminViewProps
     seedItdData(tenantId)
     setAlerts(loadItdAlerts(tenantId))
     setRecords(loadItdRecords(tenantId))
-    setHotspots(loadItdHotspots(tenantId))
+    setHotspots(loadItdHotspots(tenantId, 'admin'))
     setPlaybook(loadItdPlaybook(tenantId))
   }, [tenantId])
 
@@ -146,21 +146,7 @@ export function ItdAdminView({ tenantId, userRole, userName }: ItdAdminViewProps
         <div className="space-y-4">
           <ItdRecordForm tenantId={tenantId} onSaved={refresh} />
           {records.map((r) => (
-            <Card key={r.id}>
-              <CardContent className="p-4 text-sm">
-                <p className="font-semibold">
-                  {r.driverName} · {r.vehicleRegistration} · {r.controlDate}
-                </p>
-                <p>{r.locationLabel}</p>
-                <p className="mt-1">
-                  Wynik: <strong>{ITD_OUTCOME_LABELS[r.outcome]}</strong>
-                  {r.finePln ? ` · ${r.finePln} PLN` : ''}
-                </p>
-                {r.protocolNumber && <p>Nr protokołu: {r.protocolNumber}</p>}
-                {r.attachmentName && <p>Załącznik: {r.attachmentName}</p>}
-                {r.notes && <p className="text-muted-foreground">{r.notes}</p>}
-              </CardContent>
-            </Card>
+            <ItdRecordRow key={r.id} tenantId={tenantId} record={r} />
           ))}
         </div>
       )}
@@ -175,6 +161,25 @@ export function ItdAdminView({ tenantId, userRole, userName }: ItdAdminViewProps
           </CardHeader>
           <CardContent>
             <ItdHotspotsMap hotspots={hotspots} onRefresh={refresh} />
+            <div className="mt-4 space-y-2">
+              <p className="text-sm font-medium">Moderacja zgłoszeń kierowców</p>
+              {hotspots
+                .filter((h) => h.source !== 'curated')
+                .map((h) => (
+                  <HotspotModerationRow
+                    key={h.id}
+                    hotspot={h}
+                    onConfirm={() => {
+                      moderateItdHotspot(tenantId, h.id, 'confirm', userName)
+                      refresh()
+                    }}
+                    onDismiss={() => {
+                      moderateItdHotspot(tenantId, h.id, 'dismiss', userName)
+                      refresh()
+                    }}
+                  />
+                ))}
+            </div>
           </CardContent>
         </Card>
       )}
@@ -272,6 +277,7 @@ function ItdRecordForm({ tenantId, onSaved }: { tenantId: string; onSaved: () =>
   const [finePln, setFinePln] = useState('')
   const [protocolNumber, setProtocolNumber] = useState('')
   const [attachmentName, setAttachmentName] = useState('')
+  const [attachmentFileId, setAttachmentFileId] = useState<string | undefined>()
   const [notes, setNotes] = useState('')
 
   function submit(e: React.FormEvent) {
@@ -286,6 +292,7 @@ function ItdRecordForm({ tenantId, onSaved }: { tenantId: string; onSaved: () =>
       finePln: finePln ? Number(finePln) : undefined,
       protocolNumber: protocolNumber || undefined,
       attachmentName: attachmentName || undefined,
+      attachmentFileId,
       notes: notes || undefined,
     })
     onSaved()
@@ -295,6 +302,7 @@ function ItdRecordForm({ tenantId, onSaved }: { tenantId: string; onSaved: () =>
     setFinePln('')
     setProtocolNumber('')
     setAttachmentName('')
+    setAttachmentFileId(undefined)
     setNotes('')
   }
 
@@ -302,7 +310,7 @@ function ItdRecordForm({ tenantId, onSaved }: { tenantId: string; onSaved: () =>
     <Card>
       <CardHeader>
         <CardTitle className="text-base">Dodaj wynik kontroli</CardTitle>
-        <CardDescription>Protokół, mandat — skan jako nazwa pliku (demo)</CardDescription>
+        <CardDescription>Protokół, mandat — PDF lub zdjęcie (max 512 KB)</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={submit} className="grid gap-3 sm:grid-cols-2">
@@ -340,9 +348,21 @@ function ItdRecordForm({ tenantId, onSaved }: { tenantId: string; onSaved: () =>
             <Label>Nr protokołu</Label>
             <Input value={protocolNumber} onChange={(e) => setProtocolNumber(e.target.value)} />
           </div>
-          <div>
-            <Label>Plik (np. protokol-itd.pdf)</Label>
-            <Input value={attachmentName} onChange={(e) => setAttachmentName(e.target.value)} />
+          <div className="sm:col-span-2">
+            <Label>Skan protokołu / mandatu</Label>
+            <FileUploadField
+              tenantId={tenantId}
+              tags={['itd', 'protocol']}
+              label="Dodaj PDF lub zdjęcie"
+              onUploaded={(id, name) => {
+                setAttachmentFileId(id)
+                setAttachmentName(name)
+              }}
+              onClear={() => {
+                setAttachmentFileId(undefined)
+                setAttachmentName('')
+              }}
+            />
           </div>
           <div className="sm:col-span-2">
             <Label>Notatki</Label>
@@ -354,5 +374,75 @@ function ItdRecordForm({ tenantId, onSaved }: { tenantId: string; onSaved: () =>
         </form>
       </CardContent>
     </Card>
+  )
+}
+
+function ItdRecordRow({ tenantId, record }: { tenantId: string; record: ItdControlRecord }) {
+  const { openPreview } = useFilePreview()
+  return (
+    <Card>
+      <CardContent className="p-4 text-sm">
+        <p className="font-semibold">
+          {record.driverName} · {record.vehicleRegistration} · {record.controlDate}
+        </p>
+        <p>{record.locationLabel}</p>
+        <p className="mt-1">
+          Wynik: <strong>{ITD_OUTCOME_LABELS[record.outcome]}</strong>
+          {record.finePln ? ` · ${record.finePln} PLN` : ''}
+        </p>
+        {record.protocolNumber && <p>Nr protokołu: {record.protocolNumber}</p>}
+        {record.attachmentName && (
+          <p className="flex flex-wrap items-center gap-2">
+            Załącznik: {record.attachmentName}
+            {record.attachmentFileId && (
+              <Button
+                size="sm"
+                variant="outline"
+                type="button"
+                onClick={() => {
+                  const f = loadTenantFiles(tenantId).find((x) => x.id === record.attachmentFileId)
+                  if (f) openPreview(storedToPreviewable(f))
+                }}
+              >
+                Podgląd
+              </Button>
+            )}
+          </p>
+        )}
+        {record.notes && <p className="text-muted-foreground">{record.notes}</p>}
+      </CardContent>
+    </Card>
+  )
+}
+
+function HotspotModerationRow({
+  hotspot,
+  onConfirm,
+  onDismiss,
+}: {
+  hotspot: ItdHotspot
+  onConfirm: () => void
+  onDismiss: () => void
+}) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border p-2 text-sm">
+      <div>
+        <p className="font-medium">{hotspot.name}</p>
+        <p className="text-xs text-muted-foreground">
+          {hotspot.road} · {hotspot.moderation ?? 'pending'} ·{' '}
+          {new Date(hotspot.reportedAt).toLocaleString('pl-PL')}
+        </p>
+      </div>
+      {hotspot.moderation === 'pending' && (
+        <div className="flex gap-1">
+          <Button size="sm" variant="outline" onClick={onConfirm}>
+            Potwierdź
+          </Button>
+          <Button size="sm" variant="ghost" onClick={onDismiss}>
+            Odrzuć
+          </Button>
+        </div>
+      )}
+    </div>
   )
 }

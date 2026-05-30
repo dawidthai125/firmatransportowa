@@ -76,6 +76,7 @@ export type TenantDataKey =
   | 'fleet-positions'
   | 'freight-board'
   | 'freight-offers'
+  | 'freight-connectors'
   | 'itd'
 
 export const TENANT_DATA_KEYS: TenantDataKey[] = [
@@ -91,6 +92,7 @@ export const TENANT_DATA_KEYS: TenantDataKey[] = [
   'fleet-positions',
   'freight-board',
   'freight-offers',
+  'freight-connectors',
   'itd',
 ]
 

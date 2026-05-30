@@ -12,28 +12,41 @@ import {
 } from '@/lib/domain/freight-offer'
 import { searchFreightOffers } from '@/lib/domain/freight-board-store'
 import {
+  importEmailLead,
+  loadFreightConnectorConfig,
+  saveFreightConnectorConfig,
+  syncFreightConnectors,
+} from '@/lib/domain/freight-connectors'
+import { freightOfferToCourse } from '@/lib/domain/freight-offer-to-course'
+import { upsertCourse } from '@/lib/domain/courses-store'
+import {
   loadFreightPreferences,
   saveFreightPreferences,
   toggleSavedOffer,
   type FreightSearchPreferences,
 } from '@/lib/domain/freight-preferences'
 import { cn } from '@/lib/utils'
-import { Bookmark, BookmarkCheck, Filter, RefreshCw, Search, Star } from 'lucide-react'
+import { Bookmark, BookmarkCheck, CloudDownload, Filter, Plus, RefreshCw, Search, Star } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 
 interface FreightBoardViewProps {
   tenantId: string
+  onNavigateToCourses?: () => void
 }
 
 const ALL_SOURCES = Object.keys(FREIGHT_SOURCE_LABELS) as FreightSource[]
 const ALL_BODIES = Object.keys(FREIGHT_BODY_LABELS) as FreightBodyType[]
 
-export function FreightBoardView({ tenantId }: FreightBoardViewProps) {
+export function FreightBoardView({ tenantId, onNavigateToCourses }: FreightBoardViewProps) {
   const [query, setQuery] = useState('')
   const [offers, setOffers] = useState<FreightOffer[]>([])
   const [prefs, setPrefs] = useState<FreightSearchPreferences>(() => loadFreightPreferences(tenantId))
   const [showFilters, setShowFilters] = useState(true)
   const [savedOnly, setSavedOnly] = useState(false)
+  const [connectorCfg, setConnectorCfg] = useState(() => loadFreightConnectorConfig(tenantId))
+  const [syncMsg, setSyncMsg] = useState<string | null>(null)
+  const [emailLead, setEmailLead] = useState('')
+  const [courseCreated, setCourseCreated] = useState<string | null>(null)
 
   const refresh = useCallback(() => {
     const { offers: found, prefs: p } = searchFreightOffers(tenantId, query)
@@ -77,6 +90,108 @@ export function FreightBoardView({ tenantId }: FreightBoardViewProps) {
         Agregacja ofert: Trans.eu, TimoCom, Teleroute, 123cargo, Transporeon, e-mail i sieć partnerska.
         Filtry odzwierciedlają typowe preferencje polskich firm TSL.
       </p>
+
+      {courseCreated && (
+        <Card className="border-success/30 bg-success/5">
+          <CardContent className="flex flex-wrap items-center justify-between gap-2 p-3 text-sm">
+            <span>Kurs {courseCreated} utworzony z oferty.</span>
+            {onNavigateToCourses && (
+              <Button size="sm" variant="outline" onClick={onNavigateToCourses}>
+                Otwórz kursy
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Synchronizacja giełd (API)</CardTitle>
+          <CardDescription>
+            Trans.eu + TimoCom — demo symuluje live feed; produkcja: klucze w Edge Function
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex flex-wrap gap-4 text-sm">
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={connectorCfg.transEuEnabled}
+                onChange={(e) => {
+                  const next = { ...connectorCfg, transEuEnabled: e.target.checked }
+                  saveFreightConnectorConfig(tenantId, next)
+                  setConnectorCfg(next)
+                }}
+              />
+              Trans.eu
+              {connectorCfg.lastSyncBySource.trans_eu && (
+                <span className="text-xs text-muted-foreground">
+                  · {new Date(connectorCfg.lastSyncBySource.trans_eu).toLocaleString('pl-PL')}
+                </span>
+              )}
+            </label>
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={connectorCfg.timocomEnabled}
+                onChange={(e) => {
+                  const next = { ...connectorCfg, timocomEnabled: e.target.checked }
+                  saveFreightConnectorConfig(tenantId, next)
+                  setConnectorCfg(next)
+                }}
+              />
+              TimoCom
+              {connectorCfg.lastSyncBySource.timocom && (
+                <span className="text-xs text-muted-foreground">
+                  · {new Date(connectorCfg.lastSyncBySource.timocom).toLocaleString('pl-PL')}
+                </span>
+              )}
+            </label>
+          </div>
+          <Button
+            size="sm"
+            onClick={() => {
+              const r = syncFreightConnectors(tenantId)
+              setConnectorCfg(loadFreightConnectorConfig(tenantId))
+              setSyncMsg(`Pobrano ${r.added} nowych ofert (${r.sources.join(', ')})`)
+              refresh()
+            }}
+          >
+            <CloudDownload className="mr-2 h-4 w-4" />
+            Synchronizuj teraz
+          </Button>
+          {syncMsg && <p className="text-xs text-success">{syncMsg}</p>}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Import leadu e-mail</CardTitle>
+          <CardDescription>Wklej treść maila — parser wyciągnie trasę i stawkę</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <textarea
+            className="min-h-[80px] w-full rounded-lg border border-border bg-background p-3 text-sm"
+            placeholder="np. Wrocław (PL) → Berlin (DE), 1680 EUR, 22t, załadunek jutro"
+            value={emailLead}
+            onChange={(e) => setEmailLead(e.target.value)}
+          />
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              const o = importEmailLead(tenantId, emailLead)
+              if (o) {
+                setEmailLead('')
+                setSyncMsg(`Zaimportowano: ${o.reference}`)
+                refresh()
+              }
+            }}
+          >
+            Importuj na giełdę
+          </Button>
+        </CardContent>
+      </Card>
 
       <div className="flex flex-wrap gap-2">
         <div className="relative min-w-[200px] flex-1">
@@ -276,6 +391,11 @@ export function FreightBoardView({ tenantId }: FreightBoardViewProps) {
               toggleSavedOffer(tenantId, o.id)
               refresh()
             }}
+            onCreateCourse={() => {
+              const course = freightOfferToCourse(o)
+              upsertCourse(tenantId, course)
+              setCourseCreated(course.reference)
+            }}
           />
         ))}
         {visible.length === 0 && (
@@ -294,10 +414,12 @@ function FreightOfferCard({
   offer,
   saved,
   onToggleSave,
+  onCreateCourse,
 }: {
   offer: FreightOffer
   saved: boolean
   onToggleSave: () => void
+  onCreateCourse: () => void
 }) {
   return (
     <Card>
@@ -336,7 +458,8 @@ function FreightOfferCard({
             </p>
           )}
           <p className="text-xs text-muted-foreground">Płatność: {offer.paymentDays} dni</p>
-          <Button variant="ghost" size="sm" className="mt-2" onClick={onToggleSave}>
+          <div className="mt-2 flex flex-col gap-1">
+            <Button variant="ghost" size="sm" onClick={onToggleSave}>
             {saved ? (
               <>
                 <BookmarkCheck className="mr-1 h-4 w-4" />
@@ -348,7 +471,12 @@ function FreightOfferCard({
                 Zapisz
               </>
             )}
-          </Button>
+            </Button>
+            <Button variant="outline" size="sm" onClick={onCreateCourse}>
+              <Plus className="mr-1 h-4 w-4" />
+              Utwórz kurs
+            </Button>
+          </div>
         </div>
       </CardContent>
     </Card>

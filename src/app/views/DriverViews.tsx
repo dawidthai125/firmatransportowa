@@ -21,6 +21,8 @@ import { findDriverByDisplayName, resolveDriverVehicle } from '@/lib/domain/driv
 import { syncDriverReminders } from '@/lib/notifications/driver-reminders'
 import { seedDemoCompanyDocuments, loadTenantSettingsData } from '@/lib/domain/tenant-settings'
 import { expiryStatus, EXPIRY_STATUS_COLORS, formatExpiryDate } from '@/lib/domain/compliance'
+import { isPushSubscribed, subscribeAppPush } from '@/lib/notifications/app-notify'
+import { ensureNotificationPermission } from '@/lib/notifications/web-notify'
 import { cn } from '@/lib/utils'
 import { AlertTriangle, CheckCircle2, FileText, Fuel, Phone, Route, Truck, User, Wrench } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
@@ -508,6 +510,16 @@ export function DriverProfileView({ tenantId, driverName }: { tenantId: string; 
 
       <Card>
         <CardHeader>
+          <CardTitle className="text-base">Powiadomienia PWA</CardTitle>
+          <CardDescription>Alerty o kursie, raporcie i ITD — także gdy app jest w tle</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <PushSubscribeButton />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle className="text-base">Dokumenty</CardTitle>
           <CardDescription>CKZ, prawo jazdy, badania — ważność</CardDescription>
         </CardHeader>
@@ -528,6 +540,31 @@ export function DriverProfileView({ tenantId, driverName }: { tenantId: string; 
           })}
         </CardContent>
       </Card>
+    </div>
+  )
+}
+
+function PushSubscribeButton() {
+  const [subscribed, setSubscribed] = useState(isPushSubscribed())
+  const [msg, setMsg] = useState<string | null>(null)
+
+  async function enable() {
+    const perm = await ensureNotificationPermission()
+    if (perm !== 'granted') {
+      setMsg('Brak zgody na powiadomienia w przeglądarce')
+      return
+    }
+    const ok = await subscribeAppPush()
+    setSubscribed(ok || isPushSubscribed())
+    setMsg(ok ? 'Powiadomienia w tle włączone' : 'Tryb demo — bez VAPID key')
+  }
+
+  return (
+    <div className="space-y-2">
+      <Button variant="outline" size="sm" onClick={() => void enable()} disabled={subscribed}>
+        {subscribed ? 'Powiadomienia aktywne' : 'Włącz powiadomienia push'}
+      </Button>
+      {msg && <p className="text-xs text-muted-foreground">{msg}</p>}
     </div>
   )
 }

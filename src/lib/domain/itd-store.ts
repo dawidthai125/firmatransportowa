@@ -1,3 +1,4 @@
+import { showAppNotification } from '@/lib/notifications/app-notify'
 import { pushNotification } from '@/lib/automation/notifications-store'
 import { defaultItdPlaybook } from '@/lib/domain/itd-playbook-default'
 import type {
@@ -127,18 +128,21 @@ export function saveItdPlaybook(tenantId: string, playbook: ItdPlaybookSection[]
   saveItd(tenantId, { ...data, playbook })
 }
 
-export function loadItdHotspots(tenantId: string): ItdHotspot[] {
+export function loadItdHotspots(tenantId: string, role: 'driver' | 'admin' = 'driver'): ItdHotspot[] {
   const now = Date.now()
   return seedItdData(tenantId).hotspots.filter((h) => {
-    if (!h.expiresAt) return true
-    return new Date(h.expiresAt).getTime() > now
+    if (h.expiresAt && new Date(h.expiresAt).getTime() <= now) return false
+    if (h.source === 'curated') return true
+    if (h.moderation === 'dismissed') return role === 'admin'
+    return true
   })
 }
 
 export function reportItdHotspot(
   tenantId: string,
-  patch: Omit<ItdHotspot, 'id' | 'reportedAt' | 'source' | 'activity' | 'type'> & {
+  patch: Omit<ItdHotspot, 'id' | 'reportedAt' | 'source' | 'activity' | 'type' | 'moderation'> & {
     source: 'driver_report' | 'dispatcher_report'
+    reportedBy?: string
   },
 ): ItdHotspot {
   const data = seedItdData(tenantId)
@@ -150,6 +154,7 @@ export function reportItdHotspot(
     activity: 'high',
     type: 'reported_live',
     expiresAt: expires,
+    moderation: 'pending',
   }
   saveItd(tenantId, { ...data, hotspots: [hotspot, ...data.hotspots] })
   return hotspot
@@ -186,6 +191,12 @@ export function submitItdControlAlert(
     actionView: 'itd',
   })
 
+  void showAppNotification(
+    'Kontrola ITD — alert kierowcy',
+    `${alert.driverName} · ${alert.locationLabel}`,
+    { tag: 'itd-alert', requireInteraction: true, data: { view: 'itd' } },
+  )
+
   if (alert.lat != null && alert.lng != null) {
     reportItdHotspot(tenantId, {
       name: `Kontrola: ${alert.driverName}`,
@@ -194,6 +205,7 @@ export function submitItdControlAlert(
       road: alert.road,
       notes: alert.message,
       source: 'driver_report',
+      reportedBy: alert.driverName,
     })
   }
 
@@ -263,4 +275,26 @@ export function updatePlaybookSection(
   )
   saveItd(tenantId, { ...data, playbook })
   return true
+}
+
+export function moderateItdHotspot(
+  tenantId: string,
+  hotspotId: string,
+  action: 'confirm' | 'dismiss',
+  byUser: string,
+): void {
+  const data = seedItdData(tenantId)
+  saveItd(tenantId, {
+    ...data,
+    hotspots: data.hotspots.map((h) =>
+      h.id === hotspotId
+        ? {
+            ...h,
+            moderation: action === 'confirm' ? 'confirmed' : 'dismissed',
+            notes: `${h.notes ?? ''} · ${action === 'confirm' ? 'Potwierdzone' : 'Odrzucone'} przez ${byUser}`.trim(),
+            ...(action === 'confirm' ? { expiresAt: undefined, activity: 'high' as const } : {}),
+          }
+        : h,
+    ),
+  })
 }

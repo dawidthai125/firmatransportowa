@@ -6,7 +6,7 @@ import {
   loadDriverNotifications,
   pushDriverNotification,
 } from '@/lib/notifications/driver-inbox'
-import { showWebNotification } from '@/lib/notifications/web-notify'
+import { showAppNotification } from '@/lib/notifications/app-notify'
 
 const SEEN_COURSES_KEY = 'ft-driver-seen-courses'
 
@@ -45,7 +45,7 @@ export function syncDriverReminders(tenantId: string, driverName: string): void 
       level: 'info',
       actionView: 'courses',
     })
-    void showWebNotification(n.title, n.message)
+    void showAppNotification(n.title, n.message, { tag: 'driver-course' })
     seen.add(course.id)
   }
   saveSeenCourseIds(tenantId, driverName, [...seen])
@@ -63,7 +63,7 @@ export function syncDriverReminders(tenantId: string, driverName: string): void 
       level: 'warning',
       actionView: 'report',
     })
-    void showWebNotification(n.title, n.message)
+    void showAppNotification(n.title, n.message, { tag: 'driver-course' })
   }
 }
 

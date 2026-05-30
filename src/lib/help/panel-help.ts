@@ -252,7 +252,7 @@ function adminSteps(
           action: 'Kolumna ceny i gwiazdki na karcie oferty',
         },
       ],
-      tips: ['Docelowo: integracja API z giełdami — teraz agregacja demo + leady e-mail.'],
+      tips: ['Docelowo: integracja API z giełdami — użyj „Synchronizuj teraz” (Trans.eu / TimoCom).'],
     },
     itd: {
       title: 'ITD i kontrole drogowe',

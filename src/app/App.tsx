@@ -162,7 +162,12 @@ export default function App() {
           <DashboardView tenant={currentTenant} onNavigate={setAdminView} />
         )}
         {adminView === 'courses' && <CoursesView tenantId={currentTenant.id} />}
-        {adminView === 'loads' && <FreightBoardView tenantId={currentTenant.id} />}
+        {adminView === 'loads' && (
+          <FreightBoardView
+            tenantId={currentTenant.id}
+            onNavigateToCourses={() => setAdminView('courses')}
+          />
+        )}
         {adminView === 'reports' && <DailyReportsView tenantId={currentTenant.id} />}
         {adminView === 'settlements' && (
           <SettlementsView

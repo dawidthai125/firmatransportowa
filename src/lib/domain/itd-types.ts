@@ -18,6 +18,9 @@ export interface ItdHotspot {
   reportedAt: string
   notes?: string
   expiresAt?: string
+  /** Moderacja zgłoszeń kierowcy/dyspozytora */
+  moderation?: 'pending' | 'confirmed' | 'dismissed'
+  reportedBy?: string
 }
 
 export type ItdPlaybookSectionKind = 'legal' | 'company' | 'checklist'
@@ -62,6 +65,7 @@ export interface ItdControlRecord {
   protocolNumber?: string
   notes?: string
   attachmentName?: string
+  attachmentFileId?: string
   alertId?: string
   createdAt: string
 }
