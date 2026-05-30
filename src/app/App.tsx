@@ -23,6 +23,7 @@ import { MechanicHomeView } from '@/app/views/MechanicViews'
 import { RepairsView } from '@/app/views/RepairsView'
 import { SettlementsView } from '@/app/views/SettlementsView'
 import { SettingsView } from '@/app/views/SettingsView'
+import { TachographView } from '@/app/views/TachographView'
 import type { AppMode } from '@/lib/auth/session'
 import { loadSession, roleToAppMode } from '@/lib/auth/session'
 import {
@@ -203,6 +204,7 @@ export default function App() {
         {adminView === 'compliance' && (
           <ComplianceView tenantId={currentTenant.id} tenantName={currentTenant.name} />
         )}
+        {adminView === 'tachograph' && <TachographView tenantId={currentTenant.id} />}
         {adminView === 'settings' && mode === 'owner' && <SettingsView tenant={currentTenant} />}
         {adminView === 'settings' && mode === 'dispatcher' && (
           <DashboardView tenant={currentTenant} onNavigate={setAdminView} />

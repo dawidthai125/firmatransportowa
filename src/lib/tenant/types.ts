@@ -48,7 +48,7 @@ export const DEFAULT_MODULES: TenantModules = {
   gps: true,
   loadBoard: true,
   itd: true,
-  tachographImport: false,
+  tachographImport: true,
   repairs: true,
 }
 
@@ -78,6 +78,7 @@ export type TenantDataKey =
   | 'freight-offers'
   | 'freight-connectors'
   | 'itd'
+  | 'tachograph'
 
 export const TENANT_DATA_KEYS: TenantDataKey[] = [
   'drivers',
@@ -94,6 +95,7 @@ export const TENANT_DATA_KEYS: TenantDataKey[] = [
   'freight-offers',
   'freight-connectors',
   'itd',
+  'tachograph',
 ]
 
 export function tenantStorageKey(tenantId: string, key: TenantDataKey): string {

@@ -37,6 +37,7 @@ function patchRegistryTenants(tenants: Tenant[]): Tenant[] {
                   gps: true,
                   loadBoard: true,
                   itd: true,
+                  tachographImport: true,
                 },
               },
             }

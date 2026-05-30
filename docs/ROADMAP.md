@@ -42,17 +42,18 @@
 - [x] Profil kierowcy, powiadomienia, wyjątki na pulpicie — v0.11
 - [x] Giełda ładunków (agregacja + filtry TSL) — v0.12
 - [x] Moduł ITD (instrukcja, alerty, mapa, archiwum) — v0.12
+- [x] Alerty RMPD/CMR + import tachografu DDD — v0.14
 - [ ] Web Push (VAPID) — poza Notification API
 
 ## 🔜 v0.9 — Integracje branżowe
 
 - [x] Giełda ładunków — agregacja demo + filtry (v0.12)
+- [x] RMPD/SENT — przypomnienie rejestracji (v0.14)
 - [ ] API Trans.eu / TimoCom (produkcja)
-- Import plików tachografu (DDD)
-- RMPD/SENT — przypomnienie rejestracji
+- Import plików tachografu (DDD) — demo v0.14, parser produkcyjny później
 
 ## 🔜 v1.0 — Produkt pod abonament
 
-- Plany Starter / Business / Enterprise (moduły)
+- Plany Starter / Business / Enterprise (moduły) — presety v0.14
 - Onboarding nowej firmy (self-service)
 - Panel platform_admin (Ty jako sprzedawca SaaS)

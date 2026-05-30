@@ -11,6 +11,7 @@ export type AdminView =
   | 'repairs'
   | 'loads'
   | 'itd'
+  | 'tachograph'
   | 'settings'
 
 export type DriverView = 'home' | 'report' | 'courses' | 'issue' | 'itd' | 'profile'
@@ -38,6 +39,7 @@ export const OWNER_NAV: NavItem<AdminView>[] = [
   { id: 'itd', label: 'ITD', icon: 'shield-alert', module: 'itd' },
   { id: 'drivers', label: 'Kierowcy', icon: 'users', module: 'drivers' },
   { id: 'compliance', label: 'Zgodność', icon: 'shield-check', module: 'compliance' },
+  { id: 'tachograph', label: 'Tachograf', icon: 'hard-drive', module: 'tachographImport' },
   { id: 'settings', label: 'Firma', icon: 'settings' },
 ]
 
@@ -79,5 +81,6 @@ export const VIEW_TITLES: Record<AdminView, string> = {
   itd: 'ITD i kontrole drogowe',
   drivers: 'Kierowcy',
   compliance: 'Zgodność i dokumenty',
+  tachograph: 'Import tachografu (DDD)',
   settings: 'Ustawienia firmy',
 }

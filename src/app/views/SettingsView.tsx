@@ -12,6 +12,13 @@ import {
 import { EXPIRY_STATUS_COLORS, expiryStatus, formatExpiryDate } from '@/lib/domain/compliance'
 import { COMPANY_BRANDING, isCompanyDeployment } from '@/config/branding'
 import type { Tenant } from '@/lib/tenant/types'
+import type { SubscriptionPlan } from '@/lib/tenant/types'
+import {
+  modulesForPlan,
+  PLAN_DESCRIPTIONS,
+  PLAN_LABELS,
+} from '@/lib/tenant/plan-presets'
+import { useTenant } from '@/lib/tenant/context'
 import { cn } from '@/lib/utils'
 import { Plus, Settings, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
@@ -21,6 +28,7 @@ interface SettingsViewProps {
 }
 
 export function SettingsView({ tenant }: SettingsViewProps) {
+  const { registerTenant, setCurrentTenant } = useTenant()
   const { settings } = tenant
   const [documents, setDocuments] = useState<CompanyDocument[]>([])
   const [mechanics, setMechanics] = useState(loadTenantSettingsData(tenant.id).mechanics)
@@ -90,6 +98,19 @@ export function SettingsView({ tenant }: SettingsViewProps) {
     persist(documents.filter((_, i) => i !== index))
   }
 
+  function applyPlan(plan: SubscriptionPlan) {
+    const updated: Tenant = {
+      ...tenant,
+      plan,
+      settings: {
+        ...tenant.settings,
+        modules: modulesForPlan(plan),
+      },
+    }
+    registerTenant(updated)
+    setCurrentTenant(updated)
+  }
+
   const scopeLabel =
     settings.transportScope === 'both'
       ? 'Kraj + międzynarodowy'
@@ -131,8 +152,43 @@ export function SettingsView({ tenant }: SettingsViewProps) {
           </div>
 
           {!isCompanyDeployment() && (
+            <div className="space-y-3 border-t border-border pt-3">
+              <p className="font-medium text-foreground">Plan abonamentowy (demo SaaS)</p>
+              <p className="text-xs text-muted-foreground">{PLAN_DESCRIPTIONS[tenant.plan]}</p>
+              <div className="flex flex-wrap gap-2">
+                {(Object.keys(PLAN_LABELS) as SubscriptionPlan[]).map((plan) => (
+                  <Button
+                    key={plan}
+                    size="sm"
+                    variant={tenant.plan === plan ? 'default' : 'secondary'}
+                    onClick={() => applyPlan(plan)}
+                  >
+                    {PLAN_LABELS[plan]}
+                  </Button>
+                ))}
+              </div>
+              <div className="pt-1">
+                <p className="mb-2 text-xs font-medium text-muted-foreground">Moduły w planie</p>
+                <div className="flex flex-wrap gap-2">
+                  {Object.entries(settings.modules).map(([key, enabled]) => (
+                    <span
+                      key={key}
+                      className={cn(
+                        'rounded-full px-2.5 py-0.5 text-xs font-medium',
+                        enabled ? 'bg-success/15 text-success' : 'bg-muted text-muted-foreground',
+                      )}
+                    >
+                      {key}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {isCompanyDeployment() && (
             <div className="pt-2">
-              <p className="mb-2 font-medium text-foreground">Aktywne moduły (abonament)</p>
+              <p className="mb-2 font-medium text-foreground">Aktywne moduły</p>
               <div className="flex flex-wrap gap-2">
                 {Object.entries(settings.modules).map(([key, enabled]) => (
                   <span

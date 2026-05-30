@@ -18,6 +18,10 @@ import {
   seedDemoCourses,
   upsertCourse,
 } from '@/lib/domain/courses-store'
+import {
+  buildInternationalCourseAlerts,
+  courseNeedsInternationalCheck,
+} from '@/lib/domain/international-compliance'
 import { cn } from '@/lib/utils'
 import { AlertTriangle, Globe, MapPin, Pencil, Plus, Route, Trash2, X } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
@@ -145,6 +149,9 @@ function CourseCard({
 }) {
   const margin = courseMargin(course)
   const isInternational = course.scope !== 'domestic'
+  const intlIssues = courseNeedsInternationalCheck(course)
+    ? buildInternationalCourseAlerts(course.tenantId, [course])
+    : []
 
   return (
     <Card>
@@ -167,6 +174,20 @@ function CourseCard({
                   ADR
                 </span>
               )}
+              {intlIssues.map((issue) => (
+                <span
+                  key={issue.id}
+                  className={cn(
+                    'flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium',
+                    issue.severity === 'critical'
+                      ? 'bg-danger/15 text-danger'
+                      : 'bg-warning/15 text-warning',
+                  )}
+                >
+                  <AlertTriangle className="h-3 w-3" />
+                  {issue.issue === 'missing_rmpd' ? 'RMPD' : issue.issue === 'missing_cmr' ? 'CMR' : 'Wypis'}
+                </span>
+              ))}
             </div>
 
             <p className="text-sm text-muted-foreground">{course.cargo}</p>

@@ -306,24 +306,56 @@ function adminSteps(
     },
     compliance: {
       title: 'Zgodność i dokumenty',
-      summary: 'Alerty ważności licencji, CKZ, pojazdów i dokumentów firmy — tylko właściciel.',
+      summary: 'Alerty ważności licencji, CKZ, pojazdów oraz brakujące CMR/RMPD na kursach międzynarodowych.',
       steps: [
         {
-          title: 'Przegląd alertów',
+          title: 'Kursy międzynarodowe',
+          description: 'Sekcja u góry — brak CMR, wypisu lub rejestracji RMPD w PUESC przed wyjazdem poza UE.',
+          action: 'Link PUESC przy alertach RMPD',
+        },
+        {
+          title: 'Przegląd alertów dokumentów',
           description: 'Lista posortowana według pilności — czerwony = po terminie lub wkrótce.',
           action: 'Lista alertów na ekranie',
         },
         {
           title: 'Uzupełnij dane u źródła',
-          description: 'Edytuj kierowcę, pojazd lub dokumenty firmy, żeby alert zniknął.',
-          action: `${NAV_HINT} → Kierowcy / Flota / Firma`,
+          description: 'Edytuj kierowcę, pojazd, kurs lub dokumenty firmy, żeby alert zniknął.',
+          action: `${NAV_HINT} → Kierowcy / Flota / Kursy / Firma`,
         },
       ],
     },
+    tachograph: {
+      title: 'Import tachografu (DDD)',
+      summary: 'Archiwum odczytów karty kierowcy i urządzenia pojazdu — kontrola ITD i czas jazdy 561/2006.',
+      steps: [
+        {
+          title: 'Import pliku DDD',
+          description: 'Pobierz plik z tachografu (karta lub VU) i zaimportuj — trafia też do biblioteki Pliki.',
+          action: 'Przycisk „Importuj plik DDD”',
+        },
+        {
+          title: 'Przypisz kierowcę',
+          description: 'System próbuje rozpoznać kierowcę z nazwy pliku — możesz poprawić ręcznie.',
+          action: 'Lista importów → wybór kierowcy',
+        },
+        {
+          title: 'Okres odczytu',
+          description: 'Daty z nazwy pliku (YYYYMMDD) — pełne dekodowanie DDD w wersji produkcyjnej.',
+          action: 'Kolumna okresu na karcie importu',
+        },
+      ],
+      related: [{ label: 'Pliki', hint: 'Kopia importu w bibliotece dokumentów' }],
+    },
     settings: {
       title: 'Ustawienia firmy',
-      summary: 'Dokumenty firmy (licencje, CKZ), mechanicy i weryfikatorzy awarii.',
+      summary: 'Dokumenty firmy, plan abonamentowy (demo SaaS), mechanicy i weryfikatorzy awarii.',
       steps: [
+        {
+          title: 'Plan abonamentowy',
+          description: 'Starter / Business / Enterprise — włącza lub ukrywa moduły (GPS, giełda, ITD, tachograf).',
+          action: 'Sekcja „Plan abonamentowy” → wybierz plan',
+        },
         {
           title: 'Dokumenty firmy',
           description: 'Licencja, CKZ, zezwolenie — daty ważności wpływają na alerty.',

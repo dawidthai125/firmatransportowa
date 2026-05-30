@@ -9,6 +9,7 @@ import { loadDailyReports, seedDemoDailyReports } from '@/lib/domain/daily-repor
 import type { FleetPosition } from '@/lib/domain/fleet-position'
 import { loadFleetPositions } from '@/lib/domain/fleet-positions-store'
 import { activeItdAlerts } from '@/lib/domain/itd-store'
+import { buildInternationalCourseAlerts } from '@/lib/domain/international-compliance'
 import { loadRepairReports, seedDemoRepairReports } from '@/lib/domain/repair-reports-store'
 import { seedDemoCompanyDocuments, loadTenantSettingsData } from '@/lib/domain/tenant-settings'
 import { loadVehicles, seedDemoVehicles } from '@/lib/domain/vehicles-store'
@@ -67,6 +68,31 @@ export function buildOperationsExceptions(
   const itdActive = activeItdAlerts(tenantId)
 
   const out: OperationException[] = []
+
+  seedDemoCourses(tenantId)
+  const intlAlerts = buildInternationalCourseAlerts(tenantId, loadCourses(tenantId))
+  const rmpdMissing = intlAlerts.filter((a) => a.issue === 'missing_rmpd')
+  const cmrMissing = intlAlerts.filter((a) => a.issue === 'missing_cmr')
+
+  if (rmpdMissing.length > 0) {
+    out.push({
+      id: 'rmpd-missing',
+      severity: rmpdMissing.some((a) => a.severity === 'critical') ? 'critical' : 'warning',
+      title: `${rmpdMissing.length} kursów bez RMPD / SENT`,
+      description: rmpdMissing.map((a) => a.courseRef).join(', '),
+      actionView: 'courses',
+    })
+  }
+
+  if (cmrMissing.length > 0) {
+    out.push({
+      id: 'cmr-missing',
+      severity: cmrMissing.some((a) => a.severity === 'critical') ? 'critical' : 'warning',
+      title: `${cmrMissing.length} kursów bez numeru CMR`,
+      description: cmrMissing.map((a) => a.courseRef).join(', '),
+      actionView: 'courses',
+    })
+  }
 
   if (itdActive.length > 0) {
     out.push({

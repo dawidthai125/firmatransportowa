@@ -18,6 +18,10 @@ import {
 } from '@/lib/domain/daily-reports-store'
 import { loadCourses, seedDemoCourses } from '@/lib/domain/courses-store'
 import { findDriverByDisplayName, resolveDriverVehicle } from '@/lib/domain/driver-profile'
+import {
+  buildInternationalCourseAlerts,
+  courseNeedsInternationalCheck,
+} from '@/lib/domain/international-compliance'
 import { syncDriverReminders } from '@/lib/notifications/driver-reminders'
 import { seedDemoCompanyDocuments, loadTenantSettingsData } from '@/lib/domain/tenant-settings'
 import { expiryStatus, EXPIRY_STATUS_COLORS, formatExpiryDate } from '@/lib/domain/compliance'
@@ -48,12 +52,20 @@ export function DriverHomeView({
   const [shiftEnded, setShiftEnded] = useState(false)
   const [vehicleReg, setVehicleReg] = useState<string | undefined>()
   const [vehicleId, setVehicleId] = useState<string | undefined>()
+  const [intlWarnings, setIntlWarnings] = useState<string[]>([])
 
   useEffect(() => {
     seedDemoCourses(tenantId)
     const courses = loadCourses(tenantId)
     const active = courses.find((c) => c.status === 'in_transit' || c.status === 'loading')
     setActiveCourse(active ?? null)
+    if (active && courseNeedsInternationalCheck(active)) {
+      setIntlWarnings(
+        buildInternationalCourseAlerts(tenantId, [active]).map((a) => a.label),
+      )
+    } else {
+      setIntlWarnings([])
+    }
     if (driverName) {
       const today = getTodayReportForDriver(tenantId, driverName)
       setShiftEnded(today?.shiftEnded ?? false)
@@ -86,7 +98,28 @@ export function DriverHomeView({
           </CardDescription>
         </CardHeader>
         {activeCourse && (
-          <CardContent className="text-sm text-muted-foreground">{activeCourse.cargo}</CardContent>
+          <CardContent className="space-y-2 text-sm text-muted-foreground">
+            <p>{activeCourse.cargo}</p>
+            {activeCourse.unloadAt && (
+              <p className="text-xs">
+                Rozładunek plan:{' '}
+                {new Date(activeCourse.unloadAt).toLocaleString('pl-PL', {
+                  dateStyle: 'short',
+                  timeStyle: 'short',
+                })}
+              </p>
+            )}
+            {intlWarnings.length > 0 && (
+              <div className="rounded-md border border-warning/40 bg-warning/10 p-2 text-xs text-warning">
+                <p className="font-medium">Uwaga — dokumenty międzynarodowe</p>
+                <ul className="mt-1 list-inside list-disc">
+                  {intlWarnings.map((w) => (
+                    <li key={w}>{w}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </CardContent>
         )}
       </Card>
 

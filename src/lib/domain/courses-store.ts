@@ -40,9 +40,47 @@ export function deleteCourse(tenantId: string, courseId: string): Course[] {
   return next
 }
 
+const DEMO_UA_COURSE: Course = {
+  id: 'course-demo-004',
+  tenantId: 'tenant-demo-001',
+  reference: 'K/2026/UA-01',
+  status: 'planned',
+  scope: 'international_third',
+  shipper: 'TransCargo Lublin',
+  consignee: 'Logistics UA Lviv',
+  cargo: 'Części AGD — 20 palet',
+  weightKg: 16800,
+  adr: false,
+  loadCity: 'Lublin',
+  unloadCity: 'Lwów',
+  loadCountry: 'PL',
+  unloadCountry: 'UA',
+  plannedKm: 420,
+  freightPln: 0,
+  freightEur: 980,
+  routeCostsPln: 450,
+  cmrNumber: 'CMR/2026/009812',
+  licenseExtractNo: 'WYP/2026/08',
+  rmpdRegistered: false,
+  loadAt: new Date(Date.now() + 86400000).toISOString(),
+  unloadAt: new Date(Date.now() + 86400000 * 2).toISOString(),
+  notes: 'Demo — brak RMPD, alert na pulpicie',
+  createdAt: '',
+  updatedAt: '',
+}
+
 export function seedDemoCourses(tenantId: string): Course[] {
   const existing = loadCourses(tenantId)
-  if (existing.length > 0) return existing
+  if (existing.length > 0) {
+    if (!existing.some((c) => c.id === 'course-demo-004')) {
+      const now = new Date().toISOString()
+      const ua = { ...DEMO_UA_COURSE, tenantId, createdAt: now, updatedAt: now }
+      const next = [...existing, ua]
+      saveCourses(tenantId, next)
+      return next
+    }
+    return existing
+  }
 
   const now = new Date().toISOString()
   const demo: Course[] = [
@@ -125,6 +163,7 @@ export function seedDemoCourses(tenantId: string): Course[] {
       createdAt: now,
       updatedAt: now,
     },
+    { ...DEMO_UA_COURSE, tenantId, createdAt: now, updatedAt: now },
   ]
 
   saveCourses(tenantId, demo)
