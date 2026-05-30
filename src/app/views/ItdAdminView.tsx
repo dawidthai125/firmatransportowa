@@ -21,6 +21,7 @@ import {
 import { ITD_OUTCOME_LABELS, type ItdControlOutcome, type ItdControlRecord, type ItdHotspot, type ItdPlaybookSection } from '@/lib/domain/itd-types'
 import { loadTenantFiles, storedToPreviewable } from '@/lib/files/files-store'
 import { cn } from '@/lib/utils'
+import { useCloudSyncRefresh } from '@/lib/sync/useCloudSyncRefresh'
 import { AlertTriangle, BookOpen, Check, FileText, MapPin, ShieldAlert } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 
@@ -52,6 +53,8 @@ export function ItdAdminView({ tenantId, userRole, userName }: ItdAdminViewProps
   useEffect(() => {
     refresh()
   }, [refresh])
+
+  useCloudSyncRefresh(tenantId, 'itd', refresh)
 
   const active = activeItdAlerts(tenantId)
 

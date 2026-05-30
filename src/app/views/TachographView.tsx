@@ -14,6 +14,7 @@ import {
 import type { TachographDownload } from '@/lib/domain/tachograph-types'
 import { storePreviewableFile } from '@/lib/files/files-store'
 import { fileFromInput } from '@/lib/files/download'
+import { useCloudSyncRefresh } from '@/lib/sync/useCloudSyncRefresh'
 import { cn } from '@/lib/utils'
 import { Clock, HardDriveDownload, Trash2, Upload, User } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -37,6 +38,8 @@ export function TachographView({ tenantId }: TachographViewProps) {
   useEffect(() => {
     refresh()
   }, [refresh])
+
+  useCloudSyncRefresh(tenantId, 'tachograph', refresh)
 
   async function onUpload(files: FileList | null) {
     const file = files?.[0]

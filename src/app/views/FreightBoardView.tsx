@@ -26,6 +26,7 @@ import {
   type FreightSearchPreferences,
 } from '@/lib/domain/freight-preferences'
 import { cn } from '@/lib/utils'
+import { useCloudSyncRefreshKeys } from '@/lib/sync/useCloudSyncRefresh'
 import { Bookmark, BookmarkCheck, CloudDownload, Filter, Plus, RefreshCw, Search, Star } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 
@@ -57,6 +58,15 @@ export function FreightBoardView({ tenantId, onNavigateToCourses }: FreightBoard
   useEffect(() => {
     refresh()
   }, [refresh])
+
+  useCloudSyncRefreshKeys(
+    tenantId,
+    ['freight-offers', 'freight-board', 'freight-connectors'],
+    () => {
+      refresh()
+      setConnectorCfg(loadFreightConnectorConfig(tenantId))
+    },
+  )
 
   function updatePrefs(patch: Partial<FreightSearchPreferences>) {
     const next = { ...prefs, ...patch }

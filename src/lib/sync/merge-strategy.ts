@@ -1,6 +1,9 @@
 import type { AutomationRule, AutomationSettings } from '@/lib/automation/rules'
+import type { FreightConnectorConfig } from '@/lib/domain/freight-connectors'
+import type { FreightSearchPreferences } from '@/lib/domain/freight-preferences'
+import type { ItdPlaybookSection, ItdTenantData } from '@/lib/domain/itd-types'
 import type { TenantSettingsData } from '@/lib/domain/tenant-settings'
-import type { Tenant, TenantDataKey } from '@/lib/tenant/types'
+import { TENANT_DATA_KEYS, type Tenant, type TenantDataKey } from '@/lib/tenant/types'
 import {
   maxIso,
   normalizeToEnvelope,
@@ -17,6 +20,9 @@ export const RECORD_ARRAY_KEYS: TenantDataKey[] = [
   'daily-reports',
   'repair-reports',
   'files',
+  'fleet-positions',
+  'freight-offers',
+  'tachograph',
 ]
 
 type Identifiable = { id: string; updatedAt?: string; importedAt?: string; createdAt?: string }
@@ -91,9 +97,85 @@ function mergeTenantSettings(local: TenantSettingsData, cloud: TenantSettingsDat
 
 function mergeTenants(local: Tenant[], cloud: Tenant[]): Tenant[] {
   return mergeRecordsByNewest(
-    local.map((t) => ({ ...t, updatedAt: t.createdAt })),
-    cloud.map((t) => ({ ...t, updatedAt: t.createdAt })),
-  ).map(({ updatedAt: _u, ...t }) => t as Tenant)
+    local.map((t) => ({ ...t, updatedAt: t.updatedAt ?? t.createdAt })),
+    cloud.map((t) => ({ ...t, updatedAt: t.updatedAt ?? t.createdAt })),
+  ) as Tenant[]
+}
+
+function mergePlaybookSections(
+  local: ItdPlaybookSection[],
+  cloud: ItdPlaybookSection[],
+): ItdPlaybookSection[] {
+  const map = new Map<string, ItdPlaybookSection>()
+  for (const s of cloud) map.set(s.id, s)
+  for (const s of local) map.set(s.id, s)
+  return [...map.values()].sort((a, b) => a.order - b.order)
+}
+
+function mergeItdData(local: ItdTenantData, cloud: ItdTenantData): ItdTenantData {
+  const empty: ItdTenantData = { playbook: [], hotspots: [], alerts: [], records: [] }
+  const l = local ?? empty
+  const c = cloud ?? empty
+
+  return {
+    playbook: mergePlaybookSections(l.playbook, c.playbook),
+    hotspots: mergeRecordsByNewest(
+      l.hotspots.map((h) => ({ ...h, updatedAt: h.reportedAt })),
+      c.hotspots.map((h) => ({ ...h, updatedAt: h.reportedAt })),
+    ).map(({ updatedAt: _u, ...h }) => h),
+    alerts: mergeRecordsByNewest(
+      l.alerts.map((a) => ({ ...a, updatedAt: a.acknowledgedAt ?? a.createdAt })),
+      c.alerts.map((a) => ({ ...a, updatedAt: a.acknowledgedAt ?? a.createdAt })),
+    ).map(({ updatedAt: _u, ...a }) => a),
+    records: mergeRecordsByNewest(
+      l.records.map((r) => ({ ...r, updatedAt: r.createdAt })),
+      c.records.map((r) => ({ ...r, updatedAt: r.createdAt })),
+    ).map(({ updatedAt: _u, ...r }) => r),
+  }
+}
+
+function mergeFreightPreferences(
+  local: Partial<FreightSearchPreferences>,
+  cloud: Partial<FreightSearchPreferences>,
+  localAt: string,
+  cloudAt: string,
+): Partial<FreightSearchPreferences> {
+  const preferLocal = Date.parse(localAt) >= Date.parse(cloudAt)
+  const newer = preferLocal ? local : cloud
+  const older = preferLocal ? cloud : local
+  return {
+    ...older,
+    ...newer,
+    savedOfferIds: [
+      ...new Set([...(older.savedOfferIds ?? []), ...(newer.savedOfferIds ?? [])]),
+    ],
+    updatedAt: maxIso(maxIso(local.updatedAt, cloud.updatedAt), maxIso(localAt, cloudAt)),
+  }
+}
+
+function mergeFreightConnectors(
+  local: Partial<FreightConnectorConfig>,
+  cloud: Partial<FreightConnectorConfig>,
+  localAt: string,
+  cloudAt: string,
+): FreightConnectorConfig {
+  const preferLocal = Date.parse(localAt) >= Date.parse(cloudAt)
+  const newer = preferLocal ? local : cloud
+  const older = preferLocal ? cloud : local
+  const lastSync: Partial<Record<string, string>> = {
+    ...(older.lastSyncBySource ?? {}),
+    ...(newer.lastSyncBySource ?? {}),
+  }
+  for (const key of Object.keys({ ...older.lastSyncBySource, ...newer.lastSyncBySource })) {
+    const l = local.lastSyncBySource?.[key as keyof typeof local.lastSyncBySource]
+    const c = cloud.lastSyncBySource?.[key as keyof typeof cloud.lastSyncBySource]
+    if (l || c) lastSync[key] = maxIso(l, c)
+  }
+  return {
+    transEuEnabled: newer.transEuEnabled ?? older.transEuEnabled ?? true,
+    timocomEnabled: newer.timocomEnabled ?? older.timocomEnabled ?? true,
+    lastSyncBySource: lastSync as FreightConnectorConfig['lastSyncBySource'],
+  }
 }
 
 function mergePayload(dataKey: TenantDataKey | 'registry', local: unknown, cloud: unknown): unknown {
@@ -117,6 +199,14 @@ function mergePayload(dataKey: TenantDataKey | 'registry', local: unknown, cloud
     )
   }
 
+  if (dataKey === 'itd') {
+    const empty: ItdTenantData = { playbook: [], hotspots: [], alerts: [], records: [] }
+    return mergeItdData(
+      (local as ItdTenantData) ?? empty,
+      (cloud as ItdTenantData) ?? empty,
+    )
+  }
+
   if (dataKey === 'automation') {
     const empty: AutomationSettings = { rules: [] }
     return mergeAutomationSettings(
@@ -127,7 +217,6 @@ function mergePayload(dataKey: TenantDataKey | 'registry', local: unknown, cloud
     )
   }
 
-  // compliance-alerts i inne — bezpieczny fallback: scal tablice po id, inaczej nowszy blob
   if (Array.isArray(local) && Array.isArray(cloud)) {
     return mergeRecordsByNewest(local as Identifiable[], cloud as Identifiable[])
   }
@@ -155,34 +244,44 @@ export function mergeSyncEnvelopes(
     return wrapForSync(payload, maxIso(localEnv.updatedAt, cloudEnv.updatedAt))
   }
 
+  if (dataKey === 'freight-board') {
+    const payload = mergeFreightPreferences(
+      localEnv.payload as Partial<FreightSearchPreferences>,
+      cloudEnv.payload as Partial<FreightSearchPreferences>,
+      localEnv.updatedAt,
+      cloudEnv.updatedAt,
+    )
+    return wrapForSync(payload, maxIso(localEnv.updatedAt, cloudEnv.updatedAt))
+  }
+
+  if (dataKey === 'freight-connectors') {
+    const payload = mergeFreightConnectors(
+      localEnv.payload as Partial<FreightConnectorConfig>,
+      cloudEnv.payload as Partial<FreightConnectorConfig>,
+      localEnv.updatedAt,
+      cloudEnv.updatedAt,
+    )
+    return wrapForSync(payload, maxIso(localEnv.updatedAt, cloudEnv.updatedAt))
+  }
+
   const payload = mergePayload(dataKey, localEnv.payload, cloudEnv.payload)
   return wrapForSync(payload, maxIso(localEnv.updatedAt, cloudEnv.updatedAt))
 }
 
+/** Rozpoznaj klucz storage — wszystkie TENANT_DATA_KEYS (unikamy ślepego nadpisywania chmury). */
 export function parseTenantStorageKey(
   storageKey: string,
 ): { dataKey: TenantDataKey | 'registry'; tenantId: string | null } | null {
   if (storageKey === 'ft-tenants-registry') {
     return { dataKey: 'registry', tenantId: null }
   }
-  const prefixes = [
-    'drivers',
-    'vehicles',
-    'courses',
-    'daily-reports',
-    'compliance-alerts',
-    'settings',
-    'files',
-    'automation',
-    'repair-reports',
-  ] as const
-  for (const dk of prefixes) {
+  if (!storageKey.startsWith('ft-')) return null
+
+  for (const dk of TENANT_DATA_KEYS) {
     const suffix = `-${dk}`
-    if (storageKey.startsWith('ft-') && storageKey.endsWith(suffix)) {
-      return {
-        dataKey: dk,
-        tenantId: storageKey.slice(3, storageKey.length - suffix.length),
-      }
+    if (storageKey.endsWith(suffix)) {
+      const tenantId = storageKey.slice(3, storageKey.length - suffix.length)
+      if (tenantId.length > 0) return { dataKey: dk, tenantId }
     }
   }
   return null

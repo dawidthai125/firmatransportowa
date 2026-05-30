@@ -12,6 +12,7 @@ import {
   submitItdControlAlert,
 } from '@/lib/domain/itd-store'
 import { ITD_OUTCOME_LABELS, type ItdControlOutcome } from '@/lib/domain/itd-types'
+import { useCloudSyncRefresh } from '@/lib/sync/useCloudSyncRefresh'
 import { AlertTriangle, MapPin, ShieldAlert } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 
@@ -41,6 +42,8 @@ export function DriverItdView({ tenantId, driverName }: DriverItdViewProps) {
   useEffect(() => {
     refresh()
   }, [refresh])
+
+  useCloudSyncRefresh(tenantId, 'itd', refresh)
 
   function sendAlert() {
     if (navigator.geolocation) {

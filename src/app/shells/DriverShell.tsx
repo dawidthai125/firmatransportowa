@@ -41,7 +41,7 @@ export function DriverShell({
   return (
     <div className="app-shell bg-background">
       <OfflineIndicator />
-      <header className="flex shrink-0 items-center justify-between border-b border-border/80 bg-sidebar/95 px-4 py-3 backdrop-blur-md">
+      <header className="flex shrink-0 items-center justify-between border-b border-border/80 bg-sidebar/95 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-md">
         <div className="flex min-w-0 items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-success/30 to-success/10 text-success ring-1 ring-success/25">
             <Truck className="h-5 w-5" />

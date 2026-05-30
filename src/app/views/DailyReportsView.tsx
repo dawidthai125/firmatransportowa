@@ -1,6 +1,7 @@
 import { Card, CardContent } from '@/app/components/ui/Card'
 import { dailyReportTotalCosts } from '@/lib/domain/daily-report'
 import { loadDailyReports } from '@/lib/domain/daily-reports-store'
+import { useCloudSyncRefresh } from '@/lib/sync/useCloudSyncRefresh'
 import { cn } from '@/lib/utils'
 import { CheckCircle2, Clock, FileText, Fuel, MapPin, User } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -21,6 +22,8 @@ export function DailyReportsView({ tenantId }: DailyReportsViewProps) {
   useEffect(() => {
     refresh()
   }, [refresh])
+
+  useCloudSyncRefresh(tenantId, 'daily-reports', refresh)
 
   const filtered = useMemo(() => {
     const sorted = [...reports].sort((a, b) => b.date.localeCompare(a.date))

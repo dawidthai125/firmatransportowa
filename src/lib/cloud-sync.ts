@@ -184,6 +184,7 @@ async function flushCloudPush(): Promise<void> {
   try {
     const cloudValues = await batchGet(keys)
     const entries: { key: string; value: unknown }[] = []
+    const mergedKeys: string[] = []
 
     for (let i = 0; i < keys.length; i++) {
       const key = keys[i]
@@ -193,15 +194,19 @@ async function flushCloudPush(): Promise<void> {
       const parsed = parseTenantStorageKey(key)
       if (!parsed) {
         entries.push({ key, value: localRaw })
+        mergedKeys.push(key)
         continue
       }
 
+      const prevJson = JSON.stringify(localRaw)
       const merged = mergeSyncEnvelopes(parsed.dataKey, localRaw, cloudValues[i], null)
       writeTenantDataEnvelope(key, merged)
       entries.push({ key, value: merged })
+      if (JSON.stringify(merged) !== prevJson) mergedKeys.push(key)
     }
 
     if (entries.length > 0) await batchSet(entries)
+    if (mergedKeys.length > 0) notifySyncMerged(mergedKeys)
     setStatus('ok')
   } catch (e) {
     console.error('[TransFlow] push failed', e)
@@ -248,6 +253,8 @@ export function startCloudSyncListeners(): () => void {
   const onVisible = () => {
     if (document.visibilityState === 'visible') {
       void pullAllFromCloud()
+    } else if (pendingPushKeys.size > 0) {
+      void flushCloudPush()
     }
   }
 

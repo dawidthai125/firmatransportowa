@@ -22,6 +22,7 @@ import {
   buildInternationalCourseAlerts,
   courseNeedsInternationalCheck,
 } from '@/lib/domain/international-compliance'
+import { useCloudSyncRefresh } from '@/lib/sync/useCloudSyncRefresh'
 import { cn } from '@/lib/utils'
 import { AlertTriangle, Globe, MapPin, Pencil, Plus, Route, Trash2, X } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
@@ -44,6 +45,8 @@ export function CoursesView({ tenantId, readOnly = false }: CoursesViewProps) {
   useEffect(() => {
     refresh()
   }, [refresh])
+
+  useCloudSyncRefresh(tenantId, 'courses', refresh)
 
   function openNew() {
     const base = createEmptyCourse(tenantId)

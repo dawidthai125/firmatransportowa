@@ -23,6 +23,7 @@ import {
   courseNeedsInternationalCheck,
 } from '@/lib/domain/international-compliance'
 import { syncDriverReminders } from '@/lib/notifications/driver-reminders'
+import { useCloudSyncRefreshKeys } from '@/lib/sync/useCloudSyncRefresh'
 import { seedDemoCompanyDocuments, loadTenantSettingsData } from '@/lib/domain/tenant-settings'
 import { expiryStatus, EXPIRY_STATUS_COLORS, formatExpiryDate } from '@/lib/domain/compliance'
 import { isPushSubscribed, subscribeAppPush } from '@/lib/notifications/app-notify'
@@ -54,7 +55,7 @@ export function DriverHomeView({
   const [vehicleId, setVehicleId] = useState<string | undefined>()
   const [intlWarnings, setIntlWarnings] = useState<string[]>([])
 
-  useEffect(() => {
+  const refreshHome = useCallback(() => {
     seedDemoCourses(tenantId)
     const courses = loadCourses(tenantId)
     const active = courses.find((c) => c.status === 'in_transit' || c.status === 'loading')
@@ -76,6 +77,12 @@ export function DriverHomeView({
       setVehicleId(vehicle?.id)
     }
   }, [tenantId, driverName])
+
+  useEffect(() => {
+    refreshHome()
+  }, [refreshHome])
+
+  useCloudSyncRefreshKeys(tenantId, ['courses', 'daily-reports'], refreshHome)
 
   return (
     <div className="space-y-4">
@@ -216,6 +223,8 @@ export function DriverReportView({ tenantId, driverName }: DriverReportViewProps
   useEffect(() => {
     init()
   }, [init])
+
+  useCloudSyncRefreshKeys(tenantId, ['daily-reports', 'courses'], init)
 
   function patch(partial: Partial<DailyReport>) {
     if (!report) return

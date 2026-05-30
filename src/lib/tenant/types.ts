@@ -11,6 +11,8 @@ export interface Tenant {
   plan: SubscriptionPlan
   status: TenantStatus
   createdAt: string
+  /** Ostatnia zmiana planu / ustawień firmy — do merge rejestru tenantów */
+  updatedAt?: string
   /** NIP / dane do faktury — opcjonalnie na start */
   taxId?: string
   settings: TenantSettings
