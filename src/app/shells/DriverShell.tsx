@@ -1,4 +1,5 @@
 import { AppNav } from '@/app/components/AppNav'
+import { HelpButton } from '@/app/components/help/HelpButton'
 import { PanelThemeBanner } from '@/app/components/transport/PanelThemeBanner'
 import { Button } from '@/app/components/ui/Button'
 import type { DriverView } from '@/lib/navigation'
@@ -45,9 +46,12 @@ export function DriverShell({
             <p className="truncate text-xs text-muted-foreground">{tenant.name} · Kierowca</p>
           </div>
         </div>
-        <Button variant="ghost" size="icon" onClick={onLogout} aria-label="Wyloguj">
+        <div className="flex items-center gap-1">
+          <HelpButton />
+          <Button variant="ghost" size="icon" onClick={onLogout} aria-label="Wyloguj">
           <LogOut className="h-4 w-4" />
-        </Button>
+          </Button>
+        </div>
       </header>
 
       <main className={cn('scroll-area flex-1 p-4')}>

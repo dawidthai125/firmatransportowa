@@ -1,5 +1,6 @@
 import { AutomationNotifications } from '@/app/components/AutomationNotifications'
 import { CloudStatusBadge } from '@/app/components/CloudStatusBadge'
+import { HelpButton } from '@/app/components/help/HelpButton'
 import { AppNav } from '@/app/components/AppNav'
 import { PanelThemeBanner } from '@/app/components/transport/PanelThemeBanner'
 import { Button } from '@/app/components/ui/Button'
@@ -48,6 +49,7 @@ export function AdminShell({
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <HelpButton />
           <CloudStatusBadge />
           <AutomationNotifications tenantId={tenant.id} onNavigate={onViewChange} />
           <Button variant="ghost" size="icon" onClick={onLogout} aria-label="Wyloguj">

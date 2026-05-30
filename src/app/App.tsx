@@ -30,6 +30,7 @@ import {
   type MechanicView,
 } from '@/lib/navigation'
 import { runScheduledAutomations } from '@/lib/automation/scheduler'
+import { HelpProvider } from '@/lib/help/help-context'
 import { useTenant } from '@/lib/tenant/context'
 import { useEffect, useMemo, useState } from 'react'
 
@@ -80,92 +81,107 @@ export default function App() {
 
   const onLogout = () => handleLogout(setMode)
 
+  const helpProps = {
+    tenantId: currentTenant.id,
+    userId: session.user.id,
+  }
+
   if (mode === 'mechanic') {
     return (
-      <MechanicShell
-        tenant={currentTenant}
-        mechanicName={session.user.displayName}
-        view={mechanicView}
-        onViewChange={setMechanicView}
-        onLogout={onLogout}
-      >
-        {mechanicView === 'home' && (
-          <MechanicHomeView
-            tenantId={currentTenant.id}
-            mechanicId={session.user.mechanicId}
-            mechanicName={session.user.displayName}
-          />
-        )}
-      </MechanicShell>
+      <HelpProvider mode={mode} viewId={mechanicView} {...helpProps}>
+        <MechanicShell
+          tenant={currentTenant}
+          mechanicName={session.user.displayName}
+          view={mechanicView}
+          onViewChange={setMechanicView}
+          onLogout={onLogout}
+        >
+          {mechanicView === 'home' && (
+            <MechanicHomeView
+              tenantId={currentTenant.id}
+              mechanicId={session.user.mechanicId}
+              mechanicName={session.user.displayName}
+            />
+          )}
+        </MechanicShell>
+      </HelpProvider>
     )
   }
 
   if (mode === 'driver') {
     return (
-      <DriverShell
-        tenant={currentTenant}
-        driverName={session.user.displayName}
-        view={driverView}
-        onViewChange={setDriverView}
-        onLogout={onLogout}
-      >
-        {driverView === 'home' && (
-          <DriverHomeView
-            tenantId={currentTenant.id}
-            driverName={session.user.displayName}
-            onOpenReport={() => setDriverView('report')}
-            onOpenIssue={() => setDriverView('issue')}
-          />
-        )}
-        {driverView === 'issue' && (
-          <DriverIssueView tenantId={currentTenant.id} driverName={session.user.displayName} />
-        )}
-        {driverView === 'courses' && <CoursesView tenantId={currentTenant.id} readOnly />}
-        {driverView === 'report' && (
-          <DriverReportView tenantId={currentTenant.id} driverName={session.user.displayName} />
-        )}
-        {driverView === 'profile' && <DriverProfileView />}
-      </DriverShell>
+      <HelpProvider mode={mode} viewId={driverView} {...helpProps}>
+        <DriverShell
+          tenant={currentTenant}
+          driverName={session.user.displayName}
+          view={driverView}
+          onViewChange={setDriverView}
+          onLogout={onLogout}
+        >
+          {driverView === 'home' && (
+            <DriverHomeView
+              tenantId={currentTenant.id}
+              driverName={session.user.displayName}
+              onOpenReport={() => setDriverView('report')}
+              onOpenIssue={() => setDriverView('issue')}
+            />
+          )}
+          {driverView === 'issue' && (
+            <DriverIssueView tenantId={currentTenant.id} driverName={session.user.displayName} />
+          )}
+          {driverView === 'courses' && <CoursesView tenantId={currentTenant.id} readOnly />}
+          {driverView === 'report' && (
+            <DriverReportView tenantId={currentTenant.id} driverName={session.user.displayName} />
+          )}
+          {driverView === 'profile' && <DriverProfileView />}
+        </DriverShell>
+      </HelpProvider>
     )
   }
 
   return (
-    <AdminShell
-      tenant={currentTenant}
-      role={session.user.role}
-      view={adminView}
-      onViewChange={setAdminView}
-      navItems={navItems}
-      onLogout={onLogout}
-    >
-      {adminView === 'dashboard' && <DashboardView tenant={currentTenant} />}
-      {adminView === 'courses' && <CoursesView tenantId={currentTenant.id} />}
-      {adminView === 'reports' && <DailyReportsView tenantId={currentTenant.id} />}
-      {adminView === 'settlements' && (
-        <SettlementsView
-          tenantId={currentTenant.id}
-          tenantSlug={currentTenant.slug}
-          tenantName={currentTenant.name}
-        />
-      )}
-      {adminView === 'files' && <FilesView tenantId={currentTenant.id} />}
-      {adminView === 'automations' && (
-        <AutomationsView
-          tenantId={currentTenant.id}
-          tenantSlug={currentTenant.slug}
-          tenantName={currentTenant.name}
-        />
-      )}
-      {adminView === 'fleet' && <FleetView tenantId={currentTenant.id} />}
-      {adminView === 'repairs' && (
-        <RepairsView tenantId={currentTenant.id} userId={session.user.id} userRole={session.user.role} />
-      )}
-      {adminView === 'drivers' && <DriversView tenantId={currentTenant.id} />}
-      {adminView === 'compliance' && (
-        <ComplianceView tenantId={currentTenant.id} tenantName={currentTenant.name} />
-      )}
-      {adminView === 'settings' && mode === 'owner' && <SettingsView tenant={currentTenant} />}
-      {adminView === 'settings' && mode === 'dispatcher' && <DashboardView tenant={currentTenant} />}
-    </AdminShell>
+    <HelpProvider mode={mode} viewId={adminView} {...helpProps}>
+      <AdminShell
+        tenant={currentTenant}
+        role={session.user.role}
+        view={adminView}
+        onViewChange={setAdminView}
+        navItems={navItems}
+        onLogout={onLogout}
+      >
+        {adminView === 'dashboard' && <DashboardView tenant={currentTenant} />}
+        {adminView === 'courses' && <CoursesView tenantId={currentTenant.id} />}
+        {adminView === 'reports' && <DailyReportsView tenantId={currentTenant.id} />}
+        {adminView === 'settlements' && (
+          <SettlementsView
+            tenantId={currentTenant.id}
+            tenantSlug={currentTenant.slug}
+            tenantName={currentTenant.name}
+          />
+        )}
+        {adminView === 'files' && <FilesView tenantId={currentTenant.id} />}
+        {adminView === 'automations' && (
+          <AutomationsView
+            tenantId={currentTenant.id}
+            tenantSlug={currentTenant.slug}
+            tenantName={currentTenant.name}
+          />
+        )}
+        {adminView === 'fleet' && <FleetView tenantId={currentTenant.id} />}
+        {adminView === 'repairs' && (
+          <RepairsView
+            tenantId={currentTenant.id}
+            userId={session.user.id}
+            userRole={session.user.role}
+          />
+        )}
+        {adminView === 'drivers' && <DriversView tenantId={currentTenant.id} />}
+        {adminView === 'compliance' && (
+          <ComplianceView tenantId={currentTenant.id} tenantName={currentTenant.name} />
+        )}
+        {adminView === 'settings' && mode === 'owner' && <SettingsView tenant={currentTenant} />}
+        {adminView === 'settings' && mode === 'dispatcher' && <DashboardView tenant={currentTenant} />}
+      </AdminShell>
+    </HelpProvider>
   )
 }
