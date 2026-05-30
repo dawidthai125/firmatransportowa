@@ -44,12 +44,25 @@ interface AppNavProps<T extends string> {
   active: T
   onChange: (id: T) => void
   layout: 'sidebar' | 'bottom'
+  /** Dolna belka zawsze widoczna (panel kierowcy / mechanika — brak sidebara na desktop) */
+  bottomAlwaysVisible?: boolean
 }
 
-export function AppNav<T extends string>({ items, active, onChange, layout }: AppNavProps<T>) {
+export function AppNav<T extends string>({
+  items,
+  active,
+  onChange,
+  layout,
+  bottomAlwaysVisible = false,
+}: AppNavProps<T>) {
   if (layout === 'bottom') {
     return (
-      <nav className="flex shrink-0 overflow-x-auto border-t border-border bg-sidebar px-1 pb-[env(safe-area-inset-bottom)] pt-1 md:hidden">
+      <nav
+        className={cn(
+          'flex shrink-0 overflow-x-auto border-t border-border bg-sidebar px-1 pb-[env(safe-area-inset-bottom)] pt-1',
+          !bottomAlwaysVisible && 'md:hidden',
+        )}
+      >
         {items.map((item) => {
           const Icon = ICONS[item.icon] ?? LayoutDashboard
           const isActive = active === item.id

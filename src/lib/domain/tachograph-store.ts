@@ -1,12 +1,41 @@
 import { parseDddFilename } from '@/lib/domain/tachograph-parse'
-import type { TachographDownload } from '@/lib/domain/tachograph-types'
+import type {
+  TachographDownload,
+  TachographImportSource,
+  TachographRecordType,
+} from '@/lib/domain/tachograph-types'
 import { driverDisplayName, type Driver } from '@/lib/domain/driver'
 import { loadDrivers, seedDemoDrivers } from '@/lib/domain/drivers-store'
 import { tombstoneDeleteInTenantData } from '@/lib/sync/tombstone'
 import { readTenantData, writeTenantData } from '@/lib/tenant/storage'
 
+/** Migracja starych rekordów (source = driver_card | vehicle_unit) */
+function normalizeDownload(row: TachographDownload & { source?: string; recordType?: string }): TachographDownload {
+  const importSources: TachographImportSource[] = ['remote_api', 'telematics', 'manual_upload']
+  if (row.source && importSources.includes(row.source as TachographImportSource) && row.recordType) {
+    return row as TachographDownload
+  }
+
+  const legacySource = row.source as string | undefined
+  const recordTypes: TachographRecordType[] = ['driver_card', 'vehicle_unit', 'unknown']
+  if (legacySource && recordTypes.includes(legacySource as TachographRecordType)) {
+    return {
+      ...row,
+      recordType: legacySource as TachographRecordType,
+      source: 'manual_upload',
+    }
+  }
+
+  return {
+    ...row,
+    source: (row.source as TachographImportSource) ?? 'manual_upload',
+    recordType: (row.recordType as TachographRecordType) ?? 'unknown',
+  }
+}
+
 export function loadTachographDownloads(tenantId: string): TachographDownload[] {
-  return readTenantData<TachographDownload[]>(tenantId, 'tachograph', [])
+  const raw = readTenantData<TachographDownload[]>(tenantId, 'tachograph', [])
+  return raw.map(normalizeDownload)
 }
 
 export function saveTachographDownloads(tenantId: string, rows: TachographDownload[]): void {
@@ -36,7 +65,8 @@ export function importTachographFile(
     id: crypto.randomUUID(),
     tenantId,
     filename: file.filename,
-    source: parsed.source,
+    source: 'manual_upload',
+    recordType: parsed.recordType,
     driverId: matched?.id,
     driverName: matched ? driverDisplayName(matched) : parsed.driverHint,
     vehicleRegistration: parsed.vehicleHint,
@@ -50,6 +80,69 @@ export function importTachographFile(
   const next = [row, ...loadTachographDownloads(tenantId)]
   saveTachographDownloads(tenantId, next)
   return row
+}
+
+type RemoteRecordInput = Omit<TachographDownload, 'id' | 'tenantId' | 'importedAt'> &
+  Partial<Pick<TachographDownload, 'id' | 'importedAt'>>
+
+/** Merge rekordów z API / telematyki — deduplikacja po externalId lub filename */
+export function upsertTachographRemoteRecords(
+  tenantId: string,
+  incoming: RemoteRecordInput[],
+): { added: number; updated: number } {
+  seedDemoDrivers(tenantId)
+  const drivers = loadDrivers(tenantId)
+  const existing = loadTachographDownloads(tenantId)
+  const byExternal = new Map(existing.filter((r) => r.externalId).map((r) => [r.externalId!, r]))
+  const byFilename = new Map(existing.map((r) => [r.filename.toLowerCase(), r]))
+
+  let added = 0
+  let updated = 0
+  const next = [...existing]
+
+  for (const raw of incoming) {
+    const matched = matchDriverByHint(drivers, raw.driverName)
+    const normalized = normalizeDownload({
+      ...raw,
+      tenantId,
+      driverId: raw.driverId ?? matched?.id,
+      driverName: raw.driverName ?? (matched ? driverDisplayName(matched) : undefined),
+    } as TachographDownload)
+
+    const prev =
+      (normalized.externalId && byExternal.get(normalized.externalId)) ||
+      byFilename.get(normalized.filename.toLowerCase())
+
+    if (prev) {
+      const idx = next.findIndex((r) => r.id === prev.id)
+      if (idx >= 0) {
+        next[idx] = {
+          ...prev,
+          ...normalized,
+          id: prev.id,
+          importedAt: prev.importedAt,
+          lastSyncAt: normalized.lastSyncAt ?? new Date().toISOString(),
+        }
+        updated++
+      }
+      continue
+    }
+
+    const row: TachographDownload = {
+      ...normalized,
+      id: raw.id ?? crypto.randomUUID(),
+      tenantId,
+      importedAt: raw.importedAt ?? new Date().toISOString(),
+      lastSyncAt: normalized.lastSyncAt ?? new Date().toISOString(),
+    }
+    next.unshift(row)
+    if (row.externalId) byExternal.set(row.externalId, row)
+    byFilename.set(row.filename.toLowerCase(), row)
+    added++
+  }
+
+  saveTachographDownloads(tenantId, next)
+  return { added, updated }
 }
 
 export function updateTachographDownload(
@@ -85,7 +178,8 @@ export function seedDemoTachographDownloads(tenantId: string): TachographDownloa
       id: 'tacho-demo-001',
       tenantId,
       filename: `C_KOWALSKI_${weekAgo.replace(/-/g, '')}_${today.replace(/-/g, '')}.ddd`,
-      source: 'driver_card',
+      source: 'manual_upload',
+      recordType: 'driver_card',
       driverId: jan?.id,
       driverName: jan ? driverDisplayName(jan) : 'Jan Kowalski',
       periodFrom: weekAgo,
@@ -98,7 +192,8 @@ export function seedDemoTachographDownloads(tenantId: string): TachographDownloa
       id: 'tacho-demo-002',
       tenantId,
       filename: `M_DW9ADR1_${weekAgo.replace(/-/g, '')}_${today.replace(/-/g, '')}.ddd`,
-      source: 'vehicle_unit',
+      source: 'manual_upload',
+      recordType: 'vehicle_unit',
       vehicleRegistration: 'DW 9ADR1',
       periodFrom: weekAgo,
       periodTo: today,

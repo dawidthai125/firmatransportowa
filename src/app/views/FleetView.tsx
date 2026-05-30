@@ -1,13 +1,23 @@
 import {
-  DocumentBadges,
-  EntityActions,
   EntityFormModal,
   Field,
   DocumentsEditor,
 } from '@/app/components/EntityForm'
+import { VehicleFleetCard } from '@/app/components/fleet/VehicleFleetCard'
 import { Button } from '@/app/components/ui/Button'
-import { Card, CardContent } from '@/app/components/ui/Card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/Card'
 import { Input, Select } from '@/app/components/ui/Input'
+import {
+  buildFleetVehicleSnapshots,
+  staleGpsSnapshotsForAlerts,
+} from '@/lib/domain/fleet-enrichment'
+import type { FleetVehicleSnapshot } from '@/lib/domain/fleet-enrichment'
+import {
+  fleetTelematicsStatusLabel,
+  loadFleetTelematicsConfig,
+  syncFleetTelematics,
+} from '@/lib/domain/fleet-telematics-connectors'
+import { seedDemoFleetPositions } from '@/lib/domain/fleet-positions-store'
 import type { Vehicle, VehicleType } from '@/lib/domain/vehicle'
 import { createEmptyVehicle, VEHICLE_TYPE_LABELS } from '@/lib/domain/vehicle'
 import {
@@ -16,27 +26,57 @@ import {
   seedDemoVehicles,
   upsertVehicle,
 } from '@/lib/domain/vehicles-store'
-import { AlertTriangle, Gauge, Plus, Truck } from 'lucide-react'
+import { useCloudSyncRefreshKeys } from '@/lib/sync/useCloudSyncRefresh'
+import { cn } from '@/lib/utils'
+import { AlertTriangle, CloudDownload, MapPin, Plus, RefreshCw, Satellite } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 
 interface FleetViewProps {
   tenantId: string
+  gpsEnabled?: boolean
   readOnly?: boolean
 }
 
-export function FleetView({ tenantId, readOnly = false }: FleetViewProps) {
-  const [vehicles, setVehicles] = useState<Vehicle[]>([])
+export function FleetView({ tenantId, gpsEnabled = true, readOnly = false }: FleetViewProps) {
+  const [snapshots, setSnapshots] = useState<FleetVehicleSnapshot[]>([])
   const [editing, setEditing] = useState<Vehicle | null>(null)
   const [isNew, setIsNew] = useState(false)
+  const [telematicsStatus, setTelematicsStatus] = useState(() => fleetTelematicsStatusLabel(tenantId))
+  const [syncMsg, setSyncMsg] = useState<string | null>(null)
+  const [syncing, setSyncing] = useState(false)
 
   const refresh = useCallback(() => {
     seedDemoVehicles(tenantId)
-    setVehicles(loadVehicles(tenantId))
+    seedDemoFleetPositions(tenantId)
+    setSnapshots(buildFleetVehicleSnapshots(tenantId))
+    setTelematicsStatus(fleetTelematicsStatusLabel(tenantId))
   }, [tenantId])
 
   useEffect(() => {
     refresh()
   }, [refresh])
+
+  useCloudSyncRefreshKeys(
+    tenantId,
+    ['fleet-positions', 'vehicles', 'courses', 'drivers', 'fleet-telematics-connectors'],
+    refresh,
+  )
+
+  async function onTelematicsSync() {
+    setSyncing(true)
+    setSyncMsg(null)
+    try {
+      const r = await syncFleetTelematics(tenantId)
+      refresh()
+      setSyncMsg(
+        r.error
+          ? r.error
+          : `Telematyka OK: ${r.updated} pozycji (${r.providers.join(', ') || 'brak'})`,
+      )
+    } finally {
+      setSyncing(false)
+    }
+  }
 
   function openNew() {
     const base = createEmptyVehicle(tenantId)
@@ -47,17 +87,25 @@ export function FleetView({ tenantId, readOnly = false }: FleetViewProps) {
 
   function handleSave() {
     if (!editing) return
-    setVehicles(upsertVehicle(tenantId, { ...editing, updatedAt: new Date().toISOString() }))
+    upsertVehicle(tenantId, { ...editing, updatedAt: new Date().toISOString() })
+    refresh()
     setEditing(null)
     setIsNew(false)
   }
 
   function handleDelete(id: string) {
     if (!confirm('Usunąć pojazd?')) return
-    setVehicles(deleteVehicle(tenantId, id))
+    deleteVehicle(tenantId, id)
+    refresh()
   }
 
+  const vehicles = loadVehicles(tenantId)
   const activeCount = vehicles.filter((v) => v.active).length
+  const staleGps = gpsEnabled ? staleGpsSnapshotsForAlerts(tenantId) : []
+  const withLiveGps = snapshots.filter((s) => s.gpsFreshness === 'live').length
+  const telematicsCfg = loadFleetTelematicsConfig(tenantId)
+  const telematicsOn =
+    telematicsCfg.webfleetEnabled || telematicsCfg.transicsEnabled || telematicsCfg.genericEnabled
 
   return (
     <div className="space-y-4">
@@ -66,6 +114,7 @@ export function FleetView({ tenantId, readOnly = false }: FleetViewProps) {
           <h1 className="text-xl font-semibold">Flota pojazdów</h1>
           <p className="text-sm text-muted-foreground">
             {vehicles.length} pojazdów · {activeCount} aktywnych
+            {gpsEnabled && ` · ${withLiveGps} ze świeżym GPS`}
           </p>
         </div>
         {!readOnly && (
@@ -76,45 +125,85 @@ export function FleetView({ tenantId, readOnly = false }: FleetViewProps) {
         )}
       </div>
 
+      {gpsEnabled && staleGps.length > 0 && (
+        <Card className="border-warning/40 bg-warning/5">
+          <CardContent className="flex flex-wrap items-start gap-2 p-4 text-sm">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
+            <div>
+              <p className="font-medium text-foreground">
+                {staleGps.length} pojazdów bez świeżego GPS (&gt; 3 h)
+              </p>
+              <p className="text-muted-foreground">
+                {staleGps.map((s) => s.vehicle.registration).join(', ')} — sprawdź telefon kierowcy
+                (PWA) lub telematykę w aucie.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {gpsEnabled && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Satellite className="h-4 w-4 text-primary" />
+              GPS / telematyka
+            </CardTitle>
+            <CardDescription>{telematicsStatus}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-xs text-muted-foreground">
+              Źródła: telefon kierowcy (PWA), urządzenie w aucie (Webfleet, Transics) → klucz{' '}
+              <code className="rounded bg-muted px-1">fleet-positions</code>. Każdy pojazd ma mapę
+              z ostatnią pozycją poniżej.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" disabled={syncing || !telematicsOn} onClick={() => void onTelematicsSync()}>
+                {syncing ? (
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <CloudDownload className="mr-2 h-4 w-4" />
+                )}
+                Synchronizuj telematykę
+              </Button>
+              <Button size="sm" variant="secondary" onClick={refresh}>
+                <MapPin className="mr-2 h-4 w-4" />
+                Odśwież pozycje
+              </Button>
+            </div>
+            {!telematicsOn && (
+              <p className="text-xs text-muted-foreground">
+                Włącz Webfleet / Transics w Ustawieniach firmy, aby pobierać pozycje z ciężarówki.
+              </p>
+            )}
+            {syncMsg && (
+              <p
+                className={cn(
+                  'text-xs',
+                  syncMsg.includes('Błąd') || syncMsg.includes('Włącz') || syncMsg.includes('error')
+                    ? 'text-danger'
+                    : 'text-success',
+                )}
+              >
+                {syncMsg}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       <div className="space-y-3">
-        {vehicles.map((vehicle) => (
-          <Card key={vehicle.id}>
-            <CardContent className="flex flex-wrap items-start justify-between gap-3 p-4">
-              <div className="min-w-0 flex-1 space-y-2">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Truck className="h-4 w-4 text-primary" />
-                  <span className="font-semibold">{vehicle.registration}</span>
-                  <span className="text-xs text-muted-foreground">{VEHICLE_TYPE_LABELS[vehicle.type]}</span>
-                  {vehicle.adrEnabled && (
-                    <span className="flex items-center gap-1 rounded-full bg-danger/15 px-2 py-0.5 text-xs font-medium text-danger">
-                      <AlertTriangle className="h-3 w-3" />
-                      ADR
-                    </span>
-                  )}
-                </div>
-                {(vehicle.brand || vehicle.model) && (
-                  <p className="text-sm text-muted-foreground">
-                    {[vehicle.brand, vehicle.model, vehicle.year].filter(Boolean).join(' ')}
-                  </p>
-                )}
-                {vehicle.odometerKm != null && (
-                  <p className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <Gauge className="h-3.5 w-3.5" />
-                    {vehicle.odometerKm.toLocaleString('pl-PL')} km
-                  </p>
-                )}
-                <DocumentBadges documents={vehicle.documents} />
-              </div>
-              <EntityActions
-                readOnly={readOnly}
-                onEdit={() => {
-                  setEditing({ ...vehicle })
-                  setIsNew(false)
-                }}
-                onDelete={() => handleDelete(vehicle.id)}
-              />
-            </CardContent>
-          </Card>
+        {snapshots.map((snapshot) => (
+          <VehicleFleetCard
+            key={snapshot.vehicle.id}
+            snapshot={snapshot}
+            readOnly={readOnly}
+            onEdit={() => {
+              setEditing({ ...snapshot.vehicle })
+              setIsNew(false)
+            }}
+            onDelete={() => handleDelete(snapshot.vehicle.id)}
+          />
         ))}
       </div>
 
@@ -179,7 +268,7 @@ export function FleetView({ tenantId, readOnly = false }: FleetViewProps) {
             />
             Zezwolenie ADR na pojeździe
           </label>
-          <label className="flex items-center gap-2 text-sm">
+          <label className={cn('flex items-center gap-2 text-sm')}>
             <input
               type="checkbox"
               checked={editing.active}

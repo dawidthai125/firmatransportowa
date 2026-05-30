@@ -46,6 +46,15 @@ import { useEffect, useMemo, useState } from 'react'
 
 const OWNER_ONLY_ADMIN_VIEWS: AdminView[] = ['compliance', 'settings', 'tachograph']
 
+/** Moduły tylko dla właściciela — poza menu dyspozytora */
+const DISPATCHER_FORBIDDEN_VIEWS: AdminView[] = [
+  ...OWNER_ONLY_ADMIN_VIEWS,
+  'settlements',
+  'files',
+  'automations',
+  'itd',
+]
+
 function filterNavByModules<T extends string>(
   items: NavItem<T>[],
   modules: import('@/lib/tenant/types').TenantModules,
@@ -55,7 +64,7 @@ function filterNavByModules<T extends string>(
 
 function canAccessAdminView(view: AdminView, mode: AppMode): boolean {
   if (mode === 'owner') return true
-  if (mode === 'dispatcher' && OWNER_ONLY_ADMIN_VIEWS.includes(view)) return false
+  if (mode === 'dispatcher') return !DISPATCHER_FORBIDDEN_VIEWS.includes(view)
   return true
 }
 
@@ -274,7 +283,9 @@ export default function App() {
             tenantName={currentTenant.name}
           />
         )}
-        {adminAllowed && adminView === 'fleet' && <FleetView tenantId={currentTenant.id} />}
+        {adminAllowed && adminView === 'fleet' && (
+          <FleetView tenantId={currentTenant.id} gpsEnabled={currentTenant.settings.modules.gps} />
+        )}
         {adminAllowed && adminView === 'repairs' && (
           <RepairsView
             tenantId={currentTenant.id}

@@ -196,25 +196,28 @@ function adminSteps(
     },
     fleet: {
       title: 'Flota pojazdów',
-      summary: 'Ciągniki, naczepy, ADR, dokumenty pojazdu i przebieg.',
+      summary: 'Pojazdy z ostatnią pozycją GPS, kierowcą, kursem i alertem gdy sygnał starszy niż 3 h.',
       steps: [
         {
-          title: 'Dodaj pojazd',
-          description: 'Rejestracja, typ, ADR, daty dokumentów, przebieg.',
-          action: 'Przycisk „Dodaj pojazd”',
+          title: 'Status GPS na karcie pojazdu',
+          description: 'Kierowca, aktywny kurs, prędkość i „ostatni sygnał” — z telefonu (PWA) lub telematyki.',
+          action: 'Moduł Flota → lista pojazdów',
         },
         {
-          title: 'Edytuj dane',
-          description: 'Aktualizuj przebieg i ważność dokumentów po przeglądzie lub kontroli.',
-          action: 'Kliknij pojazd → Edytuj',
+          title: 'Alert GPS nieaktualny',
+          description: 'Pojazd bez świeżej pozycji > 3 h — baner w Flocie i wyjątek na pulpicie.',
+          action: 'Pulpit → Wymaga uwagi → GPS, lub Flota → pomarańczowy baner',
         },
         {
-          title: 'Dezaktywuj',
-          description: 'Nieaktywny pojazd nie pojawia się przy przypisywaniu do kursu.',
-          action: 'Formularz pojazdu → pole Aktywny',
+          title: 'Dodaj / edytuj pojazd',
+          description: 'Rejestracja, ADR, dokumenty, przebieg.',
+          action: 'Przycisk „Dodaj pojazd” lub Edytuj na karcie',
         },
       ],
-      related: [{ label: 'Zgodność', hint: 'Alerty ważności dokumentów' }],
+      related: [
+        { label: 'Pulpit', hint: 'Mapa floty na żywo' },
+        { label: 'Kursy', hint: 'Przypisanie pojazdu do trasy' },
+      ],
     },
     repairs: {
       title: 'Awarie i naprawy',
@@ -346,35 +349,46 @@ function adminSteps(
       ],
     },
     tachograph: {
-      title: 'Import tachografu (DDD)',
-      summary: 'Archiwum odczytów karty kierowcy i urządzenia pojazdu — kontrola ITD i czas jazdy 561/2006.',
+      title: 'Tachograf i czasy jazdy',
+      summary:
+        'Synchronizacja z TachoScan / VDO / telematyką oraz archiwum DDD — kontrola ITD i czas jazdy 561/2006.',
       steps: [
         {
-          title: 'Import pliku DDD',
-          description: 'Pobierz plik z tachografu (karta lub VU) i zaimportuj — trafia też do biblioteki Pliki.',
-          action: 'Przycisk „Importuj plik DDD”',
+          title: 'Status połączenia',
+          description:
+            'Włącz dostawców w Ustawieniach firmy, potem „Synchronizuj teraz” — widać ostatni sync i minuty jazdy/odpoczynku.',
+          action: 'Karta „Połączenie z dostawcą” u góry modułu',
+        },
+        {
+          title: 'Import ręczny (.ddd)',
+          description:
+            'Fallback przy kontroli ITD lub awarii telematyki — plik trafia też do biblioteki Pliki.',
+          action: 'Sekcja „Import ręczny” na dole modułu',
         },
         {
           title: 'Przypisz kierowcę',
-          description: 'System próbuje rozpoznać kierowcę z nazwy pliku — możesz poprawić ręcznie.',
-          action: 'Lista importów → wybór kierowcy',
-        },
-        {
-          title: 'Okres odczytu',
-          description: 'Daty z nazwy pliku (YYYYMMDD) — pełne dekodowanie DDD w wersji produkcyjnej.',
-          action: 'Kolumna okresu na karcie importu',
+          description: 'System próbuje rozpoznać kierowcę z nazwy pliku lub danych API — możesz poprawić ręcznie.',
+          action: 'Lista odczytów → wybór kierowcy',
         },
       ],
-      related: [{ label: 'Pliki', hint: 'Kopia importu w bibliotece dokumentów' }],
+      related: [
+        { label: 'Ustawienia firmy', hint: 'Konfiguracja TachoScan / VDO / FMS' },
+        { label: 'Pliki', hint: 'Kopia importu ręcznego w bibliotece' },
+      ],
     },
     settings: {
       title: 'Ustawienia firmy',
-      summary: 'Dokumenty firmy, plan abonamentowy (demo SaaS), mechanicy i weryfikatorzy awarii.',
+      summary: 'Dokumenty firmy, plan abonamentowy, mechanicy i weryfikatorzy awarii.',
       steps: [
         {
           title: 'Plan abonamentowy',
           description: 'Starter / Business / Enterprise — włącza lub ukrywa moduły (GPS, giełda, ITD, tachograf).',
           action: 'Sekcja „Plan abonamentowy” → wybierz plan',
+        },
+        {
+          title: 'Integracja tachografu',
+          description: 'TachoScan, VDO Online, telematyka FMS — włącz dostawców i podaj klucze API (demo lokalnie).',
+          action: 'Sekcja „Integracja tachografu (API)”',
         },
         {
           title: 'Dokumenty firmy',

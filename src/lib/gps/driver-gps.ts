@@ -33,9 +33,12 @@ export function upsertDriverLivePosition(
     source: 'driver-pwa',
   }
 
-  const idx = positions.findIndex(
-    (p) => p.driverName?.toLowerCase() === payload.driverName.toLowerCase(),
-  )
+  const idx =
+    payload.vehicleId != null
+      ? positions.findIndex((p) => p.vehicleId === payload.vehicleId)
+      : positions.findIndex(
+          (p) => p.driverName?.toLowerCase() === payload.driverName.toLowerCase(),
+        )
   const next = [...positions]
   if (idx >= 0) next[idx] = entry
   else next.unshift(entry)

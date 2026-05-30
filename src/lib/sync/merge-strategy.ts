@@ -1,5 +1,7 @@
 import type { AutomationRule, AutomationSettings } from '@/lib/automation/rules'
 import type { FreightConnectorConfig } from '@/lib/domain/freight-connectors'
+import type { FleetTelematicsConnectorConfig } from '@/lib/domain/fleet-telematics-connectors'
+import type { TachographConnectorConfig } from '@/lib/domain/tachograph-connectors'
 import type { FreightSearchPreferences } from '@/lib/domain/freight-preferences'
 import type { ItdPlaybookSection, ItdTenantData } from '@/lib/domain/itd-types'
 import type { TenantSettingsData } from '@/lib/domain/tenant-settings'
@@ -203,6 +205,69 @@ function mergeFreightConnectors(
   }
 }
 
+function mergeFleetTelematicsConnectors(
+  local: Partial<FleetTelematicsConnectorConfig>,
+  cloud: Partial<FleetTelematicsConnectorConfig>,
+  localAt: string,
+  cloudAt: string,
+): FleetTelematicsConnectorConfig {
+  const preferLocal = Date.parse(localAt) >= Date.parse(cloudAt)
+  const newer = preferLocal ? local : cloud
+  const older = preferLocal ? cloud : local
+  const lastSync: Partial<Record<string, string>> = {
+    ...(older.lastSyncByProvider ?? {}),
+    ...(newer.lastSyncByProvider ?? {}),
+  }
+  for (const key of Object.keys({ ...older.lastSyncByProvider, ...newer.lastSyncByProvider })) {
+    const l = local.lastSyncByProvider?.[key as keyof typeof local.lastSyncByProvider]
+    const c = cloud.lastSyncByProvider?.[key as keyof typeof cloud.lastSyncByProvider]
+    if (l || c) lastSync[key] = maxIso(l, c)
+  }
+  return {
+    webfleetEnabled: newer.webfleetEnabled ?? older.webfleetEnabled ?? false,
+    transicsEnabled: newer.transicsEnabled ?? older.transicsEnabled ?? false,
+    genericEnabled: newer.genericEnabled ?? older.genericEnabled ?? false,
+    webfleetAccount: newer.webfleetAccount ?? older.webfleetAccount,
+    webfleetApiKey: newer.webfleetApiKey ?? older.webfleetApiKey,
+    transicsFleetId: newer.transicsFleetId ?? older.transicsFleetId,
+    genericWebhookUrl: newer.genericWebhookUrl ?? older.genericWebhookUrl,
+    lastSyncByProvider: lastSync as FleetTelematicsConnectorConfig['lastSyncByProvider'],
+    lastSyncAt: maxIso(local.lastSyncAt, cloud.lastSyncAt),
+    lastSyncError: preferLocal ? local.lastSyncError : cloud.lastSyncError ?? local.lastSyncError,
+  }
+}
+
+function mergeTachographConnectors(
+  local: Partial<TachographConnectorConfig>,
+  cloud: Partial<TachographConnectorConfig>,
+  localAt: string,
+  cloudAt: string,
+): TachographConnectorConfig {
+  const preferLocal = Date.parse(localAt) >= Date.parse(cloudAt)
+  const newer = preferLocal ? local : cloud
+  const older = preferLocal ? cloud : local
+  const lastSync: Partial<Record<string, string>> = {
+    ...(older.lastSyncByProvider ?? {}),
+    ...(newer.lastSyncByProvider ?? {}),
+  }
+  for (const key of Object.keys({ ...older.lastSyncByProvider, ...newer.lastSyncByProvider })) {
+    const l = local.lastSyncByProvider?.[key as keyof typeof local.lastSyncByProvider]
+    const c = cloud.lastSyncByProvider?.[key as keyof typeof cloud.lastSyncByProvider]
+    if (l || c) lastSync[key] = maxIso(l, c)
+  }
+  return {
+    tachoScanEnabled: newer.tachoScanEnabled ?? older.tachoScanEnabled ?? false,
+    vdoOnlineEnabled: newer.vdoOnlineEnabled ?? older.vdoOnlineEnabled ?? false,
+    telematicsFmsEnabled: newer.telematicsFmsEnabled ?? older.telematicsFmsEnabled ?? false,
+    tachoScanApiKey: newer.tachoScanApiKey ?? older.tachoScanApiKey,
+    vdoFleetId: newer.vdoFleetId ?? older.vdoFleetId,
+    telematicsEndpoint: newer.telematicsEndpoint ?? older.telematicsEndpoint,
+    lastSyncByProvider: lastSync as TachographConnectorConfig['lastSyncByProvider'],
+    lastSyncAt: maxIso(local.lastSyncAt, cloud.lastSyncAt),
+    lastSyncError: preferLocal ? local.lastSyncError : cloud.lastSyncError ?? local.lastSyncError,
+  }
+}
+
 function mergePayload(
   dataKey: TenantDataKey | 'registry',
   local: unknown,
@@ -292,6 +357,26 @@ export function mergeSyncEnvelopes(
     const payload = mergeFreightConnectors(
       localEnv.payload as Partial<FreightConnectorConfig>,
       cloudEnv.payload as Partial<FreightConnectorConfig>,
+      localEnv.updatedAt,
+      cloudEnv.updatedAt,
+    )
+    return wrapForSync(payload, maxIso(localEnv.updatedAt, cloudEnv.updatedAt))
+  }
+
+  if (dataKey === 'fleet-telematics-connectors') {
+    const payload = mergeFleetTelematicsConnectors(
+      localEnv.payload as Partial<FleetTelematicsConnectorConfig>,
+      cloudEnv.payload as Partial<FleetTelematicsConnectorConfig>,
+      localEnv.updatedAt,
+      cloudEnv.updatedAt,
+    )
+    return wrapForSync(payload, maxIso(localEnv.updatedAt, cloudEnv.updatedAt))
+  }
+
+  if (dataKey === 'tachograph-connectors') {
+    const payload = mergeTachographConnectors(
+      localEnv.payload as Partial<TachographConnectorConfig>,
+      cloudEnv.payload as Partial<TachographConnectorConfig>,
       localEnv.updatedAt,
       cloudEnv.updatedAt,
     )

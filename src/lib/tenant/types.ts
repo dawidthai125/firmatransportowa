@@ -81,6 +81,8 @@ export type TenantDataKey =
   | 'freight-connectors'
   | 'itd'
   | 'tachograph'
+  | 'tachograph-connectors'
+  | 'fleet-telematics-connectors'
 
 export const TENANT_DATA_KEYS: TenantDataKey[] = [
   'drivers',
@@ -98,6 +100,8 @@ export const TENANT_DATA_KEYS: TenantDataKey[] = [
   'freight-connectors',
   'itd',
   'tachograph',
+  'tachograph-connectors',
+  'fleet-telematics-connectors',
 ]
 
 export function tenantStorageKey(tenantId: string, key: TenantDataKey): string {

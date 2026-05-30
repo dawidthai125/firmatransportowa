@@ -14,6 +14,35 @@ export function saveFleetPositions(tenantId: string, positions: FleetPosition[])
   writeTenantData(tenantId, KEY, positions)
 }
 
+/** Merge pozycji z telematyki — deduplikacja po vehicleId / externalId */
+export function upsertFleetTelematicsPositions(
+  tenantId: string,
+  incoming: FleetPosition[],
+): { updated: number } {
+  const existing = loadFleetPositions(tenantId)
+  const byVehicle = new Map(existing.map((p) => [p.vehicleId, p]))
+  let updated = 0
+
+  for (const row of incoming) {
+    const prev = byVehicle.get(row.vehicleId)
+    if (prev) {
+      const idx = existing.findIndex((p) => p.vehicleId === row.vehicleId)
+      if (idx >= 0) {
+        existing[idx] = { ...prev, ...row, vehicleId: prev.vehicleId }
+        updated++
+      }
+      byVehicle.set(row.vehicleId, existing[idx] ?? row)
+    } else {
+      existing.unshift(row)
+      byVehicle.set(row.vehicleId, row)
+      updated++
+    }
+  }
+
+  saveFleetPositions(tenantId, existing)
+  return { updated }
+}
+
 /** Demo: pozycje w okolicy Wrocławia / A4 / A8 */
 export function seedDemoFleetPositions(tenantId: string): FleetPosition[] {
   const existing = loadFleetPositions(tenantId)
@@ -47,7 +76,7 @@ export function seedDemoFleetPositions(tenantId: string): FleetPosition[] {
       lat: 51.7592,
       lng: 19.456,
       speedKmh: 0,
-      updatedAt: now,
+      updatedAt: new Date(Date.now() - 4 * 3600_000).toISOString(),
       status: 'loading',
       source: 'demo',
     },
@@ -75,7 +104,7 @@ export function tickFleetSimulation(tenantId: string): FleetPosition[] {
   if (positions.length === 0) return seedDemoFleetPositions(tenantId)
 
   const next = positions.map((p) => {
-    if (p.source === 'driver-pwa') return p
+    if (p.source === 'driver-pwa' || p.source === 'telematics') return p
     if (p.status !== 'in_transit') return p
     const jitter = () => (Math.random() - 0.5) * 0.02
     return {

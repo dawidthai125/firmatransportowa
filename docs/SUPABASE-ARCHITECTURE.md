@@ -1,4 +1,4 @@
-# TransFlow — Supabase i sync (dla AI)
+# TransFlow — Supabase i sync (dla programistów)
 
 > **Ostatnia aktualizacja:** 2026-05-30 · v0.4.0
 

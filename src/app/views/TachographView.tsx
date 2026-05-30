@@ -3,7 +3,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app
 import { Label, Select } from '@/app/components/ui/Input'
 import { driverDisplayName } from '@/lib/domain/driver'
 import { loadDrivers, seedDemoDrivers } from '@/lib/domain/drivers-store'
-import { TACHOGRAPH_SOURCE_LABELS } from '@/lib/domain/tachograph-parse'
+import {
+  connectorStatusLabel,
+  loadTachographConnectorConfig,
+  syncTachographConnectors,
+} from '@/lib/domain/tachograph-connectors'
+import {
+  TACHOGRAPH_IMPORT_SOURCE_LABELS,
+  TACHOGRAPH_RECORD_TYPE_LABELS,
+} from '@/lib/domain/tachograph-parse'
 import {
   deleteTachographDownload,
   importTachographFile,
@@ -14,18 +22,39 @@ import {
 import type { TachographDownload } from '@/lib/domain/tachograph-types'
 import { storePreviewableFile } from '@/lib/files/files-store'
 import { fileFromInput } from '@/lib/files/download'
-import { useCloudSyncRefresh } from '@/lib/sync/useCloudSyncRefresh'
+import { useCloudSyncRefreshKeys } from '@/lib/sync/useCloudSyncRefresh'
 import { cn } from '@/lib/utils'
-import { Clock, HardDriveDownload, Trash2, Upload, User } from 'lucide-react'
+import {
+  AlertCircle,
+  Clock,
+  CloudDownload,
+  HardDriveDownload,
+  RefreshCw,
+  Trash2,
+  Upload,
+  User,
+  Wifi,
+  WifiOff,
+} from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 interface TachographViewProps {
   tenantId: string
 }
 
+function formatMinutes(min?: number): string {
+  if (min == null) return '—'
+  const h = Math.floor(min / 60)
+  const m = min % 60
+  return `${h}h ${m}m`
+}
+
 export function TachographView({ tenantId }: TachographViewProps) {
   const [rows, setRows] = useState<TachographDownload[]>([])
   const [drivers, setDrivers] = useState(loadDrivers(tenantId))
+  const [statusLabel, setStatusLabel] = useState(() => connectorStatusLabel(tenantId))
+  const [syncMsg, setSyncMsg] = useState<string | null>(null)
+  const [syncing, setSyncing] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   const refresh = useCallback(() => {
@@ -33,13 +62,37 @@ export function TachographView({ tenantId }: TachographViewProps) {
     seedDemoTachographDownloads(tenantId)
     setRows(loadTachographDownloads(tenantId))
     setDrivers(loadDrivers(tenantId))
+    setStatusLabel(connectorStatusLabel(tenantId))
   }, [tenantId])
 
   useEffect(() => {
     refresh()
   }, [refresh])
 
-  useCloudSyncRefresh(tenantId, 'tachograph', refresh)
+  useCloudSyncRefreshKeys(tenantId, ['tachograph', 'tachograph-connectors'], refresh)
+
+  const cfg = loadTachographConnectorConfig(tenantId)
+  const anyConnector =
+    cfg.tachoScanEnabled || cfg.vdoOnlineEnabled || cfg.telematicsFmsEnabled
+  const connected = anyConnector && !cfg.lastSyncError && !!cfg.lastSyncAt
+
+  async function onSync() {
+    setSyncing(true)
+    setSyncMsg(null)
+    try {
+      const r = await syncTachographConnectors(tenantId)
+      refresh()
+      if (r.error) {
+        setSyncMsg(r.error)
+      } else {
+        setSyncMsg(
+          `Sync OK: +${r.added} nowych, ${r.updated} zaktualizowanych (${r.providers.join(', ') || 'brak'})`,
+        )
+      }
+    } finally {
+      setSyncing(false)
+    }
+  }
 
   async function onUpload(files: FileList | null) {
     const file = files?.[0]
@@ -71,38 +124,53 @@ export function TachographView({ tenantId }: TachographViewProps) {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold">Import tachografu (DDD)</h1>
-          <p className="text-sm text-muted-foreground">
-            Odczyty karty kierowcy i urządzenia pojazdu — archiwum do kontroli ITD i 561/2006
-          </p>
-        </div>
-        <>
-          <input
-            ref={inputRef}
-            type="file"
-            accept=".ddd"
-            className="hidden"
-            onChange={(e) => {
-              void onUpload(e.target.files)
-              e.target.value = ''
-            }}
-          />
-          <Button type="button" className="gap-2" onClick={() => inputRef.current?.click()}>
-            <Upload className="h-4 w-4" />
-            Importuj plik DDD
-          </Button>
-        </>
+      <div>
+        <h1 className="text-xl font-semibold">Tachograf i czasy jazdy</h1>
+        <p className="text-sm text-muted-foreground">
+          Synchronizacja z TachoScan / VDO / telematyką oraz archiwum DDD do kontroli ITD (561/2006)
+        </p>
       </div>
 
-      <Card className="border-primary/20 bg-primary/5">
-        <CardContent className="p-4 text-sm text-muted-foreground">
-          <p>
-            <strong className="text-foreground">Demo:</strong> plik zapisuje się w bibliotece Pliki.
-            Metadane (kierowca, okres) są wyciągane z nazwy pliku — pełne dekodowanie DDD w wersji
-            produkcyjnej (SDK / TachoScan).
-          </p>
+      <Card className={cn(connected ? 'border-success/30 bg-success/5' : 'border-border')}>
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-2 text-base">
+            {connected ? (
+              <Wifi className="h-4 w-4 text-success" />
+            ) : anyConnector ? (
+              <AlertCircle className="h-4 w-4 text-warning" />
+            ) : (
+              <WifiOff className="h-4 w-4 text-muted-foreground" />
+            )}
+            Połączenie z dostawcą
+          </CardTitle>
+          <CardDescription>{statusLabel}</CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-wrap items-center gap-2">
+          <Button size="sm" disabled={syncing || !anyConnector} onClick={() => void onSync()}>
+            {syncing ? (
+              <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <CloudDownload className="mr-2 h-4 w-4" />
+            )}
+            Synchronizuj teraz
+          </Button>
+          {!anyConnector && (
+            <p className="text-xs text-muted-foreground">
+              Włącz TachoScan, VDO lub telematykę w Ustawieniach firmy.
+            </p>
+          )}
+          {syncMsg && (
+            <p
+              className={cn(
+                'text-xs',
+                syncMsg.includes('Błąd') || syncMsg.includes('Włącz') || syncMsg.includes('error')
+                  ? 'text-danger'
+                  : 'text-success',
+              )}
+            >
+              {syncMsg}
+            </p>
+          )}
         </CardContent>
       </Card>
 
@@ -111,8 +179,10 @@ export function TachographView({ tenantId }: TachographViewProps) {
           <CardContent className="flex items-center gap-3 p-6 text-muted-foreground">
             <HardDriveDownload className="h-8 w-8" />
             <div>
-              <p className="font-medium text-foreground">Brak importów</p>
-              <p className="text-sm">Pobierz plik .ddd z tachografu i zaimportuj tutaj.</p>
+              <p className="font-medium text-foreground">Brak odczytów</p>
+              <p className="text-sm">
+                Synchronizuj z API lub zaimportuj plik .ddd ręcznie (fallback).
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -125,9 +195,10 @@ export function TachographView({ tenantId }: TachographViewProps) {
                   <div>
                     <CardTitle className="text-base">{row.filename}</CardTitle>
                     <CardDescription>
-                      {TACHOGRAPH_SOURCE_LABELS[row.source]} ·{' '}
-                      {new Date(row.importedAt).toLocaleString('pl-PL')} ·{' '}
-                      {(row.sizeBytes / 1024).toFixed(0)} KB
+                      {TACHOGRAPH_IMPORT_SOURCE_LABELS[row.source]} ·{' '}
+                      {TACHOGRAPH_RECORD_TYPE_LABELS[row.recordType]} ·{' '}
+                      {new Date(row.importedAt).toLocaleString('pl-PL')}
+                      {row.sizeBytes > 0 && ` · ${(row.sizeBytes / 1024).toFixed(0)} KB`}
                     </CardDescription>
                   </div>
                   <Button variant="ghost" size="icon" onClick={() => removeRow(row.id)}>
@@ -143,9 +214,20 @@ export function TachographView({ tenantId }: TachographViewProps) {
                       Okres: {row.periodFrom} — {row.periodTo}
                     </span>
                   ) : (
-                    <span className="text-muted-foreground">Okres — nie rozpoznano z nazwy pliku</span>
+                    <span className="text-muted-foreground">Okres — nie rozpoznano</span>
                   )}
                 </div>
+                {(row.drivingMinutes != null || row.restMinutes != null) && (
+                  <div className="text-sm">
+                    <span className="text-muted-foreground">Jazda / odpoczynek: </span>
+                    {formatMinutes(row.drivingMinutes)} / {formatMinutes(row.restMinutes)}
+                  </div>
+                )}
+                {row.lastSyncAt && row.source !== 'manual_upload' && (
+                  <p className="text-xs text-muted-foreground sm:col-span-2">
+                    Ostatni sync: {new Date(row.lastSyncAt).toLocaleString('pl-PL')}
+                  </p>
+                )}
                 {row.vehicleRegistration && (
                   <p className="text-sm text-muted-foreground">Pojazd: {row.vehicleRegistration}</p>
                 )}
@@ -174,6 +256,35 @@ export function TachographView({ tenantId }: TachographViewProps) {
           ))}
         </div>
       )}
+
+      <Card className="border-dashed">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Import ręczny (.ddd)</CardTitle>
+          <CardDescription>
+            Fallback przy kontroli ITD, awarii telematyki lub braku połączenia API
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <input
+            ref={inputRef}
+            type="file"
+            accept=".ddd"
+            className="hidden"
+            onChange={(e) => {
+              void onUpload(e.target.files)
+              e.target.value = ''
+            }}
+          />
+          <Button type="button" variant="secondary" className="gap-2" onClick={() => inputRef.current?.click()}>
+            <Upload className="h-4 w-4" />
+            Importuj plik DDD
+          </Button>
+          <p className="text-xs text-muted-foreground">
+            Plik trafia do biblioteki Pliki. Metadane z nazwy pliku — pełne dekodowanie DDD w produkcji
+            (SDK / TachoScan).
+          </p>
+        </CardContent>
+      </Card>
     </div>
   )
 }

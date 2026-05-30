@@ -1,3 +1,4 @@
+import { SystemCredit } from '@/app/components/SystemCredit'
 import { Button } from '@/app/components/ui/Button'
 import { Input, Label } from '@/app/components/ui/Input'
 import { PortalPanelTile } from '@/app/components/transport/PortalPanelTile'
@@ -271,7 +272,9 @@ export function PortalHome({
         )}
       </main>
 
-      <footer className="relative border-t border-border/60 px-4 py-5 text-center">
+      <footer className="relative border-t border-border/60 px-4 py-5">
+        <SystemCredit className="mb-3" />
+        <div className="text-center">
         {companyMode ? (
           <>
             <p className="text-xs text-muted-foreground">
@@ -293,6 +296,7 @@ export function PortalHome({
         <p className="mt-1 text-[10px] text-muted-foreground/70">
           Zdjęcia: Unsplash · transport drogowy, logistyka, warsztat
         </p>
+        </div>
       </footer>
     </div>
   )

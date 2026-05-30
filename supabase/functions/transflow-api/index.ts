@@ -4,6 +4,8 @@ import { cors } from 'npm:hono/cors'
 import { logger } from 'npm:hono/logger'
 import * as auth from './auth.ts'
 import * as kv from './kv_store.ts'
+import { applyTachographWebhook, runTachographSync } from './tachograph_sync.ts'
+import { applyFleetTelematicsWebhook, runFleetTelematicsSync } from './fleet_telematics_sync.ts'
 
 const SLUG = 'transflow-api'
 const PREFIX = `/${SLUG}`
@@ -46,6 +48,58 @@ app.post(`${PREFIX}/batch-set`, async (c) => {
   const values = allowed.map((e) => e.value)
   await kv.mset(keys, values)
   return c.json({ ok: true, count: allowed.length })
+})
+
+app.post(`${PREFIX}/fleet-telematics-sync`, async (c) => {
+  const requestAuth = await auth.resolveRequestAuth(c.req.header('Authorization'))
+  const body = await c.req.json().catch(() => ({}))
+  const tenantId = typeof body?.tenantId === 'string' ? body.tenantId : null
+  if (!tenantId) return c.json({ ok: false, error: 'tenantId required' }, 400)
+  if (!auth.canWriteKey(requestAuth, `ft-${tenantId}-fleet-positions`)) {
+    return c.json({ ok: false, error: 'forbidden' }, 403)
+  }
+  const result = await runFleetTelematicsSync(tenantId)
+  return c.json(result, result.ok ? 200 : 400)
+})
+
+app.post(`${PREFIX}/fleet-telematics-webhook`, async (c) => {
+  const secret = Deno.env.get('TRANSFLOW_WEBHOOK_SECRET')
+  const authHeader = c.req.header('Authorization')
+  if (secret && authHeader !== `Bearer ${secret}`) {
+    return c.json({ error: 'unauthorized' }, 401)
+  }
+  const body = await c.req.json().catch(() => ({}))
+  const tenantId = typeof body?.tenantId === 'string' ? body.tenantId : null
+  const positions = Array.isArray(body?.positions) ? body.positions : []
+  if (!tenantId) return c.json({ ok: false, error: 'tenantId required' }, 400)
+  const result = await applyFleetTelematicsWebhook(tenantId, positions)
+  return c.json({ ok: true, ...result, at: new Date().toISOString() })
+})
+
+app.post(`${PREFIX}/tachograph-sync`, async (c) => {
+  const requestAuth = await auth.resolveRequestAuth(c.req.header('Authorization'))
+  const body = await c.req.json().catch(() => ({}))
+  const tenantId = typeof body?.tenantId === 'string' ? body.tenantId : null
+  if (!tenantId) return c.json({ ok: false, error: 'tenantId required' }, 400)
+  if (!auth.canWriteKey(requestAuth, `ft-${tenantId}-tachograph`)) {
+    return c.json({ ok: false, error: 'forbidden' }, 403)
+  }
+  const result = await runTachographSync(tenantId)
+  return c.json(result, result.ok ? 200 : 400)
+})
+
+app.post(`${PREFIX}/tachograph-webhook`, async (c) => {
+  const secret = Deno.env.get('TRANSFLOW_WEBHOOK_SECRET')
+  const authHeader = c.req.header('Authorization')
+  if (secret && authHeader !== `Bearer ${secret}`) {
+    return c.json({ error: 'unauthorized' }, 401)
+  }
+  const body = await c.req.json().catch(() => ({}))
+  const tenantId = typeof body?.tenantId === 'string' ? body.tenantId : null
+  const records = Array.isArray(body?.records) ? body.records : []
+  if (!tenantId) return c.json({ ok: false, error: 'tenantId required' }, 400)
+  const result = await applyTachographWebhook(tenantId, records)
+  return c.json({ ok: true, ...result, at: new Date().toISOString() })
 })
 
 app.post(`${PREFIX}/automation/webhook`, async (c) => {

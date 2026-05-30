@@ -6,8 +6,7 @@ import { driverDisplayName, type Driver } from '@/lib/domain/driver'
 import { loadDrivers, seedDemoDrivers } from '@/lib/domain/drivers-store'
 import { buildDrivingTimeAlerts } from '@/lib/domain/driving-time'
 import { loadDailyReports, seedDemoDailyReports } from '@/lib/domain/daily-reports-store'
-import type { FleetPosition } from '@/lib/domain/fleet-position'
-import { loadFleetPositions } from '@/lib/domain/fleet-positions-store'
+import { staleGpsSnapshotsForAlerts } from '@/lib/domain/fleet-enrichment'
 import { activeItdAlerts } from '@/lib/domain/itd-store'
 import { buildInternationalCourseAlerts } from '@/lib/domain/international-compliance'
 import { loadRepairReports, seedDemoRepairReports } from '@/lib/domain/repair-reports-store'
@@ -42,11 +41,6 @@ function driversOnActiveCourses(tenantId: string): string[] {
   return [...names]
 }
 
-function staleGpsPositions(positions: FleetPosition[], maxAgeHours = 3): FleetPosition[] {
-  const cutoff = Date.now() - maxAgeHours * 3600_000
-  return positions.filter((p) => new Date(p.updatedAt).getTime() < cutoff)
-}
-
 /** Wyjątki operacyjne na dziś — właściciel reaguje tylko na to */
 export function buildOperationsExceptions(
   tenantId: string,
@@ -64,7 +58,6 @@ export function buildOperationsExceptions(
   const reports = loadDailyReports(tenantId)
   const companyDocs = loadTenantSettingsData(tenantId).companyDocuments
   const repairs = loadRepairReports(tenantId)
-  const positions = loadFleetPositions(tenantId)
   const itdActive = activeItdAlerts(tenantId)
 
   const out: OperationException[] = []
@@ -153,15 +146,16 @@ export function buildOperationsExceptions(
     })
   }
 
-  if (gpsEnabled && positions.length > 0) {
-    const stale = staleGpsPositions(positions)
-    if (stale.length > 0) {
+  if (gpsEnabled) {
+    const staleSnapshots = staleGpsSnapshotsForAlerts(tenantId)
+    if (staleSnapshots.length > 0) {
+      const onCourse = staleSnapshots.filter((s) => s.courseRef)
       out.push({
         id: 'gps-stale',
-        severity: 'info',
-        title: `${stale.length} pojazdów bez świeżego GPS`,
-        description: stale.map((p) => p.registration).join(', '),
-        actionView: 'dashboard',
+        severity: onCourse.length > 0 ? 'warning' : 'info',
+        title: `${staleSnapshots.length} pojazdów bez świeżego GPS (> 3 h)`,
+        description: staleSnapshots.map((s) => s.vehicle.registration).join(', '),
+        actionView: 'fleet',
       })
     }
   }

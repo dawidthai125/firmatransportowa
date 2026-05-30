@@ -116,7 +116,7 @@ export function AutomationsView({ tenantId, tenantSlug, tenantName }: Automation
       </div>
 
       <p className="text-xs text-muted-foreground">
-        Pełna architektura (Supabase cron, Cursor Automations, webhooki):{' '}
+        Harmonogramy i webhooki (Supabase cron, GitHub Actions):{' '}
         <code className="rounded bg-muted px-1">docs/AUTOMATION.md</code>
       </p>
     </div>

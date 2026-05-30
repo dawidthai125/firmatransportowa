@@ -2,6 +2,7 @@ import {
   FLEET_STATUS_LABELS,
   type FleetPosition,
 } from '@/lib/domain/fleet-position'
+import { formatLastSignal, isGpsStale } from '@/lib/domain/fleet-enrichment'
 import { LeafletMapCanvas } from '@/app/components/maps/LeafletMapCanvas'
 import { cn } from '@/lib/utils'
 import { MapPin, RefreshCw } from 'lucide-react'
@@ -50,8 +51,10 @@ export function FleetMapPanel({ positions, onRefresh, className }: FleetMapPanel
           for (const p of positions) {
             if (!Number.isFinite(p.lat) || !Number.isFinite(p.lng)) continue
             bounds.push([p.lat, p.lng])
-            const color =
-              p.status === 'in_transit'
+            const stale = isGpsStale(p.updatedAt)
+            const color = stale
+              ? '#ef4444'
+              : p.status === 'in_transit'
                 ? '#22c55e'
                 : p.status === 'loading'
                   ? '#f59e0b'
@@ -68,7 +71,7 @@ export function FleetMapPanel({ positions, onRefresh, className }: FleetMapPanel
             })
               .addTo(markers)
               .bindPopup(
-                `<strong>${p.registration}</strong><br/>${FLEET_STATUS_LABELS[p.status]}${p.driverName ? `<br/>${p.driverName}` : ''}${p.speedKmh != null && p.status === 'in_transit' ? `<br/>${p.speedKmh} km/h` : ''}${p.courseRef ? `<br/>${p.courseRef}` : ''}`,
+                `<strong>${p.registration}</strong><br/>${FLEET_STATUS_LABELS[p.status]}${stale ? ' · GPS nieaktualny' : ''}${p.driverName ? `<br/>${p.driverName}` : ''}${p.speedKmh != null ? `<br/>${p.speedKmh} km/h` : ''}${p.courseRef ? `<br/>${p.courseRef}` : ''}<br/><small>Ostatni sygnał: ${formatLastSignal(p.updatedAt)}</small>`,
               )
           }
           return bounds.length > 0 ? bounds : null
@@ -76,16 +79,28 @@ export function FleetMapPanel({ positions, onRefresh, className }: FleetMapPanel
       />
 
       <ul className="grid gap-2 sm:grid-cols-2">
-        {positions.map((p) => (
+        {positions.map((p) => {
+          const stale = isGpsStale(p.updatedAt)
+          return (
           <li
             key={`${p.vehicleId}-${p.registration}`}
-            className="rounded-lg border border-border bg-muted/20 px-3 py-2 text-xs"
+            className={cn(
+              'rounded-lg border border-border bg-muted/20 px-3 py-2 text-xs',
+              stale && 'border-warning/40 bg-warning/5',
+            )}
           >
             <span className="font-semibold">{p.registration}</span>
             <span className="text-muted-foreground"> · {FLEET_STATUS_LABELS[p.status]}</span>
             {p.driverName && <span className="block text-muted-foreground">{p.driverName}</span>}
+            {p.speedKmh != null && (
+              <span className="block text-muted-foreground">{p.speedKmh} km/h</span>
+            )}
+            <span className={cn('block', stale ? 'text-warning' : 'text-muted-foreground')}>
+              {formatLastSignal(p.updatedAt)}
+            </span>
           </li>
-        ))}
+          )
+        })}
       </ul>
       <p className="text-[10px] text-muted-foreground">
         Demo GPS · docelowo telemetria z tachografu / aplikacji kierowcy (PWA)

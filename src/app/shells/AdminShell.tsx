@@ -1,3 +1,4 @@
+import { SystemCredit } from '@/app/components/SystemCredit'
 import { AutomationNotifications } from '@/app/components/AutomationNotifications'
 import { CloudStatusBadge } from '@/app/components/CloudStatusBadge'
 import { OfflineIndicator } from '@/app/components/pwa/OfflineIndicator'
@@ -69,8 +70,11 @@ export function AdminShell({
             subtitle={`${tenant.name} · ${ROLE_LABELS[role]}`}
           />
           {children}
+          <SystemCredit className="mt-8 border-t border-border/60 pt-4 pb-2" compact />
         </main>
       </div>
+
+      <SystemCredit className="hidden shrink-0 border-t border-border/40 py-2 md:block" compact />
 
       <AppNav items={navItems} active={view} onChange={onViewChange} layout="bottom" />
     </div>

@@ -1,7 +1,7 @@
-import type { TachographSource } from '@/lib/domain/tachograph-types'
+import type { TachographRecordType } from '@/lib/domain/tachograph-types'
 
 export interface ParsedDddFilename {
-  source: TachographSource
+  recordType: TachographRecordType
   driverHint?: string
   vehicleHint?: string
   periodFrom?: string
@@ -13,9 +13,9 @@ export function parseDddFilename(filename: string): ParsedDddFilename {
   const base = filename.replace(/\.ddd$/i, '')
   const upper = base.toUpperCase()
 
-  let source: TachographSource = 'unknown'
-  if (/^C[_-]|CARD|KIER|DRIVER/.test(upper)) source = 'driver_card'
-  else if (/^M[_-]|VU|VEHICLE|POJAZD/.test(upper)) source = 'vehicle_unit'
+  let recordType: TachographRecordType = 'unknown'
+  if (/^C[_-]|CARD|KIER|DRIVER/.test(upper)) recordType = 'driver_card'
+  else if (/^M[_-]|VU|VEHICLE|POJAZD/.test(upper)) recordType = 'vehicle_unit'
 
   const dates = base.match(/(20\d{6})/g)
   let periodFrom: string | undefined
@@ -31,7 +31,7 @@ export function parseDddFilename(filename: string): ParsedDddFilename {
   const plateMatch = base.match(/[A-Z]{1,3}\s?[A-Z0-9]{4,6}/i)
   const vehicleHint = plateMatch?.[0]?.replace(/\s/g, '').toUpperCase()
 
-  return { source, driverHint, vehicleHint, periodFrom, periodTo }
+  return { recordType, driverHint, vehicleHint, periodFrom, periodTo }
 }
 
 function isoFromYyyymmdd(raw: string): string {
@@ -41,8 +41,14 @@ function isoFromYyyymmdd(raw: string): string {
   return `${y}-${m}-${d}`
 }
 
-export const TACHOGRAPH_SOURCE_LABELS: Record<TachographSource, string> = {
+export const TACHOGRAPH_RECORD_TYPE_LABELS: Record<TachographRecordType, string> = {
   driver_card: 'Karta kierowcy',
   vehicle_unit: 'Urządzenie pojazdu (VU)',
   unknown: 'Nie rozpoznano',
 }
+
+export const TACHOGRAPH_IMPORT_SOURCE_LABELS = {
+  remote_api: 'API partnera (TachoScan / VDO)',
+  telematics: 'Telematyka / FMS',
+  manual_upload: 'Import ręczny (.ddd)',
+} as const

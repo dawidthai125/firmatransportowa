@@ -1,6 +1,6 @@
 # TransFlow — domena transportu (Polska, mała/średnia firma TSL)
 
-> **Dla AI i programistów.** Źródła: GITD, rozporządzenie 561/2006, Pakiet Mobilności, praktyka branży.  
+> **Dla programistów.** Źródła: GITD, rozporządzenie 561/2006, Pakiet Mobilności, praktyka branży.  
 > **Ostatnia aktualizacja:** 2026-05-30 · v0.5.0
 
 ---

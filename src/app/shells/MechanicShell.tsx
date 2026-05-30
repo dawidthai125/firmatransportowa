@@ -1,3 +1,4 @@
+import { SystemCredit } from '@/app/components/SystemCredit'
 import { AppNav } from '@/app/components/AppNav'
 import { CloudStatusBadge } from '@/app/components/CloudStatusBadge'
 import { HelpButton } from '@/app/components/help/HelpButton'
@@ -57,8 +58,15 @@ export function MechanicShell({
           subtitle={`${mechanicName} · ciężarówki i naczepy`}
         />
         {children}
+        <SystemCredit className="mt-6 border-t border-border/60 pt-4 pb-2" compact />
       </main>
-      <AppNav items={MECHANIC_NAV} active={view} onChange={onViewChange} layout="bottom" />
+      <AppNav
+        items={MECHANIC_NAV}
+        active={view}
+        onChange={onViewChange}
+        layout="bottom"
+        bottomAlwaysVisible
+      />
     </div>
   )
 }

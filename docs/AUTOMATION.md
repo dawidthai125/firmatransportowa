@@ -23,22 +23,23 @@ flowchart TB
     GHA --> Deploy[Deploy Vercel/Supabase]
   end
 
-  subgraph cursor [Warstwa 3 — Cursor Automations]
-    CA[Cron / Webhook / Git]
-    Agent[Agent Cloud]
-    CA --> Agent
+  subgraph ci [Warstwa 3 — CI/CD i webhooki zewnętrzne]
+    GHA2[GitHub Actions]
+    Ext[Webhook partnera]
+    GHA2 --> Deploy
+    Ext --> Webhook
   end
 
   Engine -->|sync natychmiast| backend
   Webhook -->|pull danych| app
-  Agent -->|PR, raporty, fix CI| GHA
+  GHA2 -->|deploy, backup| Deploy
 ```
 
 | Warstwa | Co automatyzuje | Kiedy |
 |---------|-----------------|-------|
 | **1. In-app** | Alerty 561/2006, brak CMR, compliance, zapis CSV do biblioteki, sync push | Natychmiast po zdarzeniu |
 | **2. Backend** | Cotygodniowy backup KV, przypomnienia email (v0.8+), webhooki z zewnątrz | Cron / webhook |
-| **3. Cursor** | Review PR, deploy fix, generowanie docs po merge | Harmonogram / Git event |
+| **3. CI/CD** | Deploy po merge, backup repo, webhooki telematyki/giełdy | Git push / HTTP |
 
 ---
 
@@ -75,17 +76,15 @@ Reguły per tenant: `ft-{tenantId}-automation` (włącz/wyłącz w **Automatyzac
 
 ---
 
-## Warstwa 3 — Cursor Automations (propozycje)
+## Warstwa 3 — CI/CD (GitHub Actions)
 
-Gotowe szablony do utworzenia w Cursor → Automations:
+| Workflow | Trigger | Działanie |
+|----------|---------|-----------|
+| **Deploy Vercel Production** | Push na `main` | Build i publikacja frontendu |
+| **Deploy Supabase Edge Functions** | Push na `main` (zmiany w `supabase/`) | Wdrożenie `transflow-api` |
+| **Webhook zewnętrzny** | POST `/transflow-api/automation/webhook` | Sync danych od partnera (giełda, telematyka) |
 
-| Nazwa | Trigger | Działanie |
-|-------|---------|-----------|
-| **TransFlow — deploy po merge** | PR merged na `main` | Sprawdź Vercel/Actions, napraw jeśli fail |
-| **TransFlow — weekly ops** | Cron: poniedziałek 7:00 | Przegląd repo, aktualizacja ROADMAP/CURRENT-TASK |
-| **TransFlow — webhook backup** | HTTP webhook | Agent generuje raport stanu projektu |
-
-Webhook URL dostaniesz po zapisaniu automatyzacji w Cursor.
+Secret webhooku: `TRANSFLOW_WEBHOOK_SECRET` w Supabase Edge.
 
 ---
 

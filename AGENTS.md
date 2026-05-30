@@ -1,4 +1,6 @@
-# TransFlow — instrukcja dla agentów AI
+# TransFlow — przewodnik developera
+
+**Autor systemu:** Dawid Thai Thanh
 
 ## START HERE
 

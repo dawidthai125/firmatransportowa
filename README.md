@@ -2,7 +2,7 @@
 
 > System **wyłącznie dla firm TSL** — ułatwia pracę **właścicielowi** (flota, marże, compliance) i **kierowcy** (raport z kabiny, kurs, awaria).
 
-**Status:** v0.8.0 — portal paneli, moduł awarii/mechanik, motyw transportowy
+**Autor:** Dawid Thai Thanh · **Status:** v0.17.1
 
 ## Szybki start
 

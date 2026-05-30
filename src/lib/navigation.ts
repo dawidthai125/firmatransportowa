@@ -46,15 +46,11 @@ export const OWNER_NAV: NavItem<AdminView>[] = [
 export const DISPATCHER_NAV: NavItem<AdminView>[] = [
   { id: 'dashboard', label: 'Pulpit', icon: 'layout-dashboard' },
   { id: 'courses', label: 'Kursy', icon: 'route', module: 'courses' },
-  { id: 'loads', label: 'Giełda ładunków', icon: 'search', module: 'loadBoard' },
+  { id: 'loads', label: 'Giełda', icon: 'search', module: 'loadBoard' },
   { id: 'reports', label: 'Raporty', icon: 'file-text', module: 'courses' },
-  { id: 'settlements', label: 'Rozliczenia', icon: 'calculator', module: 'courses' },
-  { id: 'files', label: 'Pliki', icon: 'folder-open', module: 'courses' },
-  { id: 'automations', label: 'Automatyzacje', icon: 'bot', module: 'courses' },
   { id: 'fleet', label: 'Flota', icon: 'truck', module: 'fleet' },
-  { id: 'repairs', label: 'Awarie', icon: 'wrench', module: 'repairs' },
-  { id: 'itd', label: 'ITD', icon: 'shield-alert', module: 'itd' },
   { id: 'drivers', label: 'Kierowcy', icon: 'users', module: 'drivers' },
+  { id: 'repairs', label: 'Awarie', icon: 'wrench', module: 'repairs' },
 ]
 
 export const DRIVER_NAV: NavItem<DriverView>[] = [

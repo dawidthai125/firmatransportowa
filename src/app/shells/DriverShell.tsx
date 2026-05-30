@@ -1,3 +1,4 @@
+import { SystemCredit } from '@/app/components/SystemCredit'
 import { AppNav } from '@/app/components/AppNav'
 import { DriverNotificationsBell } from '@/app/components/driver/DriverNotificationsBell'
 import { HelpButton } from '@/app/components/help/HelpButton'
@@ -9,7 +10,7 @@ import type { DriverView, NavItem } from '@/lib/navigation'
 import { DRIVER_NAV } from '@/lib/navigation'
 import type { Tenant } from '@/lib/tenant/types'
 import { cn } from '@/lib/utils'
-import { LogOut, Truck } from 'lucide-react'
+import { LogOut, Truck, ArrowLeft } from 'lucide-react'
 import type { ReactNode } from 'react'
 
 const DRIVER_VIEW_TITLES: Record<DriverView, string> = {
@@ -73,9 +74,28 @@ export function DriverShell({
           title={DRIVER_VIEW_TITLES[view]}
           subtitle={`${driverName} · trasa · raporty`}
         />
+        {view !== 'home' && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="mb-3 gap-1.5 text-muted-foreground"
+            onClick={() => onViewChange('home')}
+          >
+            <ArrowLeft className="h-4 w-4" aria-hidden />
+            Wróć do Startu
+          </Button>
+        )}
         {children}
+        <SystemCredit className="mt-6 border-t border-border/60 pt-4 pb-2" compact />
       </main>
-      <AppNav items={navItems} active={view} onChange={onViewChange} layout="bottom" />
+      <AppNav
+        items={navItems}
+        active={view}
+        onChange={onViewChange}
+        layout="bottom"
+        bottomAlwaysVisible
+      />
     </div>
   )
 }
