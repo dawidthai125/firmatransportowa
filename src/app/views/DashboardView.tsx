@@ -1,4 +1,5 @@
 import { OperationsExceptionsPanel } from '@/app/components/dashboard/OperationsExceptionsPanel'
+import { WeeklyOpsPanel } from '@/app/components/dashboard/WeeklyOpsPanel'
 import { FleetMapPanel } from '@/app/components/fleet/FleetMapPanel'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/Card'
 import { buildComplianceAlerts, buildCompanyComplianceAlerts } from '@/lib/domain/compliance'
@@ -19,7 +20,9 @@ import {
   buildOperationsExceptions,
   type OperationException,
 } from '@/lib/operations/dashboard-exceptions'
-import { useCloudSyncRefresh } from '@/lib/sync/useCloudSyncRefresh'
+import type { Course } from '@/lib/domain/course'
+import type { DailyReport } from '@/lib/domain/daily-report'
+import { useCloudSyncRefreshKeys } from '@/lib/sync/useCloudSyncRefresh'
 import type { AdminView } from '@/lib/navigation'
 import type { Tenant } from '@/lib/tenant/types'
 import { AlertTriangle, Clock, Route, Truck, Users } from 'lucide-react'
@@ -42,6 +45,10 @@ export function DashboardView({ tenant, onNavigate }: DashboardViewProps) {
   const [fleetPositions, setFleetPositions] = useState<FleetPosition[]>([])
   const [exceptions, setExceptions] = useState<OperationException[]>([])
   const [liveGps, setLiveGps] = useState(false)
+  const [opsData, setOpsData] = useState<{ courses: Course[]; reports: DailyReport[] }>({
+    courses: [],
+    reports: [],
+  })
 
   const refreshStats = useCallback(() => {
     seedDemoCourses(tenant.id)
@@ -65,6 +72,7 @@ export function DashboardView({ tenant, onNavigate }: DashboardViewProps) {
 
     setStats({ active, total: courses.length, margin, compliance, driving })
     setExceptions(buildOperationsExceptions(tenant.id, tenant.name, gpsEnabled))
+    setOpsData({ courses, reports })
   }, [tenant.id, tenant.name, gpsEnabled])
 
   const refreshFleet = useCallback(() => {
@@ -94,7 +102,7 @@ export function DashboardView({ tenant, onNavigate }: DashboardViewProps) {
     }
   }, [refreshStats, refreshFleet, gpsEnabled])
 
-  useCloudSyncRefresh(tenant.id, 'fleet-positions', () => {
+  useCloudSyncRefreshKeys(tenant.id, ['fleet-positions', 'courses', 'daily-reports'], () => {
     refreshFleet()
     refreshStats()
   })
@@ -129,6 +137,12 @@ export function DashboardView({ tenant, onNavigate }: DashboardViewProps) {
           </Card>
         ))}
       </div>
+
+      <WeeklyOpsPanel
+        courses={opsData.courses}
+        reports={opsData.reports}
+        onNavigate={onNavigate}
+      />
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card className={stats.driving > 0 ? 'border-warning/40' : ''}>

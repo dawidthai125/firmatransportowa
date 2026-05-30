@@ -36,6 +36,11 @@ function adminSteps(
           action: 'Przewiń ekran w dół na pulpicie',
         },
         {
+          title: 'Ten tydzień — operacje',
+          description: 'Km, koszty z raportów i marża rzeczywista aktywnych kursów — bez wchodzenia w Rozliczenia.',
+          action: 'Sekcja „Ten tydzień — operacje” pod kafelkami KPI',
+        },
+        {
           title: 'Mapa floty (GPS)',
           description: 'Pozycje z telefonów kierowców (PWA) lub demo. Zielone = w trasie, pomarańczowe = załadunek.',
           action: 'Sekcja „Flota na mapie” — Odśwież aktualizuje pozycje',
@@ -69,6 +74,16 @@ function adminSteps(
           title: 'Zmień status',
           description: 'Planowany → w trasie → zakończony — kierowca widzi aktywny kurs na swoim pulpicie.',
           action: 'Kliknij kurs na liście → Edytuj → Status',
+        },
+        {
+          title: 'Marża z raportów',
+          description: 'Na karcie kursu widać km i koszty z kabiny oraz marżę rzeczywistą vs plan.',
+          action: 'Lista kursów → wiersz „Z raportów”',
+        },
+        {
+          title: 'Międzynarodówka',
+          description: 'Badge CMR / RMPD / Wypis przy kursach poza kraj — uzupełnij przed wyjazdem.',
+          action: 'Edytuj kurs → zakres i pola CMR/RMPD',
         },
         {
           title: 'Usuń lub popraw',
@@ -117,6 +132,11 @@ function adminSteps(
           title: 'Sprawdź kierowców',
           description: 'Tabela pokazuje km, koszty i dni z raportem.',
           action: 'Sekcja „Kierowcy”',
+        },
+        {
+          title: 'Marża per kurs',
+          description: 'Porównanie planu z kursu z kosztami z raportów kierowcy — ta sama lista co na pulpicie.',
+          action: 'Sekcja „Marża per kurs (z raportów kierowcy)”',
         },
         {
           title: 'Marże klientów',
@@ -484,8 +504,13 @@ function driverHelp(view: DriverView): PanelHelpContent {
     },
     report: {
       title: 'Raport dzienny',
-      summary: 'Km, paliwo, myto, czas jazdy i odpoczynku — obowiązek na koniec dnia.',
+      summary: 'Km, paliwo, myto, czas jazdy — raport przypina się do aktywnego kursu automatycznie.',
       steps: [
+        {
+          title: 'Kurs',
+          description: 'System podpowiada aktywny kurs (w trasie / załadunek). Zmień z listy, jeśli trzeba.',
+          action: 'Pole „Kurs” na górze formularza',
+        },
         {
           title: 'Uzupełnij liczby',
           description: 'Przebieg, litry paliwa, koszty myta, minuty jazdy i odpoczynku.',

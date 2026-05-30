@@ -22,7 +22,12 @@ import {
   buildInternationalCourseAlerts,
   courseNeedsInternationalCheck,
 } from '@/lib/domain/international-compliance'
-import { useCloudSyncRefresh } from '@/lib/sync/useCloudSyncRefresh'
+import {
+  buildCourseSettlementSummaries,
+  type CourseSettlementSummary,
+} from '@/lib/domain/course-settlement'
+import { loadDailyReports, seedDemoDailyReports } from '@/lib/domain/daily-reports-store'
+import { useCloudSyncRefreshKeys } from '@/lib/sync/useCloudSyncRefresh'
 import { cn } from '@/lib/utils'
 import { AlertTriangle, Globe, MapPin, Pencil, Plus, Route, Trash2, X } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
@@ -34,19 +39,25 @@ interface CoursesViewProps {
 
 export function CoursesView({ tenantId, readOnly = false }: CoursesViewProps) {
   const [courses, setCourses] = useState<Course[]>([])
+  const [settlements, setSettlements] = useState<Map<string, CourseSettlementSummary>>(new Map())
   const [editing, setEditing] = useState<Course | null>(null)
   const [isNew, setIsNew] = useState(false)
 
   const refresh = useCallback(() => {
     seedDemoCourses(tenantId)
-    setCourses(loadCourses(tenantId))
+    seedDemoDailyReports(tenantId)
+    const loaded = loadCourses(tenantId)
+    const reports = loadDailyReports(tenantId)
+    const sums = buildCourseSettlementSummaries(loaded, reports)
+    setCourses(loaded)
+    setSettlements(new Map(sums.map((s) => [s.courseId, s])))
   }, [tenantId])
 
   useEffect(() => {
     refresh()
   }, [refresh])
 
-  useCloudSyncRefresh(tenantId, 'courses', refresh)
+  useCloudSyncRefreshKeys(tenantId, ['courses', 'daily-reports'], refresh)
 
   function openNew() {
     const base = createEmptyCourse(tenantId)
@@ -118,6 +129,7 @@ export function CoursesView({ tenantId, readOnly = false }: CoursesViewProps) {
             <CourseCard
               key={course.id}
               course={course}
+              settlement={settlements.get(course.id)}
               onEdit={() => openEdit(course)}
               onDelete={() => handleDelete(course.id)}
               readOnly={readOnly}
@@ -141,11 +153,13 @@ export function CoursesView({ tenantId, readOnly = false }: CoursesViewProps) {
 
 function CourseCard({
   course,
+  settlement,
   onEdit,
   onDelete,
   readOnly,
 }: {
   course: Course
+  settlement?: CourseSettlementSummary
   onEdit: () => void
   onDelete: () => void
   readOnly: boolean
@@ -221,7 +235,23 @@ function CourseCard({
               )}
               {margin != null && (
                 <span className={margin >= 0 ? 'text-success' : 'text-danger'}>
-                  Marża: <strong>{margin.toLocaleString('pl-PL')} zł</strong>
+                  Marża plan: <strong>{margin.toLocaleString('pl-PL')} zł</strong>
+                </span>
+              )}
+              {settlement && settlement.reportDays > 0 && (
+                <span
+                  className={
+                    (settlement.actualMarginPln ?? 0) >= (settlement.plannedMarginPln ?? 0)
+                      ? 'text-success'
+                      : 'text-warning'
+                  }
+                >
+                  Z raportów:{' '}
+                  <strong>
+                    {settlement.reportKm} km · {settlement.reportCostsPln.toLocaleString('pl-PL')} zł
+                    {settlement.actualMarginPln != null &&
+                      ` · marża ${settlement.actualMarginPln.toLocaleString('pl-PL')} zł`}
+                  </strong>
                 </span>
               )}
             </div>

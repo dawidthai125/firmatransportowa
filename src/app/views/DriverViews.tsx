@@ -17,6 +17,7 @@ import {
   upsertDailyReport,
 } from '@/lib/domain/daily-reports-store'
 import { loadCourses, seedDemoCourses } from '@/lib/domain/courses-store'
+import { activeCourseForDriver } from '@/lib/domain/course-settlement'
 import { findDriverByDisplayName, resolveDriverVehicle } from '@/lib/domain/driver-profile'
 import {
   buildInternationalCourseAlerts,
@@ -204,17 +205,22 @@ export function DriverReportView({ tenantId, driverName }: DriverReportViewProps
 
   const init = useCallback(() => {
     seedDemoCourses(tenantId)
-    setCourses(loadCourses(tenantId))
+    const loadedCourses = loadCourses(tenantId)
+    setCourses(loadedCourses)
     const existing = getTodayReportForDriver(tenantId, driverName)
     if (existing) {
       setReport(existing)
       setSaved(existing.shiftEnded)
       return
     }
+    const driver = findDriverByDisplayName(tenantId, driverName)
+    const suggested = activeCourseForDriver(tenantId, driverName, loadedCourses)
     const now = new Date().toISOString()
     setReport({
-      ...createEmptyDailyReport(tenantId, driverName),
+      ...createEmptyDailyReport(tenantId, driverName, driver?.id),
       id: crypto.randomUUID(),
+      courseId: suggested?.id,
+      courseReference: suggested?.reference,
       createdAt: now,
       updatedAt: now,
     })
@@ -250,6 +256,13 @@ export function DriverReportView({ tenantId, driverName }: DriverReportViewProps
 
   const totalCosts = dailyReportTotalCosts(report)
   const drivingCheck = checkDailyDrivingLimit(report.drivingMinutes ?? 0)
+  const driverCourses = courses.filter((c) => {
+    const driver = findDriverByDisplayName(tenantId, driverName)
+    return (
+      ['planned', 'loading', 'in_transit'].includes(c.status) &&
+      (!driver || !c.driverId || c.driverId === driver.id)
+    )
+  })
 
   return (
     <div className="space-y-4 pb-6">
@@ -294,6 +307,11 @@ export function DriverReportView({ tenantId, driverName }: DriverReportViewProps
       <Card>
         <CardContent className="space-y-3 p-4">
           <Field label="Kurs (opcjonalnie)">
+            {report.courseReference && !report.courseId && (
+              <p className="mb-1 text-xs text-muted-foreground">
+                Przypisano po referencji: {report.courseReference}
+              </p>
+            )}
             <Select
               value={report.courseId ?? ''}
               onChange={(e) => {
@@ -305,12 +323,28 @@ export function DriverReportView({ tenantId, driverName }: DriverReportViewProps
               }}
             >
               <option value="">— bez przypisania —</option>
-              {courses.map((c) => (
+              {driverCourses.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.reference} · {c.loadCity} → {c.unloadCity}
                 </option>
               ))}
+              {courses
+                .filter(
+                  (c) =>
+                    !driverCourses.some((d) => d.id === c.id) &&
+                    ['planned', 'loading', 'in_transit'].includes(c.status),
+                )
+                .map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.reference} · (inny kierowca)
+                  </option>
+                ))}
             </Select>
+            {report.courseId && (
+              <p className="mt-1 text-xs text-success">
+                Raport trafi do rozliczenia kursu — biuro zobaczy km i koszty przy zleceniu.
+              </p>
+            )}
           </Field>
 
           <Field label="Przejechane km">

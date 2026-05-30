@@ -19,6 +19,11 @@ import {
   type ClientMarginSummary,
   type DriverWeeklySummary,
 } from '@/lib/domain/settlements'
+import {
+  buildCourseSettlementSummaries,
+  courseCostOverruns,
+} from '@/lib/domain/course-settlement'
+import { useCloudSyncRefreshKeys } from '@/lib/sync/useCloudSyncRefresh'
 import { useFilePreview } from '@/app/components/file-preview/FilePreviewProvider'
 import {
   buildClientMarginsCsvFile,
@@ -58,6 +63,8 @@ export function SettlementsView({ tenantId, tenantSlug, tenantName }: Settlement
     refresh()
   }, [refresh])
 
+  useCloudSyncRefreshKeys(tenantId, ['daily-reports', 'courses'], refresh)
+
   const weeklySummaries: DriverWeeklySummary[] = useMemo(
     () => buildDriverWeeklySummaries(reports, drivers, weekStart),
     [reports, drivers, weekStart],
@@ -70,6 +77,11 @@ export function SettlementsView({ tenantId, tenantSlug, tenantName }: Settlement
     () => buildDrivingTimeAlerts(tenantId, reports),
     [tenantId, reports],
   )
+  const courseSettlements = useMemo(
+    () => buildCourseSettlementSummaries(courses, reports).filter((s) => s.reportDays > 0),
+    [courses, reports],
+  )
+  const overruns = useMemo(() => courseCostOverruns(courseSettlements), [courseSettlements])
 
   return (
     <div className="space-y-6">
@@ -211,6 +223,56 @@ export function SettlementsView({ tenantId, tenantSlug, tenantName }: Settlement
                 >
                   {formatDrivingHours(alert.drivingMinutes)}
                 </span>
+              </div>
+            ))
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className={overruns.length > 0 ? 'border-warning/40' : ''}>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <TrendingUp className="h-4 w-4 text-success" />
+            Marża per kurs (z raportów kierowcy)
+          </CardTitle>
+          <CardDescription>
+            Plan z kursu vs km i koszty (paliwo, myto) wpisane w kabinie — bez nowej zakładki w menu
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {courseSettlements.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Brak raportów przypisanych do kursów. Kierowca wybiera kurs w raporcie dziennym.
+            </p>
+          ) : (
+            courseSettlements.map((s) => (
+              <div
+                key={s.courseId}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border px-3 py-2 text-sm"
+              >
+                <div>
+                  <span className="font-medium">{s.reference}</span>
+                  <span className="ml-2 text-muted-foreground">{s.shipper}</span>
+                  <p className="text-xs text-muted-foreground">
+                    {s.reportDays} dni raportu · {s.reportKm} km · koszty{' '}
+                    {s.reportCostsPln.toLocaleString('pl-PL')} zł
+                  </p>
+                </div>
+                <div className="text-right text-xs">
+                  {s.plannedMarginPln != null && (
+                    <p>Plan: {s.plannedMarginPln.toLocaleString('pl-PL')} zł</p>
+                  )}
+                  {s.actualMarginPln != null && (
+                    <p
+                      className={cn(
+                        'font-medium',
+                        (s.variancePln ?? 0) >= 0 ? 'text-success' : 'text-warning',
+                      )}
+                    >
+                      Rzeczywista: {s.actualMarginPln.toLocaleString('pl-PL')} zł
+                    </p>
+                  )}
+                </div>
               </div>
             ))
           )}
