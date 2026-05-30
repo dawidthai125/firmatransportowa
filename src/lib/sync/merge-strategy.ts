@@ -3,6 +3,7 @@ import type { FreightConnectorConfig } from '@/lib/domain/freight-connectors'
 import type { FreightSearchPreferences } from '@/lib/domain/freight-preferences'
 import type { ItdPlaybookSection, ItdTenantData } from '@/lib/domain/itd-types'
 import type { TenantSettingsData } from '@/lib/domain/tenant-settings'
+import { COMPANY_BRANDING, isCompanyDeployment } from '@/config/branding'
 import { TENANT_DATA_KEYS, type Tenant, type TenantDataKey } from '@/lib/tenant/types'
 import {
   applyTombstones,
@@ -108,11 +109,16 @@ function mergeTenantSettings(local: TenantSettingsData, cloud: TenantSettingsDat
   }
 }
 
+function applyCompanyTenantBranding(t: Tenant): Tenant {
+  if (!isCompanyDeployment() || t.id !== 'tenant-demo-001') return t
+  return { ...t, name: COMPANY_BRANDING.name, slug: COMPANY_BRANDING.slug }
+}
+
 function mergeTenants(local: Tenant[], cloud: Tenant[]): Tenant[] {
   return mergeRecordsByNewest(
     local.map((t) => ({ ...t, updatedAt: t.updatedAt ?? t.createdAt })),
     cloud.map((t) => ({ ...t, updatedAt: t.updatedAt ?? t.createdAt })),
-  ) as Tenant[]
+  ).map(applyCompanyTenantBranding) as Tenant[]
 }
 
 function mergePlaybookSections(

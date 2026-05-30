@@ -23,7 +23,7 @@ export const DEMO_TENANT: Tenant = buildDemoTenant()
 
 function normalizeTenantRecord(t: Tenant): Tenant {
   const demo = buildDemoTenant()
-  return {
+  const merged = {
     ...demo,
     ...t,
     slug: (t.slug ?? demo.slug).trim() || demo.slug,
@@ -37,6 +37,14 @@ function normalizeTenantRecord(t: Tenant): Tenant {
       },
     },
   }
+  if (isCompanyDeployment() && merged.id === 'tenant-demo-001') {
+    return {
+      ...merged,
+      name: COMPANY_BRANDING.name,
+      slug: COMPANY_BRANDING.slug,
+    }
+  }
+  return merged
 }
 
 function patchRegistryTenants(tenants: Tenant[]): Tenant[] {

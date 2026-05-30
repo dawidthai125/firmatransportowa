@@ -63,10 +63,9 @@ export async function signInWithSupabase(
   return memberToSession(member, normalizedEmail)
 }
 
-/** Przywróć sesję aplikacji z aktywnego JWT Supabase */
-export async function restoreSupabaseAppSession(
+/** Przywróć sesję aplikacji z aktywnego JWT — dowolna aktywna rola w tenantcie */
+export async function restoreSupabaseAppSessionFromJwt(
   tenantId: string,
-  expectedRole: UserRole,
 ): Promise<AuthSession | null> {
   const sb = getSupabaseClient()
   if (!sb) return null
@@ -78,7 +77,7 @@ export async function restoreSupabaseAppSession(
   if (error || !members?.length) return null
 
   const member = (members as TenantMemberRow[]).find(
-    (m) => m.tenant_id === tenantId && m.role === expectedRole && m.active,
+    (m) => m.tenant_id === tenantId && m.active,
   )
   if (!member) return null
 

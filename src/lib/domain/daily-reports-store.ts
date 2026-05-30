@@ -1,5 +1,6 @@
 import { fireAutomation } from '@/lib/automation/bridge'
 import type { DailyReport } from '@/lib/domain/daily-report'
+import { tombstoneDeleteInTenantData } from '@/lib/sync/tombstone'
 import { readTenantData, writeTenantData } from '@/lib/tenant/storage'
 
 export function loadDailyReports(tenantId: string): DailyReport[] {
@@ -22,6 +23,11 @@ export function upsertDailyReport(tenantId: string, report: DailyReport): DailyR
     fireAutomation(tenantId, 'daily_report.shift_ended', { report })
   }
   return next
+}
+
+export function deleteDailyReport(tenantId: string, reportId: string): DailyReport[] {
+  tombstoneDeleteInTenantData(tenantId, 'daily-reports', reportId)
+  return loadDailyReports(tenantId)
 }
 
 export function getTodayReportForDriver(

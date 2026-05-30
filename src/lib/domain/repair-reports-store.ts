@@ -1,6 +1,7 @@
 import { fireAutomation } from '@/lib/automation/bridge'
 import type { RepairReport } from '@/lib/domain/repair-report'
 import { nextRepairReference } from '@/lib/domain/repair-report'
+import { tombstoneDeleteInTenantData } from '@/lib/sync/tombstone'
 import { readTenantData, writeTenantData } from '@/lib/tenant/storage'
 
 export function loadRepairReports(tenantId: string): RepairReport[] {
@@ -36,6 +37,11 @@ export function submitRepairReport(tenantId: string, report: RepairReport): Repa
   const next = upsertRepairReport(tenantId, saved)
   fireAutomation(tenantId, 'repair.submitted', { report: saved })
   return next
+}
+
+export function deleteRepairReport(tenantId: string, reportId: string): RepairReport[] {
+  tombstoneDeleteInTenantData(tenantId, 'repair-reports', reportId)
+  return loadRepairReports(tenantId)
 }
 
 export function seedDemoRepairReports(tenantId: string): RepairReport[] {

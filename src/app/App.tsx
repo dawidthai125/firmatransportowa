@@ -26,7 +26,10 @@ import { SettlementsView } from '@/app/views/SettlementsView'
 import { SettingsView } from '@/app/views/SettingsView'
 import { TachographView } from '@/app/views/TachographView'
 import type { AppMode } from '@/lib/auth/session'
-import { loadSession, roleToAppMode } from '@/lib/auth/session'
+import { loadSession, roleToAppMode, saveSession } from '@/lib/auth/session'
+import { restoreSupabaseAppSessionFromJwt } from '@/lib/auth/supabase-auth'
+import { isSupabaseConfigured } from '@/config/supabase'
+import { getDefaultTenant } from '@/lib/tenant/demo-data'
 import {
   DISPATCHER_NAV,
   DRIVER_NAV,
@@ -78,6 +81,37 @@ export default function App() {
   const [mode, setMode] = useState<AppMode>(() =>
     session ? roleToAppMode(session.user.role) : 'login',
   )
+  const [supabaseRestoring, setSupabaseRestoring] = useState(
+    () => !loadSession() && isSupabaseConfigured(),
+  )
+
+  useEffect(() => {
+    if (session || !isSupabaseConfigured()) {
+      setSupabaseRestoring(false)
+      return
+    }
+
+    let cancelled = false
+    void (async () => {
+      const tenant = getDefaultTenant(tenants)
+      if (!tenant) {
+        if (!cancelled) setSupabaseRestoring(false)
+        return
+      }
+      const restored = await restoreSupabaseAppSessionFromJwt(tenant.id)
+      if (cancelled) return
+      if (restored) {
+        saveSession(restored)
+        setCurrentTenant(tenant)
+        setMode(roleToAppMode(restored.user.role))
+      }
+      setSupabaseRestoring(false)
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [session, tenants, setCurrentTenant])
 
   const [adminView, setAdminView] = useState<AdminView>('dashboard')
   const [driverView, setDriverView] = useState<DriverView>('home')
@@ -116,6 +150,10 @@ export default function App() {
       setDriverView('home')
     }
   }, [driverNavItems, driverView, mode])
+
+  if (supabaseRestoring) {
+    return <SessionBootSplash />
+  }
 
   if (!session) {
     return <LoginScreen onLogin={setMode} />
