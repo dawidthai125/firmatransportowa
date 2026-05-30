@@ -22,7 +22,7 @@ import {
 import type { UserRole } from '@/lib/auth/session'
 import { cn } from '@/lib/utils'
 import { CheckCircle2, Send, Wrench, XCircle } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 interface RepairsViewProps {
   tenantId: string
@@ -37,25 +37,29 @@ export function RepairsView({ tenantId, userId, userRole }: RepairsViewProps) {
   const [verifyNote, setVerifyNote] = useState('')
   const [rejectReason, setRejectReason] = useState('')
 
-  const settings = loadTenantSettingsData(tenantId)
+  const settings = useMemo(() => loadTenantSettingsData(tenantId), [tenantId])
   const canVerify = canVerifyRepairs(settings, userId, userRole)
-  const mechanics = settings.mechanics.filter((m) => m.active)
+  const mechanics = useMemo(() => settings.mechanics.filter((m) => m.active), [settings.mechanics])
+  const defaultMechanicId = settings.repairWorkflow.defaultMechanicId
 
   const refresh = useCallback(() => {
     seedDemoCompanyDocuments(tenantId)
     seedDemoRepairReports(tenantId)
-    const data = loadRepairReports(tenantId)
-    setReports(data)
-    if (!mechanicId && settings.repairWorkflow.defaultMechanicId) {
-      setMechanicId(settings.repairWorkflow.defaultMechanicId)
-    } else if (!mechanicId && mechanics[0]) {
-      setMechanicId(mechanics[0].id)
-    }
-  }, [tenantId, mechanicId, settings.repairWorkflow.defaultMechanicId, mechanics])
+    setReports(loadRepairReports(tenantId))
+  }, [tenantId])
 
   useEffect(() => {
     refresh()
   }, [refresh])
+
+  useEffect(() => {
+    if (mechanicId) return
+    if (defaultMechanicId && mechanics.some((m) => m.id === defaultMechanicId)) {
+      setMechanicId(defaultMechanicId)
+    } else if (mechanics[0]) {
+      setMechanicId(mechanics[0].id)
+    }
+  }, [mechanicId, defaultMechanicId, mechanics])
 
   const pending = reports.filter((r) => r.status === 'submitted')
 
@@ -63,26 +67,25 @@ export function RepairsView({ tenantId, userId, userRole }: RepairsViewProps) {
     if (!selected || !mechanicId) return
     const mechanic = mechanics.find((m) => m.id === mechanicId)
     if (!mechanic) return
-    setReports(sendReportToMechanic(tenantId, selected.id, mechanic, userId, verifyNote || undefined))
+    const next = sendReportToMechanic(tenantId, selected.id, mechanic, userId, verifyNote || undefined)
+    setReports(next)
     setSelected(null)
     setVerifyNote('')
   }
 
   function handleReject() {
     if (!selected || !rejectReason.trim()) return
-    setReports(rejectRepairReport(tenantId, selected.id, userId, rejectReason.trim()))
+    const next = rejectRepairReport(tenantId, selected.id, userId, rejectReason.trim())
+    setReports(next)
     setSelected(null)
     setRejectReason('')
   }
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-xl font-semibold">Awarie i naprawy</h1>
-        <p className="text-sm text-muted-foreground">
-          {pending.length} oczekuje weryfikacji · {reports.length} łącznie
-        </p>
-      </div>
+      <p className="text-sm text-muted-foreground">
+        {pending.length} czeka na weryfikację · {reports.length} łącznie — kierowca czeka na Twoją decyzję
+      </p>
 
       {!canVerify && (
         <Card className="border-warning/40">
@@ -92,11 +95,22 @@ export function RepairsView({ tenantId, userId, userRole }: RepairsViewProps) {
         </Card>
       )}
 
+      {mechanics.length === 0 && (
+        <Card className="border-danger/40">
+          <CardContent className="p-3 text-sm text-danger">
+            Brak mechaników w ustawieniach firmy — dodaj warsztat w Ustawienia, inaczej nie wyślesz awarii.
+          </CardContent>
+        </Card>
+      )}
+
       <div className="space-y-2">
         {reports.map((r) => (
           <Card
             key={r.id}
-            className={cn('cursor-pointer transition-colors hover:bg-muted/30', selected?.id === r.id && 'ring-2 ring-primary')}
+            className={cn(
+              'cursor-pointer transition-colors hover:bg-muted/30',
+              selected?.id === r.id && 'ring-2 ring-primary',
+            )}
             onClick={() => setSelected(r)}
           >
             <CardContent className="flex flex-wrap items-center gap-3 p-4">
@@ -109,7 +123,9 @@ export function RepairsView({ tenantId, userId, userRole }: RepairsViewProps) {
                   {r.vehicleRegistration} · {r.driverName} · {REPAIR_SEVERITY_LABELS[r.severity]}
                 </p>
               </div>
-              <span className={cn('rounded-full px-2 py-0.5 text-xs font-medium', REPAIR_STATUS_COLORS[r.status])}>
+              <span
+                className={cn('rounded-full px-2 py-0.5 text-xs font-medium', REPAIR_STATUS_COLORS[r.status])}
+              >
                 {REPAIR_STATUS_LABELS[r.status]}
               </span>
             </CardContent>
@@ -122,7 +138,9 @@ export function RepairsView({ tenantId, userId, userRole }: RepairsViewProps) {
           <CardContent className="space-y-4 p-4">
             <div>
               <h2 className="font-semibold">{selected.reference}</h2>
-              <p className="text-sm text-muted-foreground">{selected.submittedAt.slice(0, 16).replace('T', ' ')}</p>
+              <p className="text-sm text-muted-foreground">
+                {selected.submittedAt.slice(0, 16).replace('T', ' ')}
+              </p>
             </div>
             <p className="text-sm">{selected.description}</p>
             {selected.location && <p className="text-sm text-muted-foreground">📍 {selected.location}</p>}
@@ -130,7 +148,7 @@ export function RepairsView({ tenantId, userId, userRole }: RepairsViewProps) {
 
             {selected.status === 'submitted' && canVerify && (
               <div className="space-y-3 border-t border-border pt-4">
-                <Field label="Mechanik">
+                <Field label="Mechanik / warsztat">
                   <Select value={mechanicId} onChange={(e) => setMechanicId(e.target.value)}>
                     {mechanics.map((m) => (
                       <option key={m.id} value={m.id}>
@@ -143,13 +161,17 @@ export function RepairsView({ tenantId, userId, userRole }: RepairsViewProps) {
                   <Input value={verifyNote} onChange={(e) => setVerifyNote(e.target.value)} />
                 </Field>
                 <div className="flex flex-wrap gap-2">
-                  <Button className="gap-2" onClick={handleSend}>
+                  <Button className="gap-2" onClick={handleSend} disabled={!mechanicId || mechanics.length === 0}>
                     <Send className="h-4 w-4" />
                     Zweryfikuj i wyślij do mechanika
                   </Button>
                 </div>
                 <Field label="Powód odrzucenia">
-                  <Input value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} placeholder="Np. duplikat zgłoszenia" />
+                  <Input
+                    value={rejectReason}
+                    onChange={(e) => setRejectReason(e.target.value)}
+                    placeholder="Np. duplikat zgłoszenia"
+                  />
                 </Field>
                 <Button variant="secondary" className="gap-2 text-danger" onClick={handleReject}>
                   <XCircle className="h-4 w-4" />

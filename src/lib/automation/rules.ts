@@ -83,6 +83,30 @@ const DEFAULT_RULES: AutomationRule[] = [
     actions: ['push_notification'],
   },
   {
+    id: 'rule-repair-to-mechanic',
+    name: 'Awaria wysłana do mechanika',
+    description: 'Powiadomienie po weryfikacji i przekazaniu do warsztatu',
+    enabled: true,
+    trigger: 'repair.sent_to_mechanic',
+    actions: ['push_notification', 'flush_sync_now'],
+  },
+  {
+    id: 'rule-repair-scheduled',
+    name: 'Termin naprawy ustalony',
+    description: 'Mechanik wyznaczył termin — właściciel i dyspozytor widzą w Awarie',
+    enabled: true,
+    trigger: 'repair.scheduled',
+    actions: ['push_notification'],
+  },
+  {
+    id: 'rule-repair-awaiting-driver',
+    name: 'Mechanik prosi o kontakt z kierowcą',
+    description: 'Alert gdy warsztat potrzebuje dogadania szczegółów',
+    enabled: true,
+    trigger: 'repair.awaiting_driver',
+    actions: ['push_notification'],
+  },
+  {
     id: 'rule-sync-critical',
     name: 'Sync natychmiast po krytycznym zdarzeniu',
     description: 'Wysyłka danych do chmury bez czekania 2 s',
@@ -94,10 +118,19 @@ const DEFAULT_RULES: AutomationRule[] = [
 
 export function loadAutomationSettings(tenantId: string): AutomationSettings {
   const data = readTenantData<AutomationSettings>(tenantId, 'automation', { rules: [] })
-  if (data.rules.length === 0) {
-    return { rules: DEFAULT_RULES.map((r) => ({ ...r })) }
+  const base = data.rules.length === 0 ? DEFAULT_RULES.map((r) => ({ ...r })) : data.rules
+  const merged = mergeMissingRules(base, DEFAULT_RULES)
+  if (merged !== base) {
+    saveAutomationSettings(tenantId, { ...data, rules: merged })
   }
-  return data
+  return { ...data, rules: merged }
+}
+
+/** Dodaje nowe domyślne reguły bez nadpisywania istniejących (np. po aktualizacji app) */
+function mergeMissingRules(existing: AutomationRule[], defaults: AutomationRule[]): AutomationRule[] {
+  const ids = new Set(existing.map((r) => r.id))
+  const missing = defaults.filter((d) => !ids.has(d.id)).map((r) => ({ ...r }))
+  return missing.length > 0 ? [...existing, ...missing] : existing
 }
 
 export function saveAutomationSettings(tenantId: string, settings: AutomationSettings): void {

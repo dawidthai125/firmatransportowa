@@ -159,6 +159,49 @@ export function notifyRepairSubmitted(ctx: ActionContext): void {
   })
 }
 
+export function notifyRepairSentToMechanic(ctx: ActionContext): void {
+  const report = ctx.event.payload?.report as import('@/lib/domain/repair-report').RepairReport | undefined
+  if (!report) return
+  pushNotification(ctx.tenantId, {
+    tenantId: ctx.tenantId,
+    title: 'Awaria u mechanika',
+    message: `${report.reference} → ${report.mechanicName ?? 'warsztat'}`,
+    level: 'info',
+    ruleId: 'rule-repair-to-mechanic',
+    actionView: 'repairs',
+  })
+}
+
+export function notifyRepairScheduled(ctx: ActionContext): void {
+  const report = ctx.event.payload?.report as import('@/lib/domain/repair-report').RepairReport | undefined
+  if (!report || !report.scheduledRepairAt) return
+  const when = new Date(report.scheduledRepairAt).toLocaleString('pl-PL', {
+    dateStyle: 'short',
+    timeStyle: 'short',
+  })
+  pushNotification(ctx.tenantId, {
+    tenantId: ctx.tenantId,
+    title: 'Termin naprawy ustalony',
+    message: `${report.reference} · ${report.vehicleRegistration} — ${when}`,
+    level: 'success',
+    ruleId: 'rule-repair-scheduled',
+    actionView: 'repairs',
+  })
+}
+
+export function notifyRepairAwaitingDriver(ctx: ActionContext): void {
+  const report = ctx.event.payload?.report as import('@/lib/domain/repair-report').RepairReport | undefined
+  if (!report) return
+  pushNotification(ctx.tenantId, {
+    tenantId: ctx.tenantId,
+    title: 'Mechanik prosi o kontakt',
+    message: `${report.reference}: ${report.mechanicMessage ?? 'Skontaktuj się z kierowcą'}`,
+    level: 'warning',
+    ruleId: 'rule-repair-awaiting-driver',
+    actionView: 'repairs',
+  })
+}
+
 export function notifyShiftEnded(ctx: ActionContext, report: DailyReport): void {
   pushNotification(ctx.tenantId, {
     tenantId: ctx.tenantId,

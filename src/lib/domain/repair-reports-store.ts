@@ -7,6 +7,12 @@ export function loadRepairReports(tenantId: string): RepairReport[] {
   return readTenantData<RepairReport[]>(tenantId, 'repair-reports', [])
 }
 
+/** Zgłoszenia przypisane do kierowcy (po imieniu z sesji) */
+export function loadRepairReportsForDriver(tenantId: string, driverName: string): RepairReport[] {
+  const key = driverName.trim().toLowerCase()
+  return loadRepairReports(tenantId).filter((r) => r.driverName.trim().toLowerCase() === key)
+}
+
 export function saveRepairReports(tenantId: string, reports: RepairReport[]): void {
   writeTenantData(tenantId, 'repair-reports', reports)
 }
@@ -44,8 +50,8 @@ export function seedDemoRepairReports(tenantId: string): RepairReport[] {
       reference: 'AW/2026/001',
       status: 'submitted',
       severity: 'immobilized',
-      driverName: 'Piotr Nowak',
-      driverPhone: '+48 600 300 400',
+      driverName: 'Jan Kowalski',
+      driverPhone: '+48 600 111 222',
       vehicleId: 'vehicle-demo-001',
       vehicleRegistration: 'DW 12345',
       title: 'Awaria skrzyni biegów',
@@ -144,7 +150,9 @@ export function mechanicRequestDriverContact(
     mechanicMessage: message,
     updatedAt: new Date().toISOString(),
   }
-  return upsertRepairReport(tenantId, updated)
+  const next = upsertRepairReport(tenantId, updated)
+  fireAutomation(tenantId, 'repair.awaiting_driver', { report: updated })
+  return next
 }
 
 export function mechanicMarkInRepair(tenantId: string, reportId: string): RepairReport[] {
@@ -161,12 +169,15 @@ export function mechanicCompleteRepair(tenantId: string, reportId: string): Repa
   const report = loadRepairReports(tenantId).find((r) => r.id === reportId)
   if (!report) return loadRepairReports(tenantId)
   const now = new Date().toISOString()
-  return upsertRepairReport(tenantId, {
+  const updated = {
     ...report,
-    status: 'completed',
+    status: 'completed' as const,
     completedAt: now,
     updatedAt: now,
-  })
+  }
+  const next = upsertRepairReport(tenantId, updated)
+  fireAutomation(tenantId, 'repair.completed', { report: updated })
+  return next
 }
 
 export function createNewRepairReport(

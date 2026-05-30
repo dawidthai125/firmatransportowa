@@ -1,5 +1,6 @@
 import { Button } from '@/app/components/ui/Button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/Card'
+import { DriverRepairsStatus } from '@/app/components/DriverRepairsStatus'
 import { Input, Label, Select } from '@/app/components/ui/Input'
 import { COURSE_STATUS_LABELS } from '@/lib/domain/course'
 import {
@@ -48,6 +49,8 @@ export function DriverHomeView({ tenantId, driverName, onOpenReport, onOpenIssue
         Dzień dobry{driverName ? `, ${driverName.split(' ')[0]}` : ''} — wszystko do trasy i raportu
         w telefonie, bez papieru po powrocie do bazy
       </p>
+
+      {driverName && <DriverRepairsStatus tenantId={tenantId} driverName={driverName} compact />}
 
       <Card className={activeCourse ? 'border-primary/30 bg-primary/5' : ''}>
         <CardHeader>

@@ -30,11 +30,14 @@
 - [x] **Silnik automatyzacji** — reguły, powiadomienia, harmonogram
 - [ ] Supabase Auth + RLS
 
-## 🔜 v0.8 — Operacje w terenie
+## ✅ v0.8 — Operacje w terenie (w toku)
 
-- PWA + instalacja na telefon
-- GPS / ETA (mapa floty)
-- Powiadomienia push „czy zdąży na załadunek”
+- [x] Moduł awarii: kierowca → weryfikacja → mechanik
+- [x] Portal kafelkowy + motyw transportowy TSL
+- [x] Powiadomienia automatyzacji dla całego flow awarii
+- [x] Kierowca widzi status swoich zgłoszeń
+- [ ] PWA + instalacja na telefon
+- [ ] GPS / ETA (mapa floty)
 
 ## 🔜 v0.9 — Integracje branżowe
 

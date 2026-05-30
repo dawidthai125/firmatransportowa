@@ -1,6 +1,9 @@
 import type { AutomationEvent } from '@/lib/automation/events'
 import { getRulesForTrigger } from '@/lib/automation/rules'
 import {
+  notifyRepairAwaitingDriver,
+  notifyRepairScheduled,
+  notifyRepairSentToMechanic,
   notifyRepairSubmitted,
   notifyShiftEnded,
   runAutomationAction,
@@ -39,6 +42,15 @@ export async function emitAutomationEvent(ctx: ActionContext): Promise<Automatio
 
   if (event.type === 'repair.submitted') {
     notifyRepairSubmitted(fullCtx)
+  }
+  if (event.type === 'repair.sent_to_mechanic') {
+    notifyRepairSentToMechanic(fullCtx)
+  }
+  if (event.type === 'repair.scheduled') {
+    notifyRepairScheduled(fullCtx)
+  }
+  if (event.type === 'repair.awaiting_driver') {
+    notifyRepairAwaitingDriver(fullCtx)
   }
 
   for (const rule of rules) {

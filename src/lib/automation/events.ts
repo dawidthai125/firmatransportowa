@@ -12,6 +12,8 @@ export type AutomationEventType =
   | 'repair.submitted'
   | 'repair.sent_to_mechanic'
   | 'repair.scheduled'
+  | 'repair.awaiting_driver'
+  | 'repair.completed'
 
 export interface AutomationEvent {
   type: AutomationEventType

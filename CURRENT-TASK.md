@@ -1,20 +1,23 @@
 # CURRENT-TASK — TransFlow
 
-**Ostatnia sesja:** 2026-05-30 · **v0.8.0**
+**Ostatnia sesja:** 2026-05-30 · **v0.8.1**
 
 ## Skończone ✅
 
-- [x] v0.8.0 — **Profil mechanika + moduł awarii** (kierowca → weryfikacja → warsztat)
-- [x] **Portal kafelkowy** (wgdom-style) — osobny panel per rola
-- [x] **Motyw transportowy** — zdjęcia TSL, bannery w shellach, copy pod właściciela i kierowcę
-- [x] Automatyzacja: powiadomienie przy `repair.submitted`
-
-## Przekaz produktowy
-
-TransFlow = **tylko firmy transportowe**. Właściciel widzi flotę i marże. Kierowca robi raport w kabinie zamiast na papierze.
+- [x] v0.8.0 — portal TSL, moduł awarii/mechanik, motyw transportowy
+- [x] v0.8.1 — **Spójność modułu awarii:**
+  - Kierowca widzi status swoich zgłoszeń (start + zakładka Awaria)
+  - Powiadomienia: wysłano do mechanika, termin, prośba o kontakt
+  - Naprawa pętli refresh w RepairsView
+  - Merge nowych reguł automatyzacji u istniejących tenantów
+  - Demo awaria przypisana do Jan Kowalski (konto kierowcy)
 
 ## Następne kroki
 
-1. Supabase Auth + email (Resend)
-2. Push przy awarii / terminie naprawy
+1. PWA — instalacja na telefon kierowcy
+2. Supabase Auth + email (Resend)
 3. GPS / mapa floty
+
+## Przekaz
+
+TransFlow = tylko firmy TSL. Właściciel kontroluje flotę. Kierowca — raport i awaria z kabiny.
