@@ -3,10 +3,14 @@ import { Card, CardContent } from '@/app/components/ui/Card'
 import { Input, Label, Select } from '@/app/components/ui/Input'
 import type { Course, CourseStatus } from '@/lib/domain/course'
 import {
+  COURSE_SCOPE_LABELS,
   COURSE_STATUS_COLORS,
   COURSE_STATUS_LABELS,
+  courseFreightDisplay,
   courseMargin,
+  courseRouteLabel,
   createEmptyCourse,
+  type CourseScope,
 } from '@/lib/domain/course'
 import {
   deleteCourse,
@@ -15,7 +19,7 @@ import {
   upsertCourse,
 } from '@/lib/domain/courses-store'
 import { cn } from '@/lib/utils'
-import { AlertTriangle, MapPin, Pencil, Plus, Route, Trash2, X } from 'lucide-react'
+import { AlertTriangle, Globe, MapPin, Pencil, Plus, Route, Trash2, X } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 
 interface CoursesViewProps {
@@ -140,6 +144,7 @@ function CourseCard({
   readOnly: boolean
 }) {
   const margin = courseMargin(course)
+  const isInternational = course.scope !== 'domestic'
 
   return (
     <Card>
@@ -151,6 +156,10 @@ function CourseCard({
               <span className="font-semibold">{course.reference}</span>
               <span className={cn('rounded-full px-2 py-0.5 text-xs font-medium', COURSE_STATUS_COLORS[course.status])}>
                 {COURSE_STATUS_LABELS[course.status]}
+              </span>
+              <span className="flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs font-medium">
+                {isInternational && <Globe className="h-3 w-3" />}
+                {COURSE_SCOPE_LABELS[course.scope]}
               </span>
               {course.adr && (
                 <span className="flex items-center gap-1 rounded-full bg-danger/15 px-2 py-0.5 text-xs font-medium text-danger">
@@ -165,23 +174,32 @@ function CourseCard({
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
               <span className="flex items-center gap-1">
                 <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
-                {course.loadCity} → {course.unloadCity}
+                {courseRouteLabel(course)}
               </span>
               {course.plannedKm && <span>{course.plannedKm} km</span>}
             </div>
 
+            {course.cmrNumber && (
+              <p className="text-xs text-muted-foreground">CMR: {course.cmrNumber}</p>
+            )}
+
             <div className="flex flex-wrap gap-3 text-sm">
               <span>
-                Fracht: <strong className="text-foreground">{course.freightPln.toLocaleString('pl-PL')} zł</strong>
+                Fracht: <strong className="text-foreground">{courseFreightDisplay(course)}</strong>
               </span>
+              {course.tollEur != null && course.tollEur > 0 && (
+                <span>Myto: <strong>{course.tollEur} EUR</strong></span>
+              )}
               {course.routeCostsPln != null && (
                 <span>
                   Koszty: <strong>{course.routeCostsPln.toLocaleString('pl-PL')} zł</strong>
                 </span>
               )}
-              <span className={margin >= 0 ? 'text-success' : 'text-danger'}>
-                Marża: <strong>{margin.toLocaleString('pl-PL')} zł</strong>
-              </span>
+              {margin != null && (
+                <span className={margin >= 0 ? 'text-success' : 'text-danger'}>
+                  Marża: <strong>{margin.toLocaleString('pl-PL')} zł</strong>
+                </span>
+              )}
             </div>
           </div>
 
@@ -243,6 +261,19 @@ function CourseForm({
             </Select>
           </Field>
 
+          <Field label="Zakres">
+            <Select
+              value={course.scope}
+              onChange={(e) => patch({ scope: e.target.value as CourseScope })}
+            >
+              {Object.entries(COURSE_SCOPE_LABELS).map(([k, v]) => (
+                <option key={k} value={k}>
+                  {v}
+                </option>
+              ))}
+            </Select>
+          </Field>
+
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Nadawca">
               <Input value={course.shipper} onChange={(e) => patch({ shipper: e.target.value })} />
@@ -265,6 +296,23 @@ function CourseForm({
             </Field>
           </div>
 
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field label="Kraj załadunku">
+              <Input
+                value={course.loadCountry}
+                onChange={(e) => patch({ loadCountry: e.target.value.toUpperCase().slice(0, 2) })}
+                placeholder="PL"
+              />
+            </Field>
+            <Field label="Kraj rozładunku">
+              <Input
+                value={course.unloadCountry}
+                onChange={(e) => patch({ unloadCountry: e.target.value.toUpperCase().slice(0, 2) })}
+                placeholder="DE"
+              />
+            </Field>
+          </div>
+
           <div className="grid gap-3 sm:grid-cols-3">
             <Field label="Km plan">
               <Input
@@ -280,6 +328,16 @@ function CourseForm({
                 onChange={(e) => patch({ freightPln: Number(e.target.value) || 0 })}
               />
             </Field>
+            <Field label="Fracht (EUR)">
+              <Input
+                type="number"
+                value={course.freightEur ?? ''}
+                onChange={(e) => patch({ freightEur: e.target.value ? Number(e.target.value) : undefined })}
+              />
+            </Field>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Koszty trasy (zł)">
               <Input
                 type="number"
@@ -287,7 +345,43 @@ function CourseForm({
                 onChange={(e) => patch({ routeCostsPln: e.target.value ? Number(e.target.value) : undefined })}
               />
             </Field>
+            <Field label="Myto (EUR)">
+              <Input
+                type="number"
+                value={course.tollEur ?? ''}
+                onChange={(e) => patch({ tollEur: e.target.value ? Number(e.target.value) : undefined })}
+              />
+            </Field>
           </div>
+
+          {course.scope !== 'domestic' && (
+            <>
+              <Field label="Numer CMR">
+                <Input
+                  value={course.cmrNumber ?? ''}
+                  onChange={(e) => patch({ cmrNumber: e.target.value || undefined })}
+                />
+              </Field>
+              <Field label="Wypis z licencji wspólnotowej">
+                <Input
+                  value={course.licenseExtractNo ?? ''}
+                  onChange={(e) => patch({ licenseExtractNo: e.target.value || undefined })}
+                />
+              </Field>
+            </>
+          )}
+
+          {course.scope === 'international_third' && (
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={course.rmpdRegistered ?? false}
+                onChange={(e) => patch({ rmpdRegistered: e.target.checked })}
+                className="h-4 w-4 rounded border-border"
+              />
+              Zgłoszono w RMPD / SENT (PUESC)
+            </label>
+          )}
 
           <label className="flex items-center gap-2 text-sm">
             <input

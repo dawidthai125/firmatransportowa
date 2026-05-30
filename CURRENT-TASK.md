@@ -1,29 +1,21 @@
 # CURRENT-TASK — TransFlow
 
-**Ostatnia sesja:** 2026-05-30 · **v0.4.0**
+**Ostatnia sesja:** 2026-05-30 · **v0.5.0**
 
 ## Skończone ✅
 
-- [x] v0.1–0.3 — layout, multi-tenant, kursy, kierowcy, flota, compliance
-- [x] **v0.4 — Supabase (osobny projekt, NIE wgdom):**
-  - Tabela `kv_store_transflow` + migracja SQL
-  - Edge Function `transflow-api` (batch-get / batch-set)
-  - `cloud-sync.ts` — pull przy starcie, push debounce 2s
-  - CloudLoader + badge statusu w headerze
-  - Vercel `vercel.json` + `DEPLOY.md`
-  - GitHub Action deploy Supabase
-  - Docs: `SUPABASE-SETUP.md`, `docs/SUPABASE-ARCHITECTURE.md`, reguła Cursor
+- [x] v0.1–0.4 — layout, multi-tenant, kursy, kierowcy, flota, compliance, Supabase, Vercel
+- [x] **v0.5 — Raport kierowcy + międzynarodowy:**
+  - `docs/DOMAIN-TRANSPORT.md` — wymagania PL + wyjazdy za granicę (LR1, CMR, RMPD)
+  - Kurs: scope kraj/UE/poza UE, kraje, CMR, EUR, wypis, RMPD
+  - Demo kurs Wrocław → Berlin
+  - Raport dzienny kierowcy (km, paliwo, myto PLN/EUR, koniec pracy)
+  - Panel **Raporty** dla owner/dispatcher
+  - Dokumenty firmy w **Firma** + alerty compliance (licencja, CKZ)
 
-## Wymaga działania użytkownika 🔧
+## Następne kroki (v0.6+)
 
-1. **Nowy projekt Supabase** (supabase.com → New project)
-2. Uruchomić SQL z `supabase/migrations/20260530100000_init.sql`
-3. GitHub Secrets: `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_REF`
-4. `.env` lokalnie z `.env.example`
-5. **Vercel** — import repo + zmienne `VITE_*`
-
-## Następne kroki (dev)
-
-1. Raport dzienny kierowcy
+1. Kalkulator 561/2006 + eksport CSV
 2. Auth Supabase (email/hasło)
-3. PWA + domena produkcyjna
+3. PWA + GPS / ETA
+4. Integracja RMPD/SENT (przypomnienie)

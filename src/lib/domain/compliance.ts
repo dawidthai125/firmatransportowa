@@ -36,13 +36,37 @@ export const EXPIRY_STATUS_COLORS: Record<ExpiryStatus, string> = {
 export interface ComplianceAlert {
   id: string
   tenantId: string
-  entityType: 'driver' | 'vehicle'
+  entityType: 'driver' | 'vehicle' | 'company'
   entityId: string
   entityName: string
   documentLabel: string
   expiresAt: string
   status: ExpiryStatus
   daysLeft: number
+}
+
+export function buildCompanyComplianceAlerts(
+  tenantId: string,
+  companyName: string,
+  documents: DatedDocument[],
+): ComplianceAlert[] {
+  const alerts: ComplianceAlert[] = []
+  for (const doc of documents) {
+    const status = expiryStatus(doc.expiresAt)
+    if (status === 'ok') continue
+    alerts.push({
+      id: `alert-company-${doc.label}`,
+      tenantId,
+      entityType: 'company',
+      entityId: 'company',
+      entityName: companyName,
+      documentLabel: doc.label,
+      expiresAt: doc.expiresAt,
+      status,
+      daysLeft: daysUntil(doc.expiresAt),
+    })
+  }
+  return alerts
 }
 
 export function buildComplianceAlerts(

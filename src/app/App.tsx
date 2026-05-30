@@ -3,6 +3,7 @@ import { AdminShell } from '@/app/shells/AdminShell'
 import { DriverShell } from '@/app/shells/DriverShell'
 import { ComplianceView } from '@/app/views/ComplianceView'
 import { CoursesView } from '@/app/views/CoursesView'
+import { DailyReportsView } from '@/app/views/DailyReportsView'
 import { DashboardView } from '@/app/views/DashboardView'
 import {
   DriverHomeView,
@@ -75,9 +76,17 @@ export default function App() {
         onViewChange={setDriverView}
         onLogout={onLogout}
       >
-        {driverView === 'home' && <DriverHomeView tenantId={currentTenant.id} />}
+        {driverView === 'home' && (
+          <DriverHomeView
+            tenantId={currentTenant.id}
+            driverName={session.user.displayName}
+            onOpenReport={() => setDriverView('report')}
+          />
+        )}
         {driverView === 'courses' && <CoursesView tenantId={currentTenant.id} readOnly />}
-        {driverView === 'report' && <DriverReportView />}
+        {driverView === 'report' && (
+          <DriverReportView tenantId={currentTenant.id} driverName={session.user.displayName} />
+        )}
         {driverView === 'profile' && <DriverProfileView />}
       </DriverShell>
     )
@@ -94,9 +103,12 @@ export default function App() {
     >
       {adminView === 'dashboard' && <DashboardView tenant={currentTenant} />}
       {adminView === 'courses' && <CoursesView tenantId={currentTenant.id} />}
+      {adminView === 'reports' && <DailyReportsView tenantId={currentTenant.id} />}
       {adminView === 'fleet' && <FleetView tenantId={currentTenant.id} />}
       {adminView === 'drivers' && <DriversView tenantId={currentTenant.id} />}
-      {adminView === 'compliance' && <ComplianceView tenantId={currentTenant.id} />}
+      {adminView === 'compliance' && (
+        <ComplianceView tenantId={currentTenant.id} tenantName={currentTenant.name} />
+      )}
       {adminView === 'settings' && mode === 'owner' && <SettingsView tenant={currentTenant} />}
       {adminView === 'settings' && mode === 'dispatcher' && <DashboardView tenant={currentTenant} />}
     </AdminShell>

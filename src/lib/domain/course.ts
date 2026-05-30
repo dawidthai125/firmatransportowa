@@ -6,43 +6,52 @@ export type CourseStatus =
   | 'completed'
   | 'cancelled'
 
+/** Zakres geograficzny zlecenia */
+export type CourseScope = 'domestic' | 'international_eu' | 'international_third'
+
 export interface Course {
   id: string
   tenantId: string
-  /** Numer zlecenia / referencja */
   reference: string
   status: CourseStatus
-  /** Nadawca */
+  /** Krajowy / UE / poza UE (UA, TR…) */
+  scope: CourseScope
   shipper: string
-  /** Odbiorca */
   consignee: string
-  /** Opis ładunku */
   cargo: string
-  /** Waga w kg */
   weightKg?: number
-  /** Transport ADR */
   adr: boolean
-  /** Miasto załadunku */
   loadCity: string
-  /** Miasto rozładunku */
   unloadCity: string
-  /** Planowane km */
+  /** Kod kraju ISO, np. PL, DE */
+  loadCountry: string
+  unloadCountry: string
   plannedKm?: number
-  /** Fracht (przychód) PLN */
   freightPln: number
-  /** Koszty trasy PLN */
+  /** Fracht w EUR (często przy międzynarodowym) */
+  freightEur?: number
   routeCostsPln?: number
-  /** Termin załadunku ISO */
+  /** Myto / opłaty drogowe EUR */
+  tollEur?: number
+  /** Numer listu CMR */
+  cmrNumber?: string
+  /** Numer wypisu z licencji wspólnotowej (w kabinie) */
+  licenseExtractNo?: string
+  /** RMPD/SENT zarejestrowany (kraje spoza UE) */
+  rmpdRegistered?: boolean
   loadAt: string
-  /** Termin rozładunku ISO */
   unloadAt: string
-  /** ID kierowcy (opcjonalnie) */
   driverId?: string
-  /** ID pojazdu (opcjonalnie) */
   vehicleId?: string
   notes?: string
   createdAt: string
   updatedAt: string
+}
+
+export const COURSE_SCOPE_LABELS: Record<CourseScope, string> = {
+  domestic: 'Kraj',
+  international_eu: 'Międzynarodowy UE',
+  international_third: 'Poza UE (AETR/RMPD)',
 }
 
 export const COURSE_STATUS_LABELS: Record<CourseStatus, string> = {
@@ -72,19 +81,39 @@ export function createEmptyCourse(tenantId: string): Omit<Course, 'id' | 'create
     tenantId,
     reference: '',
     status: 'planned',
+    scope: 'domestic',
     shipper: '',
     consignee: '',
     cargo: '',
     adr: false,
     loadCity: '',
     unloadCity: '',
+    loadCountry: 'PL',
+    unloadCountry: 'PL',
     freightPln: 0,
     loadAt: now.toISOString().slice(0, 16),
     unloadAt: tomorrow.toISOString().slice(0, 16),
   }
 }
 
-export function courseMargin(course: Course): number {
+export function courseFreightDisplay(course: Course): string {
+  if (course.freightPln > 0) {
+    return `${course.freightPln.toLocaleString('pl-PL')} zł`
+  }
+  if (course.freightEur && course.freightEur > 0) {
+    return `${course.freightEur.toLocaleString('pl-PL')} EUR`
+  }
+  return '—'
+}
+
+export function courseMargin(course: Course): number | null {
   const costs = course.routeCostsPln ?? 0
-  return course.freightPln - costs
+  if (course.freightPln > 0) return course.freightPln - costs
+  return null
+}
+
+export function courseRouteLabel(course: Course): string {
+  const from = `${course.loadCity} (${course.loadCountry})`
+  const to = `${course.unloadCity} (${course.unloadCountry})`
+  return `${from} → ${to}`
 }

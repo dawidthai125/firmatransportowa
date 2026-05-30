@@ -9,7 +9,10 @@ export const DEMO_TENANT: Tenant = {
   status: 'active',
   createdAt: '2026-05-30T00:00:00.000Z',
   taxId: '0000000000',
-  settings: createDefaultTenantSettings(),
+  settings: {
+    ...createDefaultTenantSettings(),
+    transportScope: 'both',
+  },
 }
 
 export function seedDemoTenantIfEmpty(): Tenant[] {
