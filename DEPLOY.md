@@ -18,15 +18,22 @@ Po tym każdy `git push main` = deploy Vercel + Supabase (gdy zmieni się kod).
 
 **Supabase Dashboard → Git:** nie jest wymagany — deploy idzie przez GitHub Actions do projektu `roiainuiyqenfpkqixpv`.
 
-## Frontend — Vercel (ręcznie / pierwszy deploy)
+## Frontend — Vercel
 
 **Produkcja:** https://firmatransportowa.vercel.app
 
-1. Połącz repo GitHub z [Vercel](https://vercel.com) (opcjonalnie — auto-deploy przy push)
-2. Ustaw zmienne środowiskowe (patrz `SUPABASE-SETUP.md` krok 5)
-3. Każdy push na `main` → auto-deploy
+Deploy idzie **tylko** przez GitHub Action `deploy-vercel.yml` (token `VERCEL_TOKEN`).
 
-Plik `vercel.json` — SPA rewrite na `index.html`.
+W `vercel.json`:
+- `git.deploymentEnabled: false` — Vercel **nie** buduje przy pushu z GitHub (unika podwójnego deployu)
+- `github.silent: true` — brak komentarzy `vercel[bot]` na commitach (GitHub nie wysyła maili „Successfully deployed…”)
+
+Jeśli maile nadal przychodzą po pushu:
+1. Vercel → projekt → **Settings → Git** → **Disconnect** (projekt zostaje; deploy tylko z Actions)
+2. GitHub → [Notification settings](https://github.com/settings/notifications) → wyłącz e-mail przy **Comments on Issues and Pull Requests**
+3. Vercel → [Account notifications](https://vercel.com/account/settings/notifications) → wyłącz **Email** przy deploymentach
+
+Pierwszy setup: zmienne środowiskowe w Vercel (patrz `SUPABASE-SETUP.md` krok 5).
 
 ## Backend — Supabase (osobny projekt)
 

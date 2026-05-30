@@ -1,5 +1,6 @@
 import { isSupabaseConfigured } from '@/config/supabase'
 import { onCloudStatus, type CloudSyncStatus } from '@/lib/cloud-sync'
+import { APP_VERSION } from '@/config/version'
 import { cn } from '@/lib/utils'
 import { Cloud, CloudOff, Loader2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
@@ -21,7 +22,7 @@ export function CloudStatusBadge() {
 
   if (!isSupabaseConfigured()) {
     return (
-      <span className="flex items-center gap-1 text-xs text-muted-foreground" title="Brak .env Supabase">
+      <span className="flex items-center gap-1 text-xs text-muted-foreground" title={`Brak .env Supabase · v${APP_VERSION}`}>
         <CloudOff className="h-3.5 w-3.5" />
         local
       </span>
@@ -37,7 +38,7 @@ export function CloudStatusBadge() {
         status === 'error' && 'text-danger',
         status === 'idle' && 'text-muted-foreground',
       )}
-      title={LABELS[status]}
+      title={`${LABELS[status]} · v${APP_VERSION}`}
     >
       {status === 'syncing' ? (
         <Loader2 className="h-3.5 w-3.5 animate-spin" />

@@ -7,6 +7,7 @@ import {
   getDisplayProductName,
   isCompanyDeployment,
 } from '@/config/branding'
+import { APP_VERSION } from '@/config/version'
 import type { AuthSession } from '@/lib/auth/session'
 import { PORTAL_PANELS } from '@/lib/auth/portal-panels'
 import {
@@ -259,7 +260,7 @@ export function PortalHome({
           </>
         ) : (
           <p className="text-xs text-muted-foreground">
-            {getDisplayProductName()} v0.8 · demo:{' '}
+            {getDisplayProductName()} v{APP_VERSION} · demo:{' '}
             <strong className="text-foreground/80">DEMO-TRANS</strong> · hasło:{' '}
             <strong className="text-foreground/80">demo2026</strong>
           </p>
