@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="pl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0c1222" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="format-detection" content="telephone=no" />
+    <title>TransFlow — System zarządzania firmą transportową</title>
+    <style>
+      html, body { height: 100%; height: 100dvh; margin: 0; overflow: hidden; }
+      #root { height: 100%; height: 100dvh; min-height: 0; }
+      button, a { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+      @media (max-width: 767px) {
+        input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+        select,
+        textarea { font-size: 16px !important; }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

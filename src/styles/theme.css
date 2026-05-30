@@ -1,0 +1,19 @@
+@theme {
+  --color-background: #0c1222;
+  --color-foreground: #e8edf5;
+  --color-card: #121a2e;
+  --color-card-foreground: #e8edf5;
+  --color-muted: #1a2438;
+  --color-muted-foreground: #8b9bb8;
+  --color-border: #243049;
+  --color-primary: #3b82f6;
+  --color-primary-foreground: #ffffff;
+  --color-accent: #1e3a5f;
+  --color-accent-foreground: #93c5fd;
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+  --color-sidebar: #0a0f1a;
+  --radius-lg: 0.75rem;
+  --radius-md: 0.5rem;
+}
