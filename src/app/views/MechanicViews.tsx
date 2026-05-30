@@ -16,6 +16,7 @@ import {
   mechanicScheduleRepair,
   seedDemoRepairReports,
 } from '@/lib/domain/repair-reports-store'
+import { useCloudSyncRefresh } from '@/lib/sync/useCloudSyncRefresh'
 import { cn } from '@/lib/utils'
 import { Calendar, MessageCircle, Phone, Wrench } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
@@ -46,6 +47,8 @@ export function MechanicRepairsView({ tenantId, mechanicId, mechanicName }: Mech
   useEffect(() => {
     refresh()
   }, [refresh])
+
+  useCloudSyncRefresh(tenantId, 'repair-reports', refresh)
 
   const active = reports.filter((r) => !['completed', 'rejected'].includes(r.status))
 

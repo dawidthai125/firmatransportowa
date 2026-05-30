@@ -1,5 +1,5 @@
 import { isSupabaseConfigured } from '@/config/supabase'
-import { pullAllFromCloud } from '@/lib/cloud-sync'
+import { pullAllFromCloud, startCloudSyncListeners } from '@/lib/cloud-sync'
 import { Truck } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
 
@@ -31,9 +31,12 @@ export function CloudLoader({ children }: CloudLoaderProps) {
         clearTimeout(timeout)
       })
 
+    const stopSyncListeners = startCloudSyncListeners()
+
     return () => {
       cancelled = true
       clearTimeout(timeout)
+      stopSyncListeners()
     }
   }, [])
 

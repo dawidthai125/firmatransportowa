@@ -5,6 +5,7 @@ import {
   type RepairReport,
 } from '@/lib/domain/repair-report'
 import { loadRepairReportsForDriver, seedDemoRepairReports } from '@/lib/domain/repair-reports-store'
+import { useCloudSyncRefresh } from '@/lib/sync/useCloudSyncRefresh'
 import { cn } from '@/lib/utils'
 import { Calendar, MessageCircle, Wrench } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
@@ -26,6 +27,8 @@ export function DriverRepairsStatus({ tenantId, driverName, compact }: DriverRep
   useEffect(() => {
     refresh()
   }, [refresh])
+
+  useCloudSyncRefresh(tenantId, 'repair-reports', refresh)
 
   const active = reports.filter((r) => !['completed', 'rejected'].includes(r.status))
   if (active.length === 0) return null

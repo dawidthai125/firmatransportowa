@@ -51,6 +51,12 @@ export function SettingsView({ tenant }: SettingsViewProps) {
     saveTenantSettingsData(tenant.id, { ...data, mechanics: next })
   }
 
+  function updateMechanic(index: number, patch: Partial<(typeof mechanics)[0]>) {
+    const next = [...mechanics]
+    next[index] = { ...next[index], ...patch, updatedAt: new Date().toISOString() }
+    persistMechanics(next)
+  }
+
   function saveVerifiers() {
     const ids = verifierIds
       .split(',')
@@ -233,30 +239,18 @@ export function SettingsView({ tenant }: SettingsViewProps) {
             <div key={m.id} className="grid gap-2 rounded-lg border border-border p-3 sm:grid-cols-2">
               <Input
                 value={m.name}
-                onChange={(e) => {
-                  const next = [...mechanics]
-                  next[index] = { ...m, name: e.target.value }
-                  persistMechanics(next)
-                }}
+                onChange={(e) => updateMechanic(index, { name: e.target.value })}
                 placeholder="Imię i nazwisko"
               />
               <Input
                 value={m.phone}
-                onChange={(e) => {
-                  const next = [...mechanics]
-                  next[index] = { ...m, phone: e.target.value }
-                  persistMechanics(next)
-                }}
+                onChange={(e) => updateMechanic(index, { phone: e.target.value })}
                 placeholder="Telefon"
               />
               <Input
                 className="sm:col-span-2"
                 value={m.workshop ?? ''}
-                onChange={(e) => {
-                  const next = [...mechanics]
-                  next[index] = { ...m, workshop: e.target.value }
-                  persistMechanics(next)
-                }}
+                onChange={(e) => updateMechanic(index, { workshop: e.target.value })}
                 placeholder="Warsztat / adres"
               />
             </div>
@@ -272,6 +266,7 @@ export function SettingsView({ tenant }: SettingsViewProps) {
                   name: '',
                   phone: '',
                   active: true,
+                  updatedAt: new Date().toISOString(),
                 },
               ])
             }

@@ -19,6 +19,7 @@ export interface MechanicContact {
   email?: string
   workshop?: string
   active: boolean
+  updatedAt?: string
 }
 
 /** Osoby uprawnione do weryfikacji zgłoszeń awarii (user id z auth) */

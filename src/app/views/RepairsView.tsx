@@ -20,6 +20,7 @@ import {
   seedDemoCompanyDocuments,
 } from '@/lib/domain/tenant-settings'
 import type { UserRole } from '@/lib/auth/session'
+import { useCloudSyncRefresh } from '@/lib/sync/useCloudSyncRefresh'
 import { cn } from '@/lib/utils'
 import { CheckCircle2, Send, Wrench, XCircle } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -51,6 +52,8 @@ export function RepairsView({ tenantId, userId, userRole }: RepairsViewProps) {
   useEffect(() => {
     refresh()
   }, [refresh])
+
+  useCloudSyncRefresh(tenantId, 'repair-reports', refresh)
 
   useEffect(() => {
     if (mechanicId) return
