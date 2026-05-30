@@ -1,3 +1,6 @@
+import { scheduleCloudPush } from '@/lib/cloud-sync'
+import { RECORD_ARRAY_KEYS } from '@/lib/sync/merge-strategy'
+import { unwrapArrayPayload } from '@/lib/sync/tombstone'
 import {
   isSyncEnvelope,
   unwrapFromSync,
@@ -6,7 +9,6 @@ import {
 } from '@/lib/sync/sync-envelope'
 import type { Tenant, TenantDataKey } from './types'
 import { tenantStorageKey, tenantsRegistryKey } from './types'
-import { scheduleCloudPush } from '@/lib/cloud-sync'
 
 export function loadTenantsRegistry(): Tenant[] {
   try {
@@ -29,7 +31,11 @@ export function readTenantData<T>(tenantId: string, key: TenantDataKey, fallback
   try {
     const raw = localStorage.getItem(tenantStorageKey(tenantId, key))
     if (!raw) return fallback
-    return unwrapFromSync<T>(JSON.parse(raw), fallback)
+    const parsed = JSON.parse(raw)
+    if (RECORD_ARRAY_KEYS.includes(key) && Array.isArray(fallback)) {
+      return unwrapArrayPayload(parsed, fallback as { id: string }[]) as T
+    }
+    return unwrapFromSync<T>(parsed, fallback)
   } catch {
     return fallback
   }

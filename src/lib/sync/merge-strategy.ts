@@ -5,6 +5,11 @@ import type { ItdPlaybookSection, ItdTenantData } from '@/lib/domain/itd-types'
 import type { TenantSettingsData } from '@/lib/domain/tenant-settings'
 import { TENANT_DATA_KEYS, type Tenant, type TenantDataKey } from '@/lib/tenant/types'
 import {
+  applyTombstones,
+  mergeEnvelopeTombstones,
+  wrapMergedEnvelope,
+} from '@/lib/sync/tombstone'
+import {
   maxIso,
   normalizeToEnvelope,
   recordTimestamp,
@@ -27,17 +32,25 @@ export const RECORD_ARRAY_KEYS: TenantDataKey[] = [
 
 type Identifiable = { id: string; updatedAt?: string; importedAt?: string; createdAt?: string }
 
-export function mergeRecordsByNewest<T extends Identifiable>(...groups: T[][]): T[] {
+export function mergeRecordsByNewest<T extends Identifiable>(
+  ...groups: (T[] | { records: T[]; tombstones?: Record<string, string> })[]
+): T[] {
   const map = new Map<string, T>()
+  let tombstones: Record<string, string> = {}
+
   for (const group of groups) {
-    for (const item of group) {
+    const records = Array.isArray(group) ? group : group.records
+    if (!Array.isArray(group)) {
+      tombstones = { ...tombstones, ...(group.tombstones ?? {}) }
+    }
+    for (const item of records) {
       const prev = map.get(item.id)
       if (!prev || recordTimestamp(item) >= recordTimestamp(prev)) {
         map.set(item.id, item)
       }
     }
   }
-  return [...map.values()]
+  return applyTombstones([...map.values()], tombstones)
 }
 
 function mergeAutomationSettings(
@@ -178,7 +191,13 @@ function mergeFreightConnectors(
   }
 }
 
-function mergePayload(dataKey: TenantDataKey | 'registry', local: unknown, cloud: unknown): unknown {
+function mergePayload(
+  dataKey: TenantDataKey | 'registry',
+  local: unknown,
+  cloud: unknown,
+  localTombstones?: Record<string, string>,
+  cloudTombstones?: Record<string, string>,
+): unknown {
   if (dataKey === 'registry') {
     const l = Array.isArray(local) ? (local as Tenant[]) : []
     const c = Array.isArray(cloud) ? (cloud as Tenant[]) : []
@@ -188,7 +207,10 @@ function mergePayload(dataKey: TenantDataKey | 'registry', local: unknown, cloud
   if (RECORD_ARRAY_KEYS.includes(dataKey)) {
     const l = Array.isArray(local) ? local : []
     const c = Array.isArray(cloud) ? cloud : []
-    return mergeRecordsByNewest(l as Identifiable[], c as Identifiable[])
+    return mergeRecordsByNewest(
+      { records: l as Identifiable[], tombstones: localTombstones },
+      { records: c as Identifiable[], tombstones: cloudTombstones },
+    )
   }
 
   if (dataKey === 'settings') {
@@ -264,8 +286,15 @@ export function mergeSyncEnvelopes(
     return wrapForSync(payload, maxIso(localEnv.updatedAt, cloudEnv.updatedAt))
   }
 
-  const payload = mergePayload(dataKey, localEnv.payload, cloudEnv.payload)
-  return wrapForSync(payload, maxIso(localEnv.updatedAt, cloudEnv.updatedAt))
+  const payload = mergePayload(
+    dataKey,
+    localEnv.payload,
+    cloudEnv.payload,
+    localEnv.tombstones,
+    cloudEnv.tombstones,
+  )
+  const tombstones = mergeEnvelopeTombstones(localEnv, cloudEnv)
+  return wrapMergedEnvelope(payload, maxIso(localEnv.updatedAt, cloudEnv.updatedAt), tombstones)
 }
 
 /** Rozpoznaj klucz storage — wszystkie TENANT_DATA_KEYS (unikamy ślepego nadpisywania chmury). */

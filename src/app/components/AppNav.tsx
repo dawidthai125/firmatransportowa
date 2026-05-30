@@ -49,7 +49,7 @@ interface AppNavProps<T extends string> {
 export function AppNav<T extends string>({ items, active, onChange, layout }: AppNavProps<T>) {
   if (layout === 'bottom') {
     return (
-      <nav className="flex shrink-0 border-t border-border bg-sidebar px-1 pb-[env(safe-area-inset-bottom)] pt-1 md:hidden">
+      <nav className="flex shrink-0 overflow-x-auto border-t border-border bg-sidebar px-1 pb-[env(safe-area-inset-bottom)] pt-1 md:hidden">
         {items.map((item) => {
           const Icon = ICONS[item.icon] ?? LayoutDashboard
           const isActive = active === item.id
@@ -59,7 +59,7 @@ export function AppNav<T extends string>({ items, active, onChange, layout }: Ap
               type="button"
               onClick={() => onChange(item.id)}
               className={cn(
-                'flex flex-1 flex-col items-center gap-0.5 py-2 text-[10px] font-medium touch-target',
+                'flex min-w-[4.25rem] flex-col items-center gap-0.5 py-2 text-[10px] font-medium touch-target',
                 isActive ? 'text-primary' : 'text-muted-foreground',
               )}
             >

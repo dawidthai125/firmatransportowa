@@ -1,5 +1,6 @@
 import { fireAutomation } from '@/lib/automation/bridge'
 import type { Course } from '@/lib/domain/course'
+import { tombstoneDeleteInTenantData } from '@/lib/sync/tombstone'
 import { readTenantData, writeTenantData } from '@/lib/tenant/storage'
 
 export function loadCourses(tenantId: string): Course[] {
@@ -35,9 +36,8 @@ export function upsertCourse(tenantId: string, course: Course): Course[] {
 }
 
 export function deleteCourse(tenantId: string, courseId: string): Course[] {
-  const next = loadCourses(tenantId).filter((c) => c.id !== courseId)
-  saveCourses(tenantId, next)
-  return next
+  tombstoneDeleteInTenantData(tenantId, 'courses', courseId)
+  return loadCourses(tenantId)
 }
 
 const DEMO_UA_COURSE: Course = {

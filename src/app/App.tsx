@@ -1,3 +1,4 @@
+import { AccessDenied, SessionBootSplash } from '@/app/components/AccessDenied'
 import { LoginScreen, handleLogout } from '@/app/LoginScreen'
 import { AdminShell } from '@/app/shells/AdminShell'
 import { DriverShell } from '@/app/shells/DriverShell'
@@ -28,21 +29,31 @@ import type { AppMode } from '@/lib/auth/session'
 import { loadSession, roleToAppMode } from '@/lib/auth/session'
 import {
   DISPATCHER_NAV,
+  DRIVER_NAV,
   OWNER_NAV,
   type AdminView,
   type DriverView,
   type MechanicView,
+  type NavItem,
 } from '@/lib/navigation'
 import { runScheduledAutomations } from '@/lib/automation/scheduler'
 import { HelpProvider } from '@/lib/help/help-context'
 import { useTenant } from '@/lib/tenant/context'
 import { useEffect, useMemo, useState } from 'react'
 
-function filterNavByModules(
-  items: typeof OWNER_NAV,
+const OWNER_ONLY_ADMIN_VIEWS: AdminView[] = ['compliance', 'settings', 'tachograph']
+
+function filterNavByModules<T extends string>(
+  items: NavItem<T>[],
   modules: import('@/lib/tenant/types').TenantModules,
-) {
+): NavItem<T>[] {
   return items.filter((item) => !item.module || modules[item.module])
+}
+
+function canAccessAdminView(view: AdminView, mode: AppMode): boolean {
+  if (mode === 'owner') return true
+  if (mode === 'dispatcher' && OWNER_ONLY_ADMIN_VIEWS.includes(view)) return false
+  return true
 }
 
 export default function App() {
@@ -64,10 +75,9 @@ export default function App() {
     if (tenant) setCurrentTenant(tenant)
   }, [session, currentTenant, tenants, setCurrentTenant])
 
-  const [mode, setMode] = useState<AppMode>(() => {
-    if (session && currentTenant) return roleToAppMode(session.user.role)
-    return 'login'
-  })
+  const [mode, setMode] = useState<AppMode>(() =>
+    session ? roleToAppMode(session.user.role) : 'login',
+  )
 
   const [adminView, setAdminView] = useState<AdminView>('dashboard')
   const [driverView, setDriverView] = useState<DriverView>('home')
@@ -76,11 +86,43 @@ export default function App() {
   const navItems = useMemo(() => {
     if (!currentTenant) return OWNER_NAV
     const filtered = filterNavByModules(OWNER_NAV, currentTenant.settings.modules)
-    return mode === 'dispatcher' ? DISPATCHER_NAV.filter((i) => filtered.some((f) => f.id === i.id)) : filtered
+    return mode === 'dispatcher'
+      ? DISPATCHER_NAV.filter((i) => filtered.some((f) => f.id === i.id))
+      : filtered
   }, [currentTenant, mode])
 
-  if (mode === 'login' || !currentTenant || !session) {
+  const driverNavItems = useMemo(() => {
+    if (!currentTenant) return DRIVER_NAV
+    return filterNavByModules(DRIVER_NAV, currentTenant.settings.modules)
+  }, [currentTenant])
+
+  useEffect(() => {
+    if (mode !== 'owner' && mode !== 'dispatcher') return
+    if (!navItems.some((i) => i.id === adminView)) {
+      setAdminView('dashboard')
+    }
+  }, [navItems, adminView, mode])
+
+  useEffect(() => {
+    if (mode !== 'owner' && mode !== 'dispatcher') return
+    if (!canAccessAdminView(adminView, mode)) {
+      setAdminView('dashboard')
+    }
+  }, [mode, adminView])
+
+  useEffect(() => {
+    if (mode !== 'driver') return
+    if (!driverNavItems.some((i) => i.id === driverView)) {
+      setDriverView('home')
+    }
+  }, [driverNavItems, driverView, mode])
+
+  if (!session) {
     return <LoginScreen onLogin={setMode} />
+  }
+
+  if (!currentTenant) {
+    return <SessionBootSplash />
   }
 
   const onLogout = () => handleLogout(setMode)
@@ -119,6 +161,7 @@ export default function App() {
           tenant={currentTenant}
           driverName={session.user.displayName}
           view={driverView}
+          navItems={driverNavItems}
           onViewChange={setDriverView}
           onLogout={onLogout}
         >
@@ -141,13 +184,15 @@ export default function App() {
           {driverView === 'profile' && (
             <DriverProfileView tenantId={currentTenant.id} driverName={session.user.displayName} />
           )}
-          {driverView === 'itd' && (
+          {driverView === 'itd' && currentTenant.settings.modules.itd && (
             <DriverItdView tenantId={currentTenant.id} driverName={session.user.displayName} />
           )}
         </DriverShell>
       </HelpProvider>
     )
   }
+
+  const adminAllowed = canAccessAdminView(adminView, mode)
 
   return (
     <HelpProvider mode={mode} viewId={adminView} {...helpProps}>
@@ -159,55 +204,59 @@ export default function App() {
         navItems={navItems}
         onLogout={onLogout}
       >
-        {adminView === 'dashboard' && (
+        {!adminAllowed && (
+          <AccessDenied title="Moduł tylko dla właściciela" />
+        )}
+        {adminAllowed && adminView === 'dashboard' && (
           <DashboardView tenant={currentTenant} onNavigate={setAdminView} />
         )}
-        {adminView === 'courses' && <CoursesView tenantId={currentTenant.id} />}
-        {adminView === 'loads' && (
+        {adminAllowed && adminView === 'courses' && <CoursesView tenantId={currentTenant.id} />}
+        {adminAllowed && adminView === 'loads' && (
           <FreightBoardView
             tenantId={currentTenant.id}
             onNavigateToCourses={() => setAdminView('courses')}
           />
         )}
-        {adminView === 'reports' && <DailyReportsView tenantId={currentTenant.id} />}
-        {adminView === 'settlements' && (
+        {adminAllowed && adminView === 'reports' && <DailyReportsView tenantId={currentTenant.id} />}
+        {adminAllowed && adminView === 'settlements' && (
           <SettlementsView
             tenantId={currentTenant.id}
             tenantSlug={currentTenant.slug}
             tenantName={currentTenant.name}
           />
         )}
-        {adminView === 'files' && <FilesView tenantId={currentTenant.id} />}
-        {adminView === 'automations' && (
+        {adminAllowed && adminView === 'files' && <FilesView tenantId={currentTenant.id} />}
+        {adminAllowed && adminView === 'automations' && (
           <AutomationsView
             tenantId={currentTenant.id}
             tenantSlug={currentTenant.slug}
             tenantName={currentTenant.name}
           />
         )}
-        {adminView === 'fleet' && <FleetView tenantId={currentTenant.id} />}
-        {adminView === 'repairs' && (
+        {adminAllowed && adminView === 'fleet' && <FleetView tenantId={currentTenant.id} />}
+        {adminAllowed && adminView === 'repairs' && (
           <RepairsView
             tenantId={currentTenant.id}
             userId={session.user.id}
             userRole={session.user.role}
           />
         )}
-        {adminView === 'itd' && (
+        {adminAllowed && adminView === 'itd' && (
           <ItdAdminView
             tenantId={currentTenant.id}
             userRole={session.user.role === 'owner' ? 'owner' : 'dispatcher'}
             userName={session.user.displayName}
           />
         )}
-        {adminView === 'drivers' && <DriversView tenantId={currentTenant.id} />}
-        {adminView === 'compliance' && (
+        {adminAllowed && adminView === 'drivers' && <DriversView tenantId={currentTenant.id} />}
+        {adminAllowed && adminView === 'compliance' && mode === 'owner' && (
           <ComplianceView tenantId={currentTenant.id} tenantName={currentTenant.name} />
         )}
-        {adminView === 'tachograph' && <TachographView tenantId={currentTenant.id} />}
-        {adminView === 'settings' && mode === 'owner' && <SettingsView tenant={currentTenant} />}
-        {adminView === 'settings' && mode === 'dispatcher' && (
-          <DashboardView tenant={currentTenant} onNavigate={setAdminView} />
+        {adminAllowed && adminView === 'tachograph' && mode === 'owner' && (
+          <TachographView tenantId={currentTenant.id} />
+        )}
+        {adminAllowed && adminView === 'settings' && mode === 'owner' && (
+          <SettingsView tenant={currentTenant} />
         )}
       </AdminShell>
     </HelpProvider>

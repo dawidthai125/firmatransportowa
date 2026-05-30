@@ -1,4 +1,5 @@
 import type { Driver } from '@/lib/domain/driver'
+import { tombstoneDeleteInTenantData } from '@/lib/sync/tombstone'
 import { readTenantData, writeTenantData } from '@/lib/tenant/storage'
 
 export function loadDrivers(tenantId: string): Driver[] {
@@ -20,9 +21,8 @@ export function upsertDriver(tenantId: string, driver: Driver): Driver[] {
 }
 
 export function deleteDriver(tenantId: string, driverId: string): Driver[] {
-  const next = loadDrivers(tenantId).filter((d) => d.id !== driverId)
-  saveDrivers(tenantId, next)
-  return next
+  tombstoneDeleteInTenantData(tenantId, 'drivers', driverId)
+  return loadDrivers(tenantId)
 }
 
 export function seedDemoDrivers(tenantId: string): Driver[] {

@@ -7,6 +7,8 @@ export interface SyncEnvelope<T = unknown> {
   /** ISO — czas ostatniego zapisu na tym kliencie (po merge) */
   updatedAt: string
   payload: T
+  /** id rekordu → ISO deletedAt — propagacja usunięć między klientami */
+  tombstones?: Record<string, string>
 }
 
 export function isSyncEnvelope(raw: unknown): raw is SyncEnvelope {

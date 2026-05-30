@@ -5,7 +5,7 @@ import { InstallAppBanner } from '@/app/components/pwa/InstallAppBanner'
 import { OfflineIndicator } from '@/app/components/pwa/OfflineIndicator'
 import { PanelThemeBanner } from '@/app/components/transport/PanelThemeBanner'
 import { Button } from '@/app/components/ui/Button'
-import type { DriverView } from '@/lib/navigation'
+import type { DriverView, NavItem } from '@/lib/navigation'
 import { DRIVER_NAV } from '@/lib/navigation'
 import type { Tenant } from '@/lib/tenant/types'
 import { cn } from '@/lib/utils'
@@ -25,6 +25,7 @@ interface DriverShellProps {
   tenant: Tenant
   driverName: string
   view: DriverView
+  navItems?: NavItem<DriverView>[]
   onViewChange: (view: DriverView) => void
   onLogout: () => void
   children: ReactNode
@@ -34,6 +35,7 @@ export function DriverShell({
   tenant,
   driverName,
   view,
+  navItems = DRIVER_NAV,
   onViewChange,
   onLogout,
   children,
@@ -73,7 +75,7 @@ export function DriverShell({
         />
         {children}
       </main>
-      <AppNav items={DRIVER_NAV} active={view} onChange={onViewChange} layout="bottom" />
+      <AppNav items={navItems} active={view} onChange={onViewChange} layout="bottom" />
     </div>
   )
 }

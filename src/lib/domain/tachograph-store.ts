@@ -2,6 +2,7 @@ import { parseDddFilename } from '@/lib/domain/tachograph-parse'
 import type { TachographDownload } from '@/lib/domain/tachograph-types'
 import { driverDisplayName, type Driver } from '@/lib/domain/driver'
 import { loadDrivers, seedDemoDrivers } from '@/lib/domain/drivers-store'
+import { tombstoneDeleteInTenantData } from '@/lib/sync/tombstone'
 import { readTenantData, writeTenantData } from '@/lib/tenant/storage'
 
 export function loadTachographDownloads(tenantId: string): TachographDownload[] {
@@ -64,9 +65,8 @@ export function updateTachographDownload(
 }
 
 export function deleteTachographDownload(tenantId: string, id: string): TachographDownload[] {
-  const next = loadTachographDownloads(tenantId).filter((r) => r.id !== id)
-  saveTachographDownloads(tenantId, next)
-  return next
+  tombstoneDeleteInTenantData(tenantId, 'tachograph', id)
+  return loadTachographDownloads(tenantId)
 }
 
 export function seedDemoTachographDownloads(tenantId: string): TachographDownload[] {

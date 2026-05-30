@@ -1,6 +1,7 @@
 import { blobToBase64, base64ToBlob, base64ToText, textToBase64 } from '@/lib/files/blob-store'
 import { buildSimplePdf } from '@/lib/files/pdf-builder'
 import type { PreviewableFile, StoredTenantFile } from '@/lib/files/types'
+import { tombstoneDeleteInTenantData } from '@/lib/sync/tombstone'
 import { readTenantData, writeTenantData } from '@/lib/tenant/storage'
 
 const MAX_FILE_BYTES = 512 * 1024
@@ -81,10 +82,7 @@ export function storedToPreviewable(stored: StoredTenantFile): PreviewableFile {
 }
 
 export function deleteTenantFile(tenantId: string, fileId: string): void {
-  saveTenantFiles(
-    tenantId,
-    loadTenantFiles(tenantId).filter((f) => f.id !== fileId),
-  )
+  tombstoneDeleteInTenantData(tenantId, 'files', fileId)
 }
 
 export async function seedDemoTenantFiles(tenantId: string): Promise<void> {

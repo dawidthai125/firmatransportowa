@@ -60,7 +60,7 @@ export const DISPATCHER_NAV: NavItem<AdminView>[] = [
 export const DRIVER_NAV: NavItem<DriverView>[] = [
   { id: 'home', label: 'Start', icon: 'home' },
   { id: 'issue', label: 'Awaria', icon: 'wrench' },
-  { id: 'itd', label: 'ITD', icon: 'shield-alert' },
+  { id: 'itd', label: 'ITD', icon: 'shield-alert', module: 'itd' },
   { id: 'courses', label: 'Kursy', icon: 'route' },
   { id: 'report', label: 'Raport', icon: 'file-text' },
   { id: 'profile', label: 'Profil', icon: 'user' },

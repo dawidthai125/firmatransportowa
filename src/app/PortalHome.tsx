@@ -250,7 +250,7 @@ export function PortalHome({
         {companyMode ? (
           <>
             <p className="text-xs text-muted-foreground">
-              © {new Date().getFullYear()} {COMPANY_BRANDING.name}
+              © {new Date().getFullYear()} {COMPANY_BRANDING.name} · v{APP_VERSION}
             </p>
             {import.meta.env.DEV && (
               <p className="mt-1 text-[10px] text-muted-foreground/70">

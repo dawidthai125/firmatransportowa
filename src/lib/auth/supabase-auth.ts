@@ -44,17 +44,6 @@ export async function signInWithSupabase(
   let session = (await sb.auth.signInWithPassword({ email: normalizedEmail, password })).data
     .session
 
-  if (!session) {
-    const signUp = await sb.auth.signUp({ email: normalizedEmail, password })
-    if (signUp.error) return null
-    session = signUp.data.session
-    if (!session) {
-      const retry = await sb.auth.signInWithPassword({ email: normalizedEmail, password })
-      if (retry.error || !retry.data.session) return null
-      session = retry.data.session
-    }
-  }
-
   if (!session) return null
 
   const { data: members, error } = await sb.rpc('get_my_memberships')

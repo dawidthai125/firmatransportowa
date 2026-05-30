@@ -1,3 +1,4 @@
+import { useInitialCloudSyncDone } from '@/app/CloudLoader'
 import { Button } from '@/app/components/ui/Button'
 import { Card, CardContent } from '@/app/components/ui/Card'
 import { Input, Label, Select } from '@/app/components/ui/Input'
@@ -38,6 +39,7 @@ interface CoursesViewProps {
 }
 
 export function CoursesView({ tenantId, readOnly = false }: CoursesViewProps) {
+  const cloudReady = useInitialCloudSyncDone()
   const [courses, setCourses] = useState<Course[]>([])
   const [settlements, setSettlements] = useState<Map<string, CourseSettlementSummary>>(new Map())
   const [editing, setEditing] = useState<Course | null>(null)
@@ -117,7 +119,13 @@ export function CoursesView({ tenantId, readOnly = false }: CoursesViewProps) {
         )}
       </div>
 
-      {courses.length === 0 ? (
+      {!cloudReady ? (
+        <Card>
+          <CardContent className="p-6 text-center text-sm text-muted-foreground">
+            Ładowanie danych z chmury…
+          </CardContent>
+        </Card>
+      ) : courses.length === 0 ? (
         <Card>
           <CardContent className="p-6 text-center text-sm text-muted-foreground">
             Brak kursów. Dodaj pierwsze zlecenie transportowe.

@@ -24,7 +24,16 @@ let statusListeners: ((s: CloudSyncStatus, msg?: string) => void)[] = []
 let lastStatus: CloudSyncStatus = isSupabaseConfigured() ? 'idle' : 'offline'
 let pushTimer: ReturnType<typeof setTimeout> | null = null
 let pendingPushKeys = new Set<string>()
-let pullInFlight: Promise<void> | null = null
+let syncChain: Promise<void> = Promise.resolve()
+
+function withSyncLock<T>(fn: () => Promise<T>): Promise<T> {
+  const next = syncChain.then(fn, fn)
+  syncChain = next.then(
+    () => undefined,
+    () => undefined,
+  )
+  return next
+}
 
 export function onCloudStatus(cb: (s: CloudSyncStatus, msg?: string) => void): () => void {
   statusListeners.push(cb)
@@ -154,12 +163,7 @@ async function mergeKeysFromCloud(keys: string[]): Promise<string[]> {
 export async function pullAllFromCloud(): Promise<void> {
   if (!isSupabaseConfigured()) return
 
-  if (pullInFlight) {
-    await pullInFlight
-    return
-  }
-
-  pullInFlight = (async () => {
+  return withSyncLock(async () => {
     setStatus('syncing')
     try {
       const registryKey = tenantsRegistryKey()
@@ -182,12 +186,8 @@ export async function pullAllFromCloud(): Promise<void> {
     } catch (e) {
       console.error('[TransFlow] pull failed', e)
       setStatus('error', e instanceof Error ? e.message : 'Sync error')
-    } finally {
-      pullInFlight = null
     }
-  })()
-
-  await pullInFlight
+  })
 }
 
 export function scheduleCloudPush(storageKey: string): void {
@@ -201,59 +201,64 @@ export function scheduleCloudPush(storageKey: string): void {
 async function flushCloudPush(): Promise<void> {
   if (!isSupabaseConfigured() || pendingPushKeys.size === 0) return
 
-  const keys = [...pendingPushKeys]
-  pendingPushKeys.clear()
+  return withSyncLock(async () => {
+    const keys = [...pendingPushKeys]
+    pendingPushKeys.clear()
 
-  setStatus('syncing')
-  try {
-    const cloudValues = await batchGet(keys)
-    const entries: { key: string; value: unknown }[] = []
-    const mergedKeys: string[] = []
+    setStatus('syncing')
+    try {
+      const cloudValues = await batchGet(keys)
+      const entries: { key: string; value: unknown }[] = []
+      const mergedKeys: string[] = []
 
-    for (let i = 0; i < keys.length; i++) {
-      const key = keys[i]
-      const localRaw = readRawStorageEntry(key)
-      if (localRaw == null) continue
+      for (let i = 0; i < keys.length; i++) {
+        const key = keys[i]
+        const localRaw = readRawStorageEntry(key)
+        if (localRaw == null) continue
 
-      const parsed = parseTenantStorageKey(key)
-      if (!parsed) {
-        entries.push({ key, value: localRaw })
-        mergedKeys.push(key)
-        continue
+        const parsed = parseTenantStorageKey(key)
+        if (!parsed) {
+          entries.push({ key, value: localRaw })
+          mergedKeys.push(key)
+          continue
+        }
+
+        const prevJson = JSON.stringify(localRaw)
+        const merged = mergeSyncEnvelopes(parsed.dataKey, localRaw, cloudValues[i], null)
+        writeTenantDataEnvelope(key, merged)
+        entries.push({ key, value: merged })
+        if (JSON.stringify(merged) !== prevJson) mergedKeys.push(key)
       }
 
-      const prevJson = JSON.stringify(localRaw)
-      const merged = mergeSyncEnvelopes(parsed.dataKey, localRaw, cloudValues[i], null)
-      writeTenantDataEnvelope(key, merged)
-      entries.push({ key, value: merged })
-      if (JSON.stringify(merged) !== prevJson) mergedKeys.push(key)
+      if (entries.length > 0) await batchSet(entries)
+      if (mergedKeys.length > 0) notifySyncMerged(mergedKeys)
+      setStatus('ok')
+    } catch (e) {
+      console.error('[TransFlow] push failed', e)
+      setStatus('error', e instanceof Error ? e.message : 'Push error')
+      keys.forEach((k) => pendingPushKeys.add(k))
     }
-
-    if (entries.length > 0) await batchSet(entries)
-    if (mergedKeys.length > 0) notifySyncMerged(mergedKeys)
-    setStatus('ok')
-  } catch (e) {
-    console.error('[TransFlow] push failed', e)
-    setStatus('error', e instanceof Error ? e.message : 'Push error')
-    keys.forEach((k) => pendingPushKeys.add(k))
-  }
+  })
 }
 
 export async function pushKeyNow(storageKey: string): Promise<void> {
   if (!isSupabaseConfigured()) return
-  const localRaw = readRawStorageEntry(storageKey)
-  if (localRaw == null) return
 
-  const parsed = parseTenantStorageKey(storageKey)
-  if (!parsed) {
-    await batchSet([{ key: storageKey, value: localRaw }])
-    return
-  }
+  return withSyncLock(async () => {
+    const localRaw = readRawStorageEntry(storageKey)
+    if (localRaw == null) return
 
-  const [cloudVal] = await batchGet([storageKey])
-  const merged = mergeSyncEnvelopes(parsed.dataKey, localRaw, cloudVal, null)
-  writeTenantDataEnvelope(storageKey, merged)
-  await batchSet([{ key: storageKey, value: merged }])
+    const parsed = parseTenantStorageKey(storageKey)
+    if (!parsed) {
+      await batchSet([{ key: storageKey, value: localRaw }])
+      return
+    }
+
+    const [cloudVal] = await batchGet([storageKey])
+    const merged = mergeSyncEnvelopes(parsed.dataKey, localRaw, cloudVal, null)
+    writeTenantDataEnvelope(storageKey, merged)
+    await batchSet([{ key: storageKey, value: merged }])
+  })
 }
 
 export async function checkCloudHealth(): Promise<boolean> {

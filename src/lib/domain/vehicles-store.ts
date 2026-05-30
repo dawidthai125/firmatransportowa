@@ -1,4 +1,5 @@
 import type { Vehicle } from '@/lib/domain/vehicle'
+import { tombstoneDeleteInTenantData } from '@/lib/sync/tombstone'
 import { readTenantData, writeTenantData } from '@/lib/tenant/storage'
 
 export function loadVehicles(tenantId: string): Vehicle[] {
@@ -20,9 +21,8 @@ export function upsertVehicle(tenantId: string, vehicle: Vehicle): Vehicle[] {
 }
 
 export function deleteVehicle(tenantId: string, vehicleId: string): Vehicle[] {
-  const next = loadVehicles(tenantId).filter((v) => v.id !== vehicleId)
-  saveVehicles(tenantId, next)
-  return next
+  tombstoneDeleteInTenantData(tenantId, 'vehicles', vehicleId)
+  return loadVehicles(tenantId)
 }
 
 export function seedDemoVehicles(tenantId: string): Vehicle[] {

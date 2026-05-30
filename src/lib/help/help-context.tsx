@@ -49,8 +49,11 @@ export function HelpProvider({ mode, viewId, tenantId, userId, children }: HelpP
     const seen = hasSeenHelp(tenantId, userId, screenKey)
     setIsNewScreen(!seen)
     if (!seen) {
-      const t = window.setTimeout(() => setOpen(true), 600)
-      return () => window.clearTimeout(t)
+      const isMobile = window.matchMedia('(max-width: 767px)').matches
+      if (!isMobile) {
+        const t = window.setTimeout(() => setOpen(true), 600)
+        return () => window.clearTimeout(t)
+      }
     }
     setOpen(false)
     return undefined
