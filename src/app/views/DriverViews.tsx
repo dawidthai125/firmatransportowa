@@ -1,3 +1,4 @@
+import { DriverLocationShare } from '@/app/components/driver/DriverLocationShare'
 import { Button } from '@/app/components/ui/Button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/Card'
 import { DriverRepairsStatus } from '@/app/components/DriverRepairsStatus'
@@ -16,7 +17,12 @@ import {
   upsertDailyReport,
 } from '@/lib/domain/daily-reports-store'
 import { loadCourses, seedDemoCourses } from '@/lib/domain/courses-store'
-import { AlertTriangle, CheckCircle2, FileText, Fuel, MapPin, Route, Wrench } from 'lucide-react'
+import { findDriverByDisplayName, resolveDriverVehicle } from '@/lib/domain/driver-profile'
+import { syncDriverReminders } from '@/lib/notifications/driver-reminders'
+import { seedDemoCompanyDocuments, loadTenantSettingsData } from '@/lib/domain/tenant-settings'
+import { expiryStatus, EXPIRY_STATUS_COLORS, formatExpiryDate } from '@/lib/domain/compliance'
+import { cn } from '@/lib/utils'
+import { AlertTriangle, CheckCircle2, FileText, Fuel, Phone, Route, Truck, User, Wrench } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import type { Course } from '@/lib/domain/course'
 import type { DailyReport } from '@/lib/domain/daily-report'
@@ -26,11 +32,20 @@ interface DriverHomeViewProps {
   driverName?: string
   onOpenReport?: () => void
   onOpenIssue?: () => void
+  onOpenCourses?: () => void
 }
 
-export function DriverHomeView({ tenantId, driverName, onOpenReport, onOpenIssue }: DriverHomeViewProps) {
+export function DriverHomeView({
+  tenantId,
+  driverName,
+  onOpenReport,
+  onOpenIssue,
+  onOpenCourses,
+}: DriverHomeViewProps) {
   const [activeCourse, setActiveCourse] = useState<Course | null>(null)
   const [shiftEnded, setShiftEnded] = useState(false)
+  const [vehicleReg, setVehicleReg] = useState<string | undefined>()
+  const [vehicleId, setVehicleId] = useState<string | undefined>()
 
   useEffect(() => {
     seedDemoCourses(tenantId)
@@ -40,6 +55,11 @@ export function DriverHomeView({ tenantId, driverName, onOpenReport, onOpenIssue
     if (driverName) {
       const today = getTodayReportForDriver(tenantId, driverName)
       setShiftEnded(today?.shiftEnded ?? false)
+      syncDriverReminders(tenantId, driverName)
+      const driver = findDriverByDisplayName(tenantId, driverName)
+      const vehicle = driver ? resolveDriverVehicle(tenantId, driver) : undefined
+      setVehicleReg(vehicle?.registration)
+      setVehicleId(vehicle?.id)
     }
   }, [tenantId, driverName])
 
@@ -75,15 +95,24 @@ export function DriverHomeView({ tenantId, driverName, onOpenReport, onOpenIssue
           desc="Ciężarówka stoi? Zdjęcie + opis — biuro widzi od razu"
           onClick={onOpenIssue}
         />
-        <QuickAction icon={Route} title="Moje kursy" desc="Trasa, załadunek, CMR — bez dzwonienia" />
+        <QuickAction icon={Route} title="Moje kursy" desc="Trasa, załadunek, CMR — bez dzwonienia" onClick={onOpenCourses} />
         <QuickAction
           icon={FileText}
           title="Raport dzienny"
           desc="Km, paliwo, myto PLN/EUR — wypełnij w kabinie"
           onClick={onOpenReport}
         />
-        <QuickAction icon={MapPin} title="Udostępnij lokalizację" desc="Moduł GPS — wkrótce" />
       </div>
+
+      {driverName && (
+        <DriverLocationShare
+          tenantId={tenantId}
+          driverName={driverName}
+          vehicleId={vehicleId}
+          registration={vehicleReg}
+          courseRef={activeCourse?.reference}
+        />
+      )}
 
       <Button
         className="w-full"
@@ -384,13 +413,119 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   )
 }
 
-export function DriverProfileView() {
+export function DriverProfileView({ tenantId, driverName }: { tenantId: string; driverName: string }) {
+  const driver = findDriverByDisplayName(tenantId, driverName)
+  const vehicle = driver ? resolveDriverVehicle(tenantId, driver) : undefined
+  seedDemoCompanyDocuments(tenantId)
+  const ops = loadTenantSettingsData(tenantId).operationsContact
+
+  if (!driver) {
+    return (
+      <div className="space-y-4">
+        <h1 className="text-xl font-semibold">Profil</h1>
+        <Card>
+          <CardContent className="p-4 text-sm text-muted-foreground">
+            Nie znaleziono kartoteki kierowcy dla {driverName}.
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
   return (
-    <div className="space-y-4">
-      <h1 className="text-xl font-semibold">Profil</h1>
+    <div className="space-y-4 pb-6">
+      <div>
+        <h1 className="text-xl font-semibold">Profil kierowcy</h1>
+        <p className="text-sm text-muted-foreground">
+          Dokumenty, pojazd i kontakt do biura — wszystko bez dzwonienia do szefa
+        </p>
+      </div>
+
       <Card>
-        <CardContent className="p-4 text-sm text-muted-foreground">
-          Uprawnienia, ważność dokumentów, przypisany pojazd.
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <User className="h-4 w-4" />
+            {driverName}
+          </CardTitle>
+          <CardDescription>
+            Kategoria {driver.licenseCategory}
+            {driver.adrCertified ? ' · ADR' : ''}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-2 text-sm">
+          {driver.phone && (
+            <p>
+              Telefon:{' '}
+              <a href={`tel:${driver.phone.replace(/\s/g, '')}`} className="text-primary underline">
+                {driver.phone}
+              </a>
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      {vehicle && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Truck className="h-4 w-4" />
+              Przypisany pojazd
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm">
+            <p className="font-semibold">{vehicle.registration}</p>
+            <p className="text-muted-foreground">
+              {vehicle.brand} {vehicle.model} · {vehicle.odometerKm?.toLocaleString('pl-PL')} km
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {ops && (
+        <Card className="border-primary/25">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Phone className="h-4 w-4 text-primary" />
+              Dyspozytornia (nie szef)
+            </CardTitle>
+            <CardDescription>Operacje, kursy, awarie — pierwszy kontakt</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            <p className="font-medium">{ops.dispatcherName}</p>
+            <a
+              href={`tel:${ops.dispatcherPhone.replace(/\s/g, '')}`}
+              className="inline-flex items-center gap-2 text-primary underline"
+            >
+              <Phone className="h-4 w-4" />
+              {ops.dispatcherPhone}
+            </a>
+            {ops.dispatcherEmail && (
+              <p className="text-muted-foreground">{ops.dispatcherEmail}</p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Dokumenty</CardTitle>
+          <CardDescription>CKZ, prawo jazdy, badania — ważność</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {driver.documents.map((doc) => {
+            const status = expiryStatus(doc.expiresAt)
+            return (
+              <div
+                key={doc.label}
+                className="flex items-center justify-between gap-2 rounded-lg border border-border px-3 py-2 text-sm"
+              >
+                <span>{doc.label}</span>
+                <span className={cn('rounded-full px-2 py-0.5 text-xs font-medium', EXPIRY_STATUS_COLORS[status])}>
+                  {formatExpiryDate(doc.expiresAt)}
+                </span>
+              </div>
+            )
+          })}
         </CardContent>
       </Card>
     </div>

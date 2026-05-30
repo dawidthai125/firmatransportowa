@@ -37,6 +37,7 @@ export function seedDemoFleetPositions(tenantId: string): FleetPosition[] {
       heading: 240,
       updatedAt: now,
       status: 'in_transit',
+      source: 'demo',
     },
     {
       vehicleId: vehicles[1]?.id ?? 'vehicle-demo-002',
@@ -48,6 +49,7 @@ export function seedDemoFleetPositions(tenantId: string): FleetPosition[] {
       speedKmh: 0,
       updatedAt: now,
       status: 'loading',
+      source: 'demo',
     },
     {
       vehicleId: vehicles[0]?.id ?? 'vehicle-demo-001',
@@ -59,6 +61,7 @@ export function seedDemoFleetPositions(tenantId: string): FleetPosition[] {
       speedKmh: 0,
       updatedAt: new Date(Date.now() - 3600000).toISOString(),
       status: 'parked',
+      source: 'demo',
     },
   ]
 
@@ -72,6 +75,7 @@ export function tickFleetSimulation(tenantId: string): FleetPosition[] {
   if (positions.length === 0) return seedDemoFleetPositions(tenantId)
 
   const next = positions.map((p) => {
+    if (p.source === 'driver-pwa') return p
     if (p.status !== 'in_transit') return p
     const jitter = () => (Math.random() - 0.5) * 0.02
     return {

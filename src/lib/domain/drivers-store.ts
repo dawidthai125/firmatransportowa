@@ -39,6 +39,7 @@ export function seedDemoDrivers(tenantId: string): Driver[] {
       phone: '+48 600 100 200',
       licenseCategory: 'C+E',
       adrCertified: false,
+      vehicleId: 'vehicle-demo-001',
       active: true,
       documents: [
         { label: 'Prawo jazdy', expiresAt: '2027-06-15' },
@@ -56,6 +57,7 @@ export function seedDemoDrivers(tenantId: string): Driver[] {
       phone: '+48 600 300 400',
       licenseCategory: 'C+E',
       adrCertified: true,
+      vehicleId: 'vehicle-demo-002',
       active: true,
       documents: [
         { label: 'Prawo jazdy', expiresAt: '2028-01-10' },

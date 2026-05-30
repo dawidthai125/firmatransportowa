@@ -38,7 +38,9 @@
 - [x] Kierowca widzi status swoich zgłoszeń
 - [x] PWA + instalacja na telefon (v0.9.1)
 - [x] GPS / mapa floty — demo Leaflet (v0.10)
-- [ ] Telemetria GPS z PWA kierowcy (Geolocation API)
+- [x] Telemetria GPS z PWA kierowcy (Geolocation API) — v0.11
+- [x] Profil kierowcy, powiadomienia, wyjątki na pulpicie — v0.11
+- [ ] Web Push (VAPID) — poza Notification API
 
 ## 🔜 v0.9 — Integracje branżowe
 

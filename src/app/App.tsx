@@ -124,6 +124,7 @@ export default function App() {
               driverName={session.user.displayName}
               onOpenReport={() => setDriverView('report')}
               onOpenIssue={() => setDriverView('issue')}
+              onOpenCourses={() => setDriverView('courses')}
             />
           )}
           {driverView === 'issue' && (
@@ -133,7 +134,9 @@ export default function App() {
           {driverView === 'report' && (
             <DriverReportView tenantId={currentTenant.id} driverName={session.user.displayName} />
           )}
-          {driverView === 'profile' && <DriverProfileView />}
+          {driverView === 'profile' && (
+            <DriverProfileView tenantId={currentTenant.id} driverName={session.user.displayName} />
+          )}
         </DriverShell>
       </HelpProvider>
     )
@@ -149,7 +152,9 @@ export default function App() {
         navItems={navItems}
         onLogout={onLogout}
       >
-        {adminView === 'dashboard' && <DashboardView tenant={currentTenant} />}
+        {adminView === 'dashboard' && (
+          <DashboardView tenant={currentTenant} onNavigate={setAdminView} />
+        )}
         {adminView === 'courses' && <CoursesView tenantId={currentTenant.id} />}
         {adminView === 'reports' && <DailyReportsView tenantId={currentTenant.id} />}
         {adminView === 'settlements' && (
@@ -180,7 +185,9 @@ export default function App() {
           <ComplianceView tenantId={currentTenant.id} tenantName={currentTenant.name} />
         )}
         {adminView === 'settings' && mode === 'owner' && <SettingsView tenant={currentTenant} />}
-        {adminView === 'settings' && mode === 'dispatcher' && <DashboardView tenant={currentTenant} />}
+        {adminView === 'settings' && mode === 'dispatcher' && (
+          <DashboardView tenant={currentTenant} onNavigate={setAdminView} />
+        )}
       </AdminShell>
     </HelpProvider>
   )

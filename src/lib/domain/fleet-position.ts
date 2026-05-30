@@ -1,5 +1,7 @@
 export type FleetVehicleStatus = 'in_transit' | 'loading' | 'parked' | 'offline'
 
+export type FleetPositionSource = 'demo' | 'driver-pwa'
+
 export interface FleetPosition {
   vehicleId: string
   registration: string
@@ -11,6 +13,7 @@ export interface FleetPosition {
   heading?: number
   updatedAt: string
   status: FleetVehicleStatus
+  source?: FleetPositionSource
 }
 
 export const FLEET_STATUS_LABELS: Record<FleetVehicleStatus, string> = {

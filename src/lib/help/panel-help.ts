@@ -23,22 +23,22 @@ function adminSteps(
   const byView: Record<AdminView, PanelHelpContent> = {
     dashboard: {
       title: 'Pulpit — szybki przegląd firmy',
-      summary: `Tu widzisz najważniejsze liczby na start dnia pracy ${isOwner ? 'właściciela' : 'dyspozytora'}.`,
+      summary: `Tu widzisz wyjątki na dziś i KPI — ${isOwner ? 'właściciel' : 'dyspozytor'} reaguje tylko na to, co wymaga uwagi.`,
       steps: [
+        {
+          title: 'Panel „Wymaga uwagi dziś”',
+          description: 'Awarie, brak raportów, dokumenty, czas jazdy i nieświeży GPS — kliknij wiersz, aby przejść do modułu.',
+          action: 'Sekcja u góry pulpitu — klik w alert otwiera Kursy / Raporty / Awarie itd.',
+        },
         {
           title: 'Sprawdź kafelki KPI',
           description: 'Aktywne kursy, marża, alerty zgodności i czasu jazdy — na pierwszy rzut oka.',
           action: 'Przewiń ekran w dół na pulpicie',
         },
         {
-          title: 'Reaguj na alerty',
-          description: 'Czerwone/żółte komunikaty oznaczają dokumenty lub limity czasu jazdy do sprawdzenia.',
-          action: `${NAV_HINT} → Zgodność (tylko właściciel) lub Kierowcy / Flota`,
-        },
-        {
           title: 'Mapa floty (GPS)',
-          description: 'Zielone markery = w trasie, pomarańczowe = załadunek. Kliknij marker po szczegóły.',
-          action: 'Sekcja „Flota na mapie” — przycisk Odśwież aktualizuje pozycje',
+          description: 'Pozycje z telefonów kierowców (PWA) lub demo. Zielone = w trasie, pomarańczowe = załadunek.',
+          action: 'Sekcja „Flota na mapie” — Odśwież aktualizuje pozycje',
         },
         {
           title: 'Przejdź do szczegółów',
@@ -311,13 +311,23 @@ function driverHelp(view: DriverView): PanelHelpContent {
   const byView: Record<DriverView, PanelHelpContent> = {
     home: {
       title: 'Start kierowcy',
-      summary: 'Twój aktywny kurs, szybkie akcje i status awarii.',
+      summary: 'Aktywny kurs, udostępnianie GPS, powiadomienia i szybkie akcje z kabiny.',
       steps: [
         {
           title: 'Zainstaluj aplikację (telefon)',
           description:
             'Dodaj skrót na ekran główny — szybszy dostęp z kabiny bez wpisywania adresu w przeglądarce.',
           action: 'Baner „Zainstaluj aplikację” u góry lub Safari → Udostępnij → Dodaj do ekranu początkowego',
+        },
+        {
+          title: 'Udostępnij lokalizację (GPS)',
+          description: 'Włącz GPS — biuro widzi pojazd na mapie bez dzwonienia. Działa w tle po zainstalowaniu PWA.',
+          action: 'Przełącznik „Udostępnianie lokalizacji” na pulpicie Start',
+        },
+        {
+          title: 'Powiadomienia',
+          description: 'Dzwonek u góry — nowy kurs, przypomnienie o raporcie po 16:00. Włącz powiadomienia w przeglądarce.',
+          action: 'Ikona dzwonka w nagłówku → lista wiadomości',
         },
         {
           title: 'Sprawdź aktywny kurs',
@@ -333,11 +343,6 @@ function driverHelp(view: DriverView): PanelHelpContent {
           title: 'Wypełnij raport dzienny',
           description: 'Km, paliwo, myto — na koniec dnia lub zmiany.',
           action: '„Wypełnij raport dzienny” lub belka → Raport',
-        },
-        {
-          title: 'Status naprawy',
-          description: 'Kompaktowy podgląd Twoich zgłoszeń awarii.',
-          action: 'Sekcja statusu awarii pod kartą kursu',
         },
       ],
       related: [
@@ -417,17 +422,27 @@ function driverHelp(view: DriverView): PanelHelpContent {
     },
     profile: {
       title: 'Profil kierowcy',
-      summary: 'Twoje dane, uprawnienia i przypisany pojazd (w rozwoju).',
+      summary: 'Dane konta, przypisany pojazd, kontakt z dyspozytorem i wylogowanie.',
       steps: [
         {
           title: 'Sprawdź dane',
-          description: 'Imię i rola — szczegóły dokumentów uzupełnia biuro.',
+          description: 'Imię, rola, przypisany ciągnik/naczepa i numer telefonu dyspozytora.',
           action: 'Karta profilu na ekranie',
+        },
+        {
+          title: 'Kontakt z biurem',
+          description: 'Telefon i e-mail dyspozytora — bez szukania numeru w notesie.',
+          action: 'Sekcja „Kontakt operacyjny” na profilu',
+        },
+        {
+          title: 'Powiadomienia',
+          description: 'Włącz powiadomienia przeglądarki, aby dostawać przypomnienia o raporcie i nowe kursy.',
+          action: 'Przycisk „Włącz powiadomienia” na profilu',
         },
         {
           title: 'Wyloguj',
           description: 'Po zmianie na innym urządzeniu zawsze się wyloguj.',
-          action: 'Ikona wyjścia u góry po prawej',
+          action: 'Przycisk „Wyloguj” na dole profilu',
         },
       ],
       tips: [`W razie pytań: ${bottom} → Start → przycisk Pomoc (?) u góry`],

@@ -34,6 +34,14 @@ export interface TenantSettingsData {
   companyDocuments: CompanyDocument[]
   mechanics: MechanicContact[]
   repairWorkflow: RepairWorkflowSettings
+  /** Kontakt operacyjny — kierowca dzwoni tu, nie do właściciela */
+  operationsContact?: OperationsContact
+}
+
+export interface OperationsContact {
+  dispatcherName: string
+  dispatcherPhone: string
+  dispatcherEmail?: string
 }
 
 const DEFAULT_SETTINGS: TenantSettingsData = {
@@ -67,7 +75,8 @@ export function seedDemoCompanyDocuments(tenantId: string): TenantSettingsData {
   const existing = loadTenantSettingsData(tenantId)
   const needsMechanics = !existing.mechanics?.length
   const needsDocs = existing.companyDocuments.length === 0
-  if (!needsMechanics && !needsDocs) return existing
+  const needsContact = !existing.operationsContact?.dispatcherPhone
+  if (!needsMechanics && !needsDocs && !needsContact) return existing
 
   const data: TenantSettingsData = {
     companyDocuments: needsDocs
@@ -93,6 +102,11 @@ export function seedDemoCompanyDocuments(tenantId: string): TenantSettingsData {
     repairWorkflow: existing.repairWorkflow ?? {
       verifierUserIds: ['user-dispatcher-demo'],
       defaultMechanicId: 'mechanic-demo-001',
+    },
+    operationsContact: existing.operationsContact ?? {
+      dispatcherName: 'Anna Dyspozytor',
+      dispatcherPhone: '+48 600 200 300',
+      dispatcherEmail: isCompanyDeployment() ? 'dyspozytor@tajski-trans.pl' : 'dyspozytor@demo-trans.pl',
     },
   }
   saveTenantSettingsData(tenantId, data)

@@ -1,3 +1,4 @@
+import { OperationsExceptionsPanel } from '@/app/components/dashboard/OperationsExceptionsPanel'
 import { FleetMapPanel } from '@/app/components/fleet/FleetMapPanel'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/Card'
 import { buildComplianceAlerts, buildCompanyComplianceAlerts } from '@/lib/domain/compliance'
@@ -7,21 +8,29 @@ import { loadDailyReports, seedDemoDailyReports } from '@/lib/domain/daily-repor
 import { buildDrivingTimeAlerts } from '@/lib/domain/driving-time'
 import type { FleetPosition } from '@/lib/domain/fleet-position'
 import {
+  loadFleetPositions,
   seedDemoFleetPositions,
   tickFleetSimulation,
 } from '@/lib/domain/fleet-positions-store'
+import { hasLiveDriverPositions } from '@/lib/gps/driver-gps'
 import { seedDemoCompanyDocuments, loadTenantSettingsData } from '@/lib/domain/tenant-settings'
 import { loadVehicles, seedDemoVehicles } from '@/lib/domain/vehicles-store'
+import {
+  buildOperationsExceptions,
+  type OperationException,
+} from '@/lib/operations/dashboard-exceptions'
 import { useCloudSyncRefresh } from '@/lib/sync/useCloudSyncRefresh'
+import type { AdminView } from '@/lib/navigation'
 import type { Tenant } from '@/lib/tenant/types'
 import { AlertTriangle, Clock, Route, Truck, Users } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 
 interface DashboardViewProps {
   tenant: Tenant
+  onNavigate?: (view: AdminView) => void
 }
 
-export function DashboardView({ tenant }: DashboardViewProps) {
+export function DashboardView({ tenant, onNavigate }: DashboardViewProps) {
   const gpsEnabled = tenant.settings.modules.gps
   const [stats, setStats] = useState({
     active: 0,
@@ -31,6 +40,8 @@ export function DashboardView({ tenant }: DashboardViewProps) {
     driving: 0,
   })
   const [fleetPositions, setFleetPositions] = useState<FleetPosition[]>([])
+  const [exceptions, setExceptions] = useState<OperationException[]>([])
+  const [liveGps, setLiveGps] = useState(false)
 
   const refreshStats = useCallback(() => {
     seedDemoCourses(tenant.id)
@@ -53,21 +64,32 @@ export function DashboardView({ tenant }: DashboardViewProps) {
     const driving = buildDrivingTimeAlerts(tenant.id, reports).length
 
     setStats({ active, total: courses.length, margin, compliance, driving })
-  }, [tenant.id, tenant.name])
+    setExceptions(buildOperationsExceptions(tenant.id, tenant.name, gpsEnabled))
+  }, [tenant.id, tenant.name, gpsEnabled])
 
   const refreshFleet = useCallback(() => {
     if (!gpsEnabled) return
-    setFleetPositions(tickFleetSimulation(tenant.id))
+    const live = hasLiveDriverPositions(tenant.id)
+    setLiveGps(live)
+    if (live) {
+      setFleetPositions(loadFleetPositions(tenant.id))
+    } else {
+      setFleetPositions(tickFleetSimulation(tenant.id))
+    }
   }, [tenant.id, gpsEnabled])
 
   useEffect(() => {
     refreshStats()
     if (gpsEnabled) {
-      setFleetPositions(seedDemoFleetPositions(tenant.id))
+      seedDemoFleetPositions(tenant.id)
+      refreshFleet()
     }
   }, [refreshStats, refreshFleet, gpsEnabled])
 
-  useCloudSyncRefresh(tenant.id, 'fleet-positions', refreshFleet)
+  useCloudSyncRefresh(tenant.id, 'fleet-positions', () => {
+    refreshFleet()
+    refreshStats()
+  })
 
   const PLACEHOLDER_STATS = [
     { label: 'Aktywne kursy', value: String(stats.active), icon: Route, tone: 'text-primary' },
@@ -79,8 +101,12 @@ export function DashboardView({ tenant }: DashboardViewProps) {
   return (
     <div className="space-y-6">
       <p className="text-sm text-muted-foreground">
-        {tenant.name} · marże, flota i compliance w jednym pulpicie — bez dzwonienia po każdym kursie
+        {tenant.name} · 5 minut rano na wyjątki, reszta dnia bez mikrozarządzania
       </p>
+
+      {onNavigate && (
+        <OperationsExceptionsPanel exceptions={exceptions} onNavigate={onNavigate} />
+      )}
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {PLACEHOLDER_STATS.map((stat) => (
@@ -121,7 +147,9 @@ export function DashboardView({ tenant }: DashboardViewProps) {
             <CardTitle>Flota na mapie</CardTitle>
             <CardDescription>
               {gpsEnabled
-                ? 'Pozycje pojazdów w czasie rzeczywistym (demo) · Dolny Śląsk / A4'
+                ? liveGps
+                  ? 'Pozycje z telefonów kierowców (PWA) · na żywo'
+                  : 'Demo — włącz GPS u kierowcy, aby zobaczyć pozycje na żywo'
                 : 'Moduł GPS wyłączony w ustawieniach planu'}
             </CardDescription>
           </CardHeader>

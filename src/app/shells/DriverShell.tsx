@@ -1,4 +1,5 @@
 import { AppNav } from '@/app/components/AppNav'
+import { DriverNotificationsBell } from '@/app/components/driver/DriverNotificationsBell'
 import { HelpButton } from '@/app/components/help/HelpButton'
 import { InstallAppBanner } from '@/app/components/pwa/InstallAppBanner'
 import { OfflineIndicator } from '@/app/components/pwa/OfflineIndicator'
@@ -50,6 +51,11 @@ export function DriverShell({
           </div>
         </div>
         <div className="flex items-center gap-1">
+          <DriverNotificationsBell
+            tenantId={tenant.id}
+            driverName={driverName}
+            onNavigate={onViewChange}
+          />
           <HelpButton />
           <Button variant="ghost" size="icon" onClick={onLogout} aria-label="Wyloguj">
           <LogOut className="h-4 w-4" />
