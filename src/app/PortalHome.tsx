@@ -75,14 +75,12 @@ export function PortalHome({
     <div className="relative min-h-full pb-8">
       <TransportImageBg
         src={TRANSPORT_HERO_IMAGE}
-        alt="Ciężarówki na autostradzie — logistyka drogowa"
         overlayClass="from-background via-background/92 to-background"
       />
 
       <section className="relative overflow-hidden border-b border-border/60">
         <TransportImageBg
           src={TRANSPORT_PORT_IMAGE}
-          alt="Terminal portowy i logistyka kontenerowa"
           overlayClass="from-background/20 via-primary/30 to-background/95"
           position="absolute"
           className="opacity-60"
