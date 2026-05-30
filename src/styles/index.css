@@ -44,4 +44,19 @@
       linear-gradient(90deg, rgba(59, 130, 246, 0.06) 1px, transparent 1px);
     background-size: 32px 32px;
   }
+
+  /* Leaflet — nie rozciągaj mapy na cały ekran */
+  .map-panel-root .leaflet-container {
+    position: absolute !important;
+    inset: 0;
+    width: 100% !important;
+    height: 100% !important;
+    max-height: 100%;
+    z-index: 0;
+  }
+
+  .map-panel-root .leaflet-pane,
+  .map-panel-root .leaflet-control {
+    z-index: 1;
+  }
 }

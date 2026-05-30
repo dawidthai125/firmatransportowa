@@ -71,11 +71,19 @@ export function DashboardView({ tenant, onNavigate }: DashboardViewProps) {
     if (!gpsEnabled) return
     const live = hasLiveDriverPositions(tenant.id)
     setLiveGps(live)
-    if (live) {
-      setFleetPositions(loadFleetPositions(tenant.id))
+    const positions = loadFleetPositions(tenant.id)
+    if (positions.length === 0) {
+      setFleetPositions(seedDemoFleetPositions(tenant.id))
     } else {
-      setFleetPositions(tickFleetSimulation(tenant.id))
+      setFleetPositions(positions)
     }
+  }, [tenant.id, gpsEnabled])
+
+  /** Symulacja ruchu — tylko na żądanie (przycisk Odśwież), nie przy każdym mount */
+  const refreshFleetSimulation = useCallback(() => {
+    if (!gpsEnabled) return
+    setLiveGps(hasLiveDriverPositions(tenant.id))
+    setFleetPositions(tickFleetSimulation(tenant.id))
   }, [tenant.id, gpsEnabled])
 
   useEffect(() => {
@@ -155,7 +163,10 @@ export function DashboardView({ tenant, onNavigate }: DashboardViewProps) {
           </CardHeader>
           <CardContent>
             {gpsEnabled ? (
-              <FleetMapPanel positions={fleetPositions} onRefresh={refreshFleet} />
+              <FleetMapPanel
+                positions={fleetPositions}
+                onRefresh={liveGps ? refreshFleet : refreshFleetSimulation}
+              />
             ) : (
               <p className="text-sm text-muted-foreground">
                 Włącz moduł GPS w planie abonamentu, aby zobaczyć mapę floty.
