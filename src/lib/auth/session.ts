@@ -1,12 +1,14 @@
-export type UserRole = 'owner' | 'dispatcher' | 'driver'
+export type UserRole = 'owner' | 'dispatcher' | 'driver' | 'mechanic'
 
-export type AppMode = 'login' | 'owner' | 'dispatcher' | 'driver'
+export type AppMode = 'login' | 'owner' | 'dispatcher' | 'driver' | 'mechanic'
 
 export interface SessionUser {
   id: string
   displayName: string
   role: UserRole
   tenantId: string
+  /** Dla roli mechanic — powiązanie z kartoteką warsztatu */
+  mechanicId?: string
 }
 
 export interface AuthSession {
@@ -48,6 +50,8 @@ export function roleToAppMode(role: UserRole): AppMode {
       return 'dispatcher'
     case 'driver':
       return 'driver'
+    case 'mechanic':
+      return 'mechanic'
   }
 }
 
@@ -55,4 +59,5 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   owner: 'Właściciel / Admin',
   dispatcher: 'Dyspozytor',
   driver: 'Kierowca',
+  mechanic: 'Mechanik',
 }

@@ -12,6 +12,7 @@ import {
   Truck,
   User,
   Users,
+  Wrench,
   type LucideIcon,
 } from 'lucide-react'
 import type { NavItem } from '@/lib/navigation'
@@ -23,6 +24,7 @@ const ICONS: Record<string, LucideIcon> = {
   bot: Bot,
   'folder-open': FolderOpen,
   truck: Truck,
+  wrench: Wrench,
   users: Users,
   'shield-check': ShieldCheck,
   settings: Settings,

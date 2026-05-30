@@ -15,7 +15,7 @@ import {
   upsertDailyReport,
 } from '@/lib/domain/daily-reports-store'
 import { loadCourses, seedDemoCourses } from '@/lib/domain/courses-store'
-import { CheckCircle2, FileText, Fuel, MapPin, Route, AlertTriangle } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, FileText, Fuel, MapPin, Route, Wrench } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import type { Course } from '@/lib/domain/course'
 import type { DailyReport } from '@/lib/domain/daily-report'
@@ -24,9 +24,10 @@ interface DriverHomeViewProps {
   tenantId: string
   driverName?: string
   onOpenReport?: () => void
+  onOpenIssue?: () => void
 }
 
-export function DriverHomeView({ tenantId, driverName, onOpenReport }: DriverHomeViewProps) {
+export function DriverHomeView({ tenantId, driverName, onOpenReport, onOpenIssue }: DriverHomeViewProps) {
   const [activeCourse, setActiveCourse] = useState<Course | null>(null)
   const [shiftEnded, setShiftEnded] = useState(false)
 
@@ -43,10 +44,10 @@ export function DriverHomeView({ tenantId, driverName, onOpenReport }: DriverHom
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-xl font-semibold">Dzień dobry</h1>
-        <p className="text-sm text-muted-foreground">Panel kierowcy — mobile first</p>
-      </div>
+      <p className="text-sm text-muted-foreground">
+        Dzień dobry{driverName ? `, ${driverName.split(' ')[0]}` : ''} — wszystko do trasy i raportu
+        w telefonie, bez papieru po powrocie do bazy
+      </p>
 
       <Card className={activeCourse ? 'border-primary/30 bg-primary/5' : ''}>
         <CardHeader>
@@ -65,11 +66,17 @@ export function DriverHomeView({ tenantId, driverName, onOpenReport }: DriverHom
       </Card>
 
       <div className="grid gap-3">
-        <QuickAction icon={Route} title="Moje kursy" desc="Lista zleceń — zakładka Kursy" />
+        <QuickAction
+          icon={Wrench}
+          title="Zgłoś awarię"
+          desc="Ciężarówka stoi? Zdjęcie + opis — biuro widzi od razu"
+          onClick={onOpenIssue}
+        />
+        <QuickAction icon={Route} title="Moje kursy" desc="Trasa, załadunek, CMR — bez dzwonienia" />
         <QuickAction
           icon={FileText}
           title="Raport dzienny"
-          desc="Km, paliwo, myto PLN/EUR"
+          desc="Km, paliwo, myto PLN/EUR — wypełnij w kabinie"
           onClick={onOpenReport}
         />
         <QuickAction icon={MapPin} title="Udostępnij lokalizację" desc="Moduł GPS — wkrótce" />

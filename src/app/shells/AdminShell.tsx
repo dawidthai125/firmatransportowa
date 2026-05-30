@@ -1,6 +1,7 @@
 import { AutomationNotifications } from '@/app/components/AutomationNotifications'
 import { CloudStatusBadge } from '@/app/components/CloudStatusBadge'
 import { AppNav } from '@/app/components/AppNav'
+import { PanelThemeBanner } from '@/app/components/transport/PanelThemeBanner'
 import { Button } from '@/app/components/ui/Button'
 import type { AdminView } from '@/lib/navigation'
 import { VIEW_TITLES, type NavItem } from '@/lib/navigation'
@@ -30,11 +31,13 @@ export function AdminShell({
   onLogout,
   children,
 }: AdminShellProps) {
+  const adminRole = role === 'owner' || role === 'dispatcher' ? role : 'owner'
+
   return (
     <div className="app-shell bg-background">
-      <header className="flex shrink-0 items-center justify-between border-b border-border bg-sidebar px-4 py-3">
+      <header className="relative flex shrink-0 items-center justify-between border-b border-border/80 bg-sidebar/95 px-4 py-3 backdrop-blur-md">
         <div className="flex min-w-0 items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/15 text-primary">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary/30 to-primary/10 text-primary ring-1 ring-primary/20">
             <Truck className="h-5 w-5" />
           </div>
           <div className="min-w-0">
@@ -48,14 +51,21 @@ export function AdminShell({
           <CloudStatusBadge />
           <AutomationNotifications tenantId={tenant.id} onNavigate={onViewChange} />
           <Button variant="ghost" size="icon" onClick={onLogout} aria-label="Wyloguj">
-          <LogOut className="h-4 w-4" />
-        </Button>
+            <LogOut className="h-4 w-4" />
+          </Button>
         </div>
       </header>
 
       <div className="flex min-h-0 flex-1">
         <AppNav items={navItems} active={view} onChange={onViewChange} layout="sidebar" />
-        <main className={cn('scroll-area flex-1 p-4 md:p-6')}>{children}</main>
+        <main className={cn('scroll-area flex-1 p-4 md:p-6')}>
+          <PanelThemeBanner
+            role={adminRole}
+            title={VIEW_TITLES[view]}
+            subtitle={`${tenant.name} · ${ROLE_LABELS[role]}`}
+          />
+          {children}
+        </main>
       </div>
 
       <AppNav items={navItems} active={view} onChange={onViewChange} layout="bottom" />

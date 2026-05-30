@@ -1,6 +1,7 @@
 import type { AutomationEvent } from '@/lib/automation/events'
 import { getRulesForTrigger } from '@/lib/automation/rules'
 import {
+  notifyRepairSubmitted,
   notifyShiftEnded,
   runAutomationAction,
   runComplianceCheckNotifications,
@@ -34,6 +35,10 @@ export async function emitAutomationEvent(ctx: ActionContext): Promise<Automatio
 
   if (event.type === 'daily_report.shift_ended' && event.payload?.report) {
     notifyShiftEnded(fullCtx, event.payload.report as import('@/lib/domain/daily-report').DailyReport)
+  }
+
+  if (event.type === 'repair.submitted') {
+    notifyRepairSubmitted(fullCtx)
   }
 
   for (const rule of rules) {

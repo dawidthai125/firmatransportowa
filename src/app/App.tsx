@@ -1,11 +1,13 @@
 import { LoginScreen, handleLogout } from '@/app/LoginScreen'
 import { AdminShell } from '@/app/shells/AdminShell'
 import { DriverShell } from '@/app/shells/DriverShell'
+import { MechanicShell } from '@/app/shells/MechanicShell'
 import { AutomationsView } from '@/app/views/AutomationsView'
 import { ComplianceView } from '@/app/views/ComplianceView'
 import { CoursesView } from '@/app/views/CoursesView'
 import { DailyReportsView } from '@/app/views/DailyReportsView'
 import { DashboardView } from '@/app/views/DashboardView'
+import { DriverIssueView } from '@/app/views/DriverIssueView'
 import {
   DriverHomeView,
   DriverProfileView,
@@ -14,15 +16,18 @@ import {
 import { DriversView } from '@/app/views/DriversView'
 import { FilesView } from '@/app/views/FilesView'
 import { FleetView } from '@/app/views/FleetView'
+import { MechanicHomeView } from '@/app/views/MechanicViews'
+import { RepairsView } from '@/app/views/RepairsView'
 import { SettlementsView } from '@/app/views/SettlementsView'
 import { SettingsView } from '@/app/views/SettingsView'
 import type { AppMode } from '@/lib/auth/session'
-import { loadSession } from '@/lib/auth/session'
+import { loadSession, roleToAppMode } from '@/lib/auth/session'
 import {
   DISPATCHER_NAV,
   OWNER_NAV,
   type AdminView,
   type DriverView,
+  type MechanicView,
 } from '@/lib/navigation'
 import { runScheduledAutomations } from '@/lib/automation/scheduler'
 import { useTenant } from '@/lib/tenant/context'
@@ -55,18 +60,13 @@ export default function App() {
   }, [session, currentTenant, tenants, setCurrentTenant])
 
   const [mode, setMode] = useState<AppMode>(() => {
-    if (session && currentTenant) {
-      return session.user.role === 'owner'
-        ? 'owner'
-        : session.user.role === 'dispatcher'
-          ? 'dispatcher'
-          : 'driver'
-    }
+    if (session && currentTenant) return roleToAppMode(session.user.role)
     return 'login'
   })
 
   const [adminView, setAdminView] = useState<AdminView>('dashboard')
   const [driverView, setDriverView] = useState<DriverView>('home')
+  const [mechanicView, setMechanicView] = useState<MechanicView>('home')
 
   const navItems = useMemo(() => {
     if (!currentTenant) return OWNER_NAV
@@ -79,6 +79,26 @@ export default function App() {
   }
 
   const onLogout = () => handleLogout(setMode)
+
+  if (mode === 'mechanic') {
+    return (
+      <MechanicShell
+        tenant={currentTenant}
+        mechanicName={session.user.displayName}
+        view={mechanicView}
+        onViewChange={setMechanicView}
+        onLogout={onLogout}
+      >
+        {mechanicView === 'home' && (
+          <MechanicHomeView
+            tenantId={currentTenant.id}
+            mechanicId={session.user.mechanicId}
+            mechanicName={session.user.displayName}
+          />
+        )}
+      </MechanicShell>
+    )
+  }
 
   if (mode === 'driver') {
     return (
@@ -94,7 +114,11 @@ export default function App() {
             tenantId={currentTenant.id}
             driverName={session.user.displayName}
             onOpenReport={() => setDriverView('report')}
+            onOpenIssue={() => setDriverView('issue')}
           />
+        )}
+        {driverView === 'issue' && (
+          <DriverIssueView tenantId={currentTenant.id} driverName={session.user.displayName} />
         )}
         {driverView === 'courses' && <CoursesView tenantId={currentTenant.id} readOnly />}
         {driverView === 'report' && (
@@ -133,6 +157,9 @@ export default function App() {
         />
       )}
       {adminView === 'fleet' && <FleetView tenantId={currentTenant.id} />}
+      {adminView === 'repairs' && (
+        <RepairsView tenantId={currentTenant.id} userId={session.user.id} userRole={session.user.role} />
+      )}
       {adminView === 'drivers' && <DriversView tenantId={currentTenant.id} />}
       {adminView === 'compliance' && (
         <ComplianceView tenantId={currentTenant.id} tenantName={currentTenant.name} />

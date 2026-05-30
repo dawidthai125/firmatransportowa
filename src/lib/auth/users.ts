@@ -3,8 +3,10 @@ export interface TenantUserRecord {
   id: string
   tenantId: string
   email: string
-  role: 'owner' | 'dispatcher' | 'driver'
+  role: 'owner' | 'dispatcher' | 'driver' | 'mechanic'
   displayName: string
+  /** Powiązanie z kartoteką mechanika (role mechanic) */
+  mechanicId?: string
   /** PIN kierowcy (dev) — docelowo hash w Supabase */
   pin?: string
 }
@@ -31,6 +33,14 @@ export const DEMO_TENANT_USERS: TenantUserRecord[] = [
     role: 'driver',
     displayName: 'Jan Kowalski',
     pin: '1234',
+  },
+  {
+    id: 'user-mechanic-demo',
+    tenantId: 'tenant-demo-001',
+    email: 'mechanik@demo-trans.pl',
+    role: 'mechanic',
+    displayName: 'Tomasz Mechanik',
+    mechanicId: 'mechanic-demo-001',
   },
 ]
 

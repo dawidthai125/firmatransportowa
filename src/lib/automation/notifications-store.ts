@@ -10,7 +10,7 @@ export interface AutomationNotification {
   createdAt: string
   read: boolean
   /** Opcjonalnie: otwórz plik / widok */
-  actionView?: 'compliance' | 'settlements' | 'files' | 'courses' | 'reports'
+  actionView?: 'compliance' | 'settlements' | 'files' | 'courses' | 'reports' | 'repairs'
 }
 
 export function loadNotifications(tenantId: string): AutomationNotification[] {

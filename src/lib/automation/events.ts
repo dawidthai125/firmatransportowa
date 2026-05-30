@@ -9,7 +9,9 @@ export type AutomationEventType =
   | 'schedule.weekly'
   | 'schedule.daily'
   | 'sync.completed'
-  | 'file.imported'
+  | 'repair.submitted'
+  | 'repair.sent_to_mechanic'
+  | 'repair.scheduled'
 
 export interface AutomationEvent {
   type: AutomationEventType

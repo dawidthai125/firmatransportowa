@@ -1,9 +1,8 @@
 # TransFlow — firma transportowa
 
-> System zarządzania firmą transportową (SaaS multi-tenant).  
-> Wzorowany na architekturze [wgdom](https://github.com/dawidthai125/wgdom), dostosowany do branży TSL.
+> System **wyłącznie dla firm TSL** — ułatwia pracę **właścicielowi** (flota, marże, compliance) i **kierowcy** (raport z kabiny, kurs, awaria).
 
-**Status:** v0.4.0 — Supabase sync + Vercel ready
+**Status:** v0.8.0 — portal paneli, moduł awarii/mechanik, motyw transportowy
 
 ## Szybki start
 
@@ -13,32 +12,24 @@ npm install
 npm run dev
 ```
 
-Pełna konfiguracja chmury: **[SUPABASE-SETUP.md](./SUPABASE-SETUP.md)**  
-Deploy frontendu: **[DEPLOY.md](./DEPLOY.md)** (Vercel)
+**Demo:** https://firmatransportowa.vercel.app  
+Kod firmy: `DEMO-TRANS` · hasło email: `demo2026`
 
-Aplikacja: http://127.0.0.1:5174
-
-**Logowanie testowe:**
-- Kod firmy: `DEMO-TRANS`
-- Role: Właściciel / Dyspozytor / Kierowca
+| Rola | Email |
+|------|-------|
+| Właściciel | wlasciciel@demo-trans.pl |
+| Dyspozytor | dyspozytor@demo-trans.pl |
+| Kierowca | jan.kowalski@demo-trans.pl |
+| Mechanik | mechanik@demo-trans.pl |
 
 ## Dokumentacja
 
 | Plik | Opis |
 |------|------|
 | [PROJECT-GUIDE.md](./PROJECT-GUIDE.md) | Jak działa projekt |
-| [AGENTS.md](./AGENTS.md) | Instrukcja dla agentów AI |
-| [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | Architektura techniczna |
+| [docs/DOMAIN-TRANSPORT.md](./docs/DOMAIN-TRANSPORT.md) | Wymagania branży TSL |
 | [CURRENT-TASK.md](./CURRENT-TASK.md) | Stan prac |
 
 ## Stack
 
-React 19 · Vite 8 · TypeScript · Tailwind 4 · lucide-react
-
-Docelowo (jak wgdom): Supabase · PWA · Capacitor · Vercel
-
-## Multi-tenant (SaaS)
-
-Każda firma = **tenant** z własnym kodem (`slug`), izolowanymi danymi (`ft-{tenantId}-*`) i planem abonamentowym (moduły włącz/wyłącz).
-
-Na start: localStorage + firma demo. Produkcja: Supabase z `tenant_id` na każdym rekordzie + RLS.
+React 19 · Vite 8 · TypeScript · Tailwind 4 · Supabase KV · Vercel

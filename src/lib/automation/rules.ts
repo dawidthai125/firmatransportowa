@@ -75,6 +75,14 @@ const DEFAULT_RULES: AutomationRule[] = [
     actions: ['save_weekly_csv_to_library', 'push_notification'],
   },
   {
+    id: 'rule-repair-submitted',
+    name: 'Nowe zgłoszenie awarii',
+    description: 'Powiadomienie gdy kierowca zgłosi problem z pojazdem',
+    enabled: true,
+    trigger: 'repair.submitted',
+    actions: ['push_notification'],
+  },
+  {
     id: 'rule-sync-critical',
     name: 'Sync natychmiast po krytycznym zdarzeniu',
     description: 'Wysyłka danych do chmury bez czekania 2 s',

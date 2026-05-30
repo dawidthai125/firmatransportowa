@@ -22,10 +22,17 @@ interface SettingsViewProps {
 export function SettingsView({ tenant }: SettingsViewProps) {
   const { settings } = tenant
   const [documents, setDocuments] = useState<CompanyDocument[]>([])
+  const [mechanics, setMechanics] = useState(loadTenantSettingsData(tenant.id).mechanics)
+  const [verifierIds, setVerifierIds] = useState(
+    loadTenantSettingsData(tenant.id).repairWorkflow.verifierUserIds.join(', '),
+  )
 
   const refresh = useCallback(() => {
     seedDemoCompanyDocuments(tenant.id)
-    setDocuments(loadTenantSettingsData(tenant.id).companyDocuments)
+    const data = loadTenantSettingsData(tenant.id)
+    setDocuments(data.companyDocuments)
+    setMechanics(data.mechanics)
+    setVerifierIds(data.repairWorkflow.verifierUserIds.join(', '))
   }, [tenant.id])
 
   useEffect(() => {
@@ -34,7 +41,26 @@ export function SettingsView({ tenant }: SettingsViewProps) {
 
   function persist(next: CompanyDocument[]) {
     setDocuments(next)
-    saveTenantSettingsData(tenant.id, { companyDocuments: next })
+    const data = loadTenantSettingsData(tenant.id)
+    saveTenantSettingsData(tenant.id, { ...data, companyDocuments: next })
+  }
+
+  function persistMechanics(next: typeof mechanics) {
+    setMechanics(next)
+    const data = loadTenantSettingsData(tenant.id)
+    saveTenantSettingsData(tenant.id, { ...data, mechanics: next })
+  }
+
+  function saveVerifiers() {
+    const ids = verifierIds
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean)
+    const data = loadTenantSettingsData(tenant.id)
+    saveTenantSettingsData(tenant.id, {
+      ...data,
+      repairWorkflow: { ...data.repairWorkflow, verifierUserIds: ids },
+    })
   }
 
   function addDocument() {
@@ -185,6 +211,73 @@ export function SettingsView({ tenant }: SettingsViewProps) {
               )
             })
           )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Mechanicy i weryfikacja awarii</CardTitle>
+          <CardDescription>
+            Właściciel zawsze może weryfikować. Wyznaczeni weryfikatorzy — ID użytkowników (np. user-dispatcher-demo).
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="space-y-1.5">
+            <Label>Weryfikatorzy (ID, po przecinku)</Label>
+            <Input value={verifierIds} onChange={(e) => setVerifierIds(e.target.value)} />
+            <Button size="sm" variant="secondary" onClick={saveVerifiers}>
+              Zapisz weryfikatorów
+            </Button>
+          </div>
+          {mechanics.map((m, index) => (
+            <div key={m.id} className="grid gap-2 rounded-lg border border-border p-3 sm:grid-cols-2">
+              <Input
+                value={m.name}
+                onChange={(e) => {
+                  const next = [...mechanics]
+                  next[index] = { ...m, name: e.target.value }
+                  persistMechanics(next)
+                }}
+                placeholder="Imię i nazwisko"
+              />
+              <Input
+                value={m.phone}
+                onChange={(e) => {
+                  const next = [...mechanics]
+                  next[index] = { ...m, phone: e.target.value }
+                  persistMechanics(next)
+                }}
+                placeholder="Telefon"
+              />
+              <Input
+                className="sm:col-span-2"
+                value={m.workshop ?? ''}
+                onChange={(e) => {
+                  const next = [...mechanics]
+                  next[index] = { ...m, workshop: e.target.value }
+                  persistMechanics(next)
+                }}
+                placeholder="Warsztat / adres"
+              />
+            </div>
+          ))}
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={() =>
+              persistMechanics([
+                ...mechanics,
+                {
+                  id: crypto.randomUUID(),
+                  name: '',
+                  phone: '',
+                  active: true,
+                },
+              ])
+            }
+          >
+            Dodaj mechanika
+          </Button>
         </CardContent>
       </Card>
     </div>

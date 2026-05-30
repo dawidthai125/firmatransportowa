@@ -34,6 +34,7 @@ export interface TenantModules {
   gps: boolean
   loadBoard: boolean
   tachographImport: boolean
+  repairs: boolean
 }
 
 export const DEFAULT_MODULES: TenantModules = {
@@ -44,6 +45,7 @@ export const DEFAULT_MODULES: TenantModules = {
   gps: false,
   loadBoard: false,
   tachographImport: false,
+  repairs: true,
 }
 
 export function createDefaultTenantSettings(): TenantSettings {
@@ -66,6 +68,7 @@ export type TenantDataKey =
   | 'settings'
   | 'files'
   | 'automation'
+  | 'repair-reports'
 
 export const TENANT_DATA_KEYS: TenantDataKey[] = [
   'drivers',
@@ -76,6 +79,7 @@ export const TENANT_DATA_KEYS: TenantDataKey[] = [
   'settings',
   'files',
   'automation',
+  'repair-reports',
 ]
 
 export function tenantStorageKey(tenantId: string, key: TenantDataKey): string {

@@ -31,4 +31,15 @@
     min-height: 44px;
     min-width: 44px;
   }
+
+  .glass-card {
+    @apply border border-border/70 bg-card/75 shadow-lg backdrop-blur-md;
+  }
+
+  .portal-grid-bg {
+    background-image:
+      linear-gradient(rgba(59, 130, 246, 0.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(59, 130, 246, 0.06) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
 }

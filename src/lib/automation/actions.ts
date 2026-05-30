@@ -146,6 +146,19 @@ export function runComplianceCheckNotifications(ctx: ActionContext): void {
   })
 }
 
+export function notifyRepairSubmitted(ctx: ActionContext): void {
+  const report = ctx.event.payload?.report as import('@/lib/domain/repair-report').RepairReport | undefined
+  if (!report) return
+  pushNotification(ctx.tenantId, {
+    tenantId: ctx.tenantId,
+    title: 'Nowa awaria pojazdu',
+    message: `${report.reference}: ${report.vehicleRegistration} — ${report.title}`,
+    level: report.severity === 'immobilized' ? 'error' : 'warning',
+    ruleId: 'rule-repair-submitted',
+    actionView: 'repairs',
+  })
+}
+
 export function notifyShiftEnded(ctx: ActionContext, report: DailyReport): void {
   pushNotification(ctx.tenantId, {
     tenantId: ctx.tenantId,
