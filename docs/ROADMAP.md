@@ -26,9 +26,9 @@
 ## ✅ v0.7 — Pliki + Auth + Automatyzacja
 
 - [x] Viewery plików (CSV, PDF, HTML…)
-- [x] Logowanie emailem (demo)
+- [x] Logowanie emailem (demo + Supabase Auth v0.10)
 - [x] **Silnik automatyzacji** — reguły, powiadomienia, harmonogram
-- [ ] Supabase Auth + RLS
+- [x] Supabase Auth + RLS (Edge API, migracja SQL)
 
 ## ✅ v0.8 — Operacje w terenie (w toku)
 
