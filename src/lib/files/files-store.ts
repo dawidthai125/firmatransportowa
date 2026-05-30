@@ -20,13 +20,11 @@ export async function storePreviewableFile(
   tags?: string[],
 ): Promise<StoredTenantFile> {
   let dataBase64: string
-  let sizeBytes = file.sizeBytes ?? 0
 
   if (file.textContent != null) {
     dataBase64 = textToBase64(file.textContent)
-    sizeBytes = new TextEncoder().encode(file.textContent).length
   } else if (file.blob) {
-    sizeBytes = file.blob.size
+    const sizeBytes = file.blob.size
     if (sizeBytes > MAX_FILE_BYTES) {
       throw new Error(`Plik za duży (max ${MAX_FILE_BYTES / 1024} KB)`)
     }

@@ -1,6 +1,7 @@
 import { useInitialCloudSyncDone } from '@/app/CloudLoader'
 import { Button } from '@/app/components/ui/Button'
 import { Card, CardContent } from '@/app/components/ui/Card'
+import { CloudSyncPlaceholder } from '@/app/components/ui/CloudSyncPlaceholder'
 import { Input, Label, Select } from '@/app/components/ui/Input'
 import type { Course, CourseStatus } from '@/lib/domain/course'
 import {
@@ -120,11 +121,7 @@ export function CoursesView({ tenantId, readOnly = false }: CoursesViewProps) {
       </div>
 
       {!cloudReady ? (
-        <Card>
-          <CardContent className="p-6 text-center text-sm text-muted-foreground">
-            Ładowanie danych z chmury…
-          </CardContent>
-        </Card>
+        <CloudSyncPlaceholder />
       ) : courses.length === 0 ? (
         <Card>
           <CardContent className="p-6 text-center text-sm text-muted-foreground">

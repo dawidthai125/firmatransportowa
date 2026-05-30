@@ -1,5 +1,6 @@
 import { AutomationNotifications } from '@/app/components/AutomationNotifications'
 import { CloudStatusBadge } from '@/app/components/CloudStatusBadge'
+import { OfflineIndicator } from '@/app/components/pwa/OfflineIndicator'
 import { HelpButton } from '@/app/components/help/HelpButton'
 import { AppNav } from '@/app/components/AppNav'
 import { PanelThemeBanner } from '@/app/components/transport/PanelThemeBanner'
@@ -36,6 +37,7 @@ export function AdminShell({
 
   return (
     <div className="app-shell bg-background">
+      <OfflineIndicator />
       <header className="relative z-30 flex shrink-0 items-center justify-between border-b border-border/80 bg-sidebar/95 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-md">
         <div className="flex min-w-0 items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary/30 to-primary/10 text-primary ring-1 ring-primary/20">

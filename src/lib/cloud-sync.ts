@@ -23,7 +23,7 @@ export const SYNC_MERGED_EVENT = 'transflow:sync-merged'
 let statusListeners: ((s: CloudSyncStatus, msg?: string) => void)[] = []
 let lastStatus: CloudSyncStatus = isSupabaseConfigured() ? 'idle' : 'offline'
 let pushTimer: ReturnType<typeof setTimeout> | null = null
-let pendingPushKeys = new Set<string>()
+const pendingPushKeys = new Set<string>()
 let syncChain: Promise<void> = Promise.resolve()
 
 function withSyncLock<T>(fn: () => Promise<T>): Promise<T> {
@@ -74,7 +74,7 @@ async function fetchCloud(
     })
   } catch (e) {
     if (e instanceof DOMException && e.name === 'AbortError') {
-      throw new Error(`timeout ${timeoutMs}ms`)
+      throw new Error(`timeout ${timeoutMs}ms`, { cause: e })
     }
     throw e
   } finally {

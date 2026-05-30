@@ -41,7 +41,7 @@ export async function signInWithSupabase(
 
   const normalizedEmail = email.trim().toLowerCase()
 
-  let session = (await sb.auth.signInWithPassword({ email: normalizedEmail, password })).data
+  const session = (await sb.auth.signInWithPassword({ email: normalizedEmail, password })).data
     .session
 
   if (!session) return null

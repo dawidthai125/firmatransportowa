@@ -1,5 +1,7 @@
 import { AppNav } from '@/app/components/AppNav'
+import { CloudStatusBadge } from '@/app/components/CloudStatusBadge'
 import { HelpButton } from '@/app/components/help/HelpButton'
+import { OfflineIndicator } from '@/app/components/pwa/OfflineIndicator'
 import { PanelThemeBanner } from '@/app/components/transport/PanelThemeBanner'
 import { Button } from '@/app/components/ui/Button'
 import type { MechanicView } from '@/lib/navigation'
@@ -28,6 +30,7 @@ export function MechanicShell({
 }: MechanicShellProps) {
   return (
     <div className="app-shell bg-background">
+      <OfflineIndicator />
       <header className="relative z-30 flex shrink-0 items-center justify-between border-b border-border/80 bg-sidebar/95 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-md">
         <div className="flex min-w-0 items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-warning/30 to-warning/10 text-warning ring-1 ring-warning/25">
@@ -38,7 +41,8 @@ export function MechanicShell({
             <p className="truncate text-xs text-muted-foreground">{tenant.name} · Warsztat</p>
           </div>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
+          <CloudStatusBadge />
           <HelpButton />
           <Button variant="ghost" size="icon" onClick={onLogout} aria-label="Wyloguj">
             <LogOut className="h-4 w-4" />

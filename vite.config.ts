@@ -20,10 +20,10 @@ export default defineConfig({
         'pwa-512x512.png',
       ],
       manifest: {
-        name: `${companyShort} — panel kierowcy`,
+        name: `${companyShort} — TransFlow`,
         short_name: companyShort,
         description:
-          'Raport dzienny, kursy i zgłoszenia awarii z kabiny — aplikacja dla kierowców TSL.',
+          'Zarządzanie transportem TSL — kursy, flota, raporty kierowców i zgłoszenia awarii.',
         theme_color: '#0c1222',
         background_color: '#0c1222',
         display: 'standalone',

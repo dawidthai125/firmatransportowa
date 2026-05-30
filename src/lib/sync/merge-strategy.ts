@@ -141,15 +141,15 @@ function mergeItdData(local: ItdTenantData, cloud: ItdTenantData): ItdTenantData
     hotspots: mergeRecordsByNewest(
       l.hotspots.map((h) => ({ ...h, updatedAt: h.reportedAt })),
       c.hotspots.map((h) => ({ ...h, updatedAt: h.reportedAt })),
-    ).map(({ updatedAt: _u, ...h }) => h),
+    ).map(({ updatedAt: _updatedAt, ...h }) => h),
     alerts: mergeRecordsByNewest(
       l.alerts.map((a) => ({ ...a, updatedAt: a.acknowledgedAt ?? a.createdAt })),
       c.alerts.map((a) => ({ ...a, updatedAt: a.acknowledgedAt ?? a.createdAt })),
-    ).map(({ updatedAt: _u, ...a }) => a),
+    ).map(({ updatedAt: _updatedAt, ...a }) => a),
     records: mergeRecordsByNewest(
       l.records.map((r) => ({ ...r, updatedAt: r.createdAt })),
       c.records.map((r) => ({ ...r, updatedAt: r.createdAt })),
-    ).map(({ updatedAt: _u, ...r }) => r),
+    ).map(({ updatedAt: _updatedAt, ...r }) => r),
   }
 }
 

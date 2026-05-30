@@ -18,5 +18,15 @@ export default defineConfig([
     languageOptions: {
       globals: globals.browser,
     },
+    rules: {
+      /** Wzorzec refresh-on-mount jest świadomy w widokach z localStorage */
+      'react-hooks/set-state-in-effect': 'off',
+      /** Hooki + helpery w jednym pliku — akceptowalne w tym projekcie */
+      'react-refresh/only-export-components': 'off',
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
+      ],
+    },
   },
 ])

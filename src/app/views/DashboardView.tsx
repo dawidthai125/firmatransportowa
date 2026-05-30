@@ -1,4 +1,6 @@
+import { useInitialCloudSyncDone } from '@/app/CloudLoader'
 import { OperationsExceptionsPanel } from '@/app/components/dashboard/OperationsExceptionsPanel'
+import { CloudSyncPlaceholder } from '@/app/components/ui/CloudSyncPlaceholder'
 import { WeeklyOpsPanel } from '@/app/components/dashboard/WeeklyOpsPanel'
 import { FleetMapPanel } from '@/app/components/fleet/FleetMapPanel'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/Card'
@@ -34,6 +36,7 @@ interface DashboardViewProps {
 }
 
 export function DashboardView({ tenant, onNavigate }: DashboardViewProps) {
+  const cloudReady = useInitialCloudSyncDone()
   const gpsEnabled = tenant.settings.modules.gps
   const [stats, setStats] = useState({
     active: 0,
@@ -120,6 +123,10 @@ export function DashboardView({ tenant, onNavigate }: DashboardViewProps) {
         {tenant.name} · 5 minut rano na wyjątki, reszta dnia bez mikrozarządzania
       </p>
 
+      {!cloudReady ? (
+        <CloudSyncPlaceholder variant="kpi-grid" />
+      ) : (
+        <>
       {onNavigate && (
         <OperationsExceptionsPanel exceptions={exceptions} onNavigate={onNavigate} />
       )}
@@ -189,6 +196,8 @@ export function DashboardView({ tenant, onNavigate }: DashboardViewProps) {
           </CardContent>
         </Card>
       </div>
+        </>
+      )}
     </div>
   )
 }
