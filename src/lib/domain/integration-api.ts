@@ -1,6 +1,7 @@
 import { supabaseAnonKey, supabaseFunctionsBase, isSupabaseConfigured } from '@/config/supabase'
 import { getSupabaseAccessToken } from '@/lib/auth/supabase-client'
 import type { RateConParseResult } from '@/lib/domain/rate-con-ocr'
+import type { IntegrationHubSnapshot } from '@/lib/domain/integration-hub'
 
 async function edgePost<T>(path: string, body: unknown): Promise<T> {
   if (!isSupabaseConfigured()) throw new Error('Supabase nie skonfigurowane')
@@ -24,13 +25,6 @@ export interface OcrRateConResponse {
   extractedText: string
   parse: RateConParseResult
   provider: 'edge' | 'demo'
-}
-
-export async function ocrRateConViaEdge(
-  tenantId: string,
-  options: { text?: string; fileName?: string; mimeType?: string },
-): Promise<OcrRateConResponse> {
-  return edgePost('/ocr-rate-con', { tenantId, ...options })
 }
 
 export interface FreightProdSyncResponse {
@@ -95,4 +89,36 @@ export async function testInvoicingConnection(
   config: Record<string, string | undefined>,
 ): Promise<{ ok: boolean; message: string }> {
   return edgePost('/invoicing-sync', { tenantId, provider, config, testOnly: true, lines: [] })
+}
+
+export interface IntegrationTestResult {
+  id: string
+  label: string
+  ok: boolean
+  mode: 'production' | 'demo' | 'skipped'
+  message: string
+}
+
+export async function testIntegrationsViaEdge(
+  tenantId: string,
+  hub: IntegrationHubSnapshot,
+): Promise<IntegrationTestResult[]> {
+  const r = await edgePost<{ results: IntegrationTestResult[] }>('/integrations-test', {
+    tenantId,
+    hub,
+  })
+  return r.results ?? []
+}
+
+export async function ocrRateConViaEdge(
+  tenantId: string,
+  options: {
+    text?: string
+    fileName?: string
+    mimeType?: string
+    openaiApiKey?: string
+    googleVisionApiKey?: string
+  },
+): Promise<OcrRateConResponse> {
+  return edgePost('/ocr-rate-con', { tenantId, ...options })
 }

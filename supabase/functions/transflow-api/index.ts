@@ -10,6 +10,7 @@ import { applyFleetTelematicsWebhook, runFleetTelematicsSync } from './fleet_tel
 import { runFreightProductionSync } from './freight_sync.ts'
 import { runInvoicingSync } from './invoicing_sync.ts'
 import { runOcrRateCon } from './ocr_rate_con.ts'
+import { runIntegrationsTest } from './integrations_test.ts'
 
 const SLUG = 'transflow-api'
 const PREFIX = `/${SLUG}`
@@ -124,6 +125,25 @@ app.post(`${PREFIX}/automation/webhook`, async (c) => {
   const event = typeof body?.event === 'string' ? body.event : 'webhook.received'
   console.log('[automation/webhook]', event, tenantId)
   return c.json({ ok: true, received: event, tenantId, at: new Date().toISOString() })
+})
+
+app.post(`${PREFIX}/integrations-test`, async (c) => {
+  const requestAuth = await auth.resolveRequestAuth(c.req.header('Authorization'))
+  const body = await c.req.json().catch(() => ({}))
+  const tenantId = typeof body?.tenantId === 'string' ? body.tenantId : null
+  if (!tenantId) return c.json({ ok: false, error: 'tenantId required' }, 400)
+  if (!auth.canWriteKey(requestAuth, `ft-${tenantId}-settings`)) {
+    return c.json({ ok: false, error: 'forbidden' }, 403)
+  }
+  const hub = body?.hub ?? {}
+  const result = await runIntegrationsTest({
+    freight: hub.freight ?? {},
+    invoicing: hub.invoicing ?? {},
+    tachograph: hub.tachograph ?? {},
+    fleetGps: hub.fleetGps ?? {},
+    ocr: hub.ocr ?? {},
+  })
+  return c.json(result)
 })
 
 app.post(`${PREFIX}/ocr-rate-con`, async (c) => {

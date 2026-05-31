@@ -7,6 +7,10 @@ interface FleetTelematicsConfig {
   webfleetEnabled?: boolean
   transicsEnabled?: boolean
   genericEnabled?: boolean
+  webfleetAccount?: string
+  webfleetApiKey?: string
+  transicsFleetId?: string
+  genericWebhookUrl?: string
   lastSyncByProvider?: Partial<Record<TelematicsProvider, string>>
   lastSyncAt?: string
   lastSyncError?: string
@@ -133,6 +137,50 @@ function synthesize(
   return { positions, providers }
 }
 
+async function tryWebfleetApi(
+  cfg: FleetTelematicsConfig,
+  vehicles: VehicleRow[],
+  now: string,
+): Promise<{ positions: FleetPosition[]; mode: 'production' | 'demo' }> {
+  const account = cfg.webfleetAccount?.trim()
+  const apiKey = cfg.webfleetApiKey?.trim()
+  if (!account || !apiKey || vehicles.length === 0) {
+    return { positions: [], mode: 'demo' }
+  }
+  try {
+    const url = `https://csv.webfleet.com/extern?account=${encodeURIComponent(account)}&apikey=${encodeURIComponent(apiKey)}&action=showObjectReportExtern&outputformat=json`
+    const res = await fetch(url)
+    if (!res.ok) return { positions: [], mode: 'demo' }
+    const data = await res.json()
+    const rows = Array.isArray(data) ? data : Array.isArray(data?.objects) ? data.objects : []
+    const positions: FleetPosition[] = []
+    for (const row of rows.slice(0, 10)) {
+      const lat = Number(row.latitude ?? row.lat ?? row.position_latitude)
+      const lng = Number(row.longitude ?? row.lng ?? row.position_longitude)
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue
+      const reg = String(row.objectname ?? row.objectno ?? row.license_plate ?? '').toUpperCase()
+      const vehicle =
+        vehicles.find((v) => reg.includes(v.registration.replace(/\s/g, ''))) ?? vehicles[0]
+      positions.push({
+        vehicleId: vehicle.id,
+        registration: vehicle.registration,
+        lat,
+        lng,
+        speedKmh: Number(row.speed ?? row.velocity ?? 0) || undefined,
+        status: Number(row.speed ?? 0) > 5 ? 'in_transit' : 'parked',
+        source: 'telematics',
+        telematicsProvider: 'webfleet',
+        externalId: `webfleet-${String(row.objectno ?? vehicle.id)}`,
+        updatedAt: now,
+      })
+    }
+    if (positions.length > 0) return { positions, mode: 'production' }
+  } catch (e) {
+    console.warn('[fleet-telematics] Webfleet', e)
+  }
+  return { positions: [], mode: 'demo' }
+}
+
 export async function runFleetTelematicsSync(tenantId: string): Promise<{
   ok: boolean
   updated: number
@@ -163,13 +211,26 @@ export async function runFleetTelematicsSync(tenantId: string): Promise<{
     }
   }
 
-  const { positions: incoming, providers } = synthesize(vehicles, cfg, now)
+  const { positions: incomingSynth, providers: synthProviders } = synthesize(vehicles, cfg, now)
+  let incoming = incomingSynth
+  let providers = synthProviders
+  let mode = 'demo'
+
+  if (cfg.webfleetEnabled) {
+    const wf = await tryWebfleetApi(cfg, vehicles, now)
+    if (wf.positions.length > 0) {
+      incoming = wf.positions
+      providers = ['webfleet']
+      mode = 'production'
+    }
+  }
+
   const { next, updated } = upsertPositions(existing, incoming)
 
   const nextCfg: FleetTelematicsConfig = {
     ...cfg,
     lastSyncAt: now,
-    lastSyncError: undefined,
+    lastSyncError: mode === 'demo' && cfg.webfleetEnabled ? 'Webfleet — demo fallback (sprawdź klucze)' : undefined,
     lastSyncByProvider: { ...(cfg.lastSyncByProvider ?? {}) },
   }
   for (const p of providers) {

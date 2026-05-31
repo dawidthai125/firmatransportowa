@@ -122,6 +122,7 @@ export type TenantDataKey =
   | 'course-messages'
   | 'invoicing-config'
   | 'driver-payroll-rates'
+  | 'ocr-config'
 
 export const TENANT_DATA_KEYS: TenantDataKey[] = [
   'drivers',
@@ -144,6 +145,7 @@ export const TENANT_DATA_KEYS: TenantDataKey[] = [
   'course-messages',
   'invoicing-config',
   'driver-payroll-rates',
+  'ocr-config',
 ]
 
 export function tenantStorageKey(tenantId: string, key: TenantDataKey): string {

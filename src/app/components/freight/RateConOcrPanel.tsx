@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app
 import type { FreightOffer } from '@/lib/domain/freight-offer'
 import { writeTenantData } from '@/lib/tenant/storage'
 import { loadAllFreightOffers } from '@/lib/domain/freight-board-store'
+import { loadOcrConfig } from '@/lib/domain/ocr-config'
 import { ocrRateConViaEdge } from '@/lib/domain/integration-api'
 import { parseRateConText, readTextFromImageFile } from '@/lib/domain/rate-con-ocr'
 import { ScanLine, Upload } from 'lucide-react'
@@ -29,10 +30,13 @@ export function RateConOcrPanel({ tenantId, onImported }: RateConOcrPanelProps) 
       let parse = parseRateConText(tenantId, combined)
 
       try {
+        const ocrCfg = loadOcrConfig(tenantId)
         const edge = await ocrRateConViaEdge(tenantId, {
           text: combined,
           fileName: file.name,
           mimeType: file.type,
+          openaiApiKey: ocrCfg.openaiApiKey,
+          googleVisionApiKey: ocrCfg.googleVisionApiKey,
         })
         if (edge.parse?.offer) parse = edge.parse
         setMsg(`OCR (${edge.provider}) — ${edge.extractedText.slice(0, 80)}…`)

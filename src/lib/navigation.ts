@@ -17,6 +17,7 @@ export type AdminView =
   | 'weeklyPlanner'
   | 'invoicing'
   | 'driverPayroll'
+  | 'integrations'
 
 export type DriverView = 'home' | 'report' | 'courses' | 'issue' | 'itd' | 'profile'
 
@@ -48,6 +49,7 @@ export const OWNER_NAV: NavItem<AdminView>[] = [
   { id: 'drivers', label: 'Kierowcy', icon: 'users', module: 'drivers' },
   { id: 'compliance', label: 'Zgodność', icon: 'shield-check', module: 'compliance' },
   { id: 'tachograph', label: 'Tachograf', icon: 'hard-drive', module: 'tachographImport' },
+  { id: 'integrations', label: 'Klucze API', icon: 'key-round' },
   { id: 'settings', label: 'Firma', icon: 'settings' },
 ]
 
@@ -93,4 +95,5 @@ export const VIEW_TITLES: Record<AdminView, string> = {
   weeklyPlanner: 'Plan tygodnia',
   invoicing: 'Fakturowanie',
   driverPayroll: 'Wynagrodzenia kierowców',
+  integrations: 'Klucze API i integracje',
 }

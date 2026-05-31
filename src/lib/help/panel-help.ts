@@ -504,6 +504,28 @@ function adminSteps(
         },
       ],
     },
+    integrations: {
+      title: 'Klucze API i integracje',
+      summary:
+        'Jeden panel dla wszystkich kluczy: giełda, faktury, tachograf, GPS, OCR. Zapisz i aktywuj — moduły włączą się automatycznie.',
+      steps: [
+        {
+          title: 'Wpisz klucze u dostawców',
+          description: 'Trans.eu, Fakturownia, Webfleet, TachoScan, OpenAI — skopiuj z panelu partnera.',
+          action: 'Uzupełnij sekcje → Zapisz i aktywuj',
+        },
+        {
+          title: 'Test połączeń',
+          description: 'Edge Function sprawdza każdy klucz i pokazuje prod / demo / błąd.',
+          action: 'Przycisk „Test połączeń”',
+        },
+      ],
+      related: [
+        { label: 'Giełda', hint: 'Sync ofert po kluczach Trans.eu' },
+        { label: 'Tachograf', hint: 'Import DDD po sync' },
+        { label: 'Firma', hint: 'Moduły i plan abonamentu' },
+      ],
+    },
   }
 
   const content = byView[view]

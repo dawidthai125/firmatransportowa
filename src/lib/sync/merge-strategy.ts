@@ -474,6 +474,16 @@ export function mergeSyncEnvelopes(
     return wrapForSync(payload, maxIso(localEnv.updatedAt, cloudEnv.updatedAt))
   }
 
+  if (dataKey === 'ocr-config') {
+    const preferLocal = Date.parse(localEnv.updatedAt) >= Date.parse(cloudEnv.updatedAt)
+    const newer = preferLocal ? localEnv.payload : cloudEnv.payload
+    const older = preferLocal ? cloudEnv.payload : localEnv.payload
+    return wrapForSync(
+      { ...(older as object), ...(newer as object) },
+      maxIso(localEnv.updatedAt, cloudEnv.updatedAt),
+    )
+  }
+
   if (dataKey === 'repair-reports') {
     const l = Array.isArray(localEnv.payload) ? (localEnv.payload as RepairReport[]) : []
     const c = Array.isArray(cloudEnv.payload) ? (cloudEnv.payload as RepairReport[]) : []

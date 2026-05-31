@@ -26,6 +26,7 @@ import { RepairsView } from '@/app/views/RepairsView'
 import { SettlementsView } from '@/app/views/SettlementsView'
 import { SettingsView } from '@/app/views/SettingsView'
 import { WeeklyPlannerView } from '@/app/views/WeeklyPlannerView'
+import { IntegrationsView } from '@/app/views/IntegrationsView'
 import { InvoicingView } from '@/app/views/InvoicingView'
 import { DriverPayrollView } from '@/app/views/DriverPayrollView'
 import { ClientTrackingView } from '@/app/views/ClientTrackingView'
@@ -51,7 +52,7 @@ import { DEFAULT_MODULES } from '@/lib/tenant/types'
 import { usePwaBrandingEffect } from '@/lib/pwa/usePwaBrandingEffect'
 import { useEffect, useMemo, useState } from 'react'
 
-const OWNER_ONLY_ADMIN_VIEWS: AdminView[] = ['compliance', 'settings', 'tachograph']
+const OWNER_ONLY_ADMIN_VIEWS: AdminView[] = ['compliance', 'settings', 'tachograph', 'integrations']
 
 /** Moduły tylko dla właściciela — poza menu dyspozytora */
 const DISPATCHER_FORBIDDEN_VIEWS: AdminView[] = [
@@ -358,6 +359,9 @@ export default function App() {
         )}
         {adminAllowed && adminView === 'tachograph' && mode === 'owner' && (
           <TachographView tenantId={currentTenant.id} />
+        )}
+        {adminAllowed && adminView === 'integrations' && mode === 'owner' && (
+          <IntegrationsView tenant={currentTenant} />
         )}
         {adminAllowed && adminView === 'settings' && mode === 'owner' && (
           <SettingsView tenant={currentTenant} />

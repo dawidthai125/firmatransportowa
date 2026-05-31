@@ -7,6 +7,9 @@ interface TachographConnectorConfig {
   tachoScanEnabled?: boolean
   vdoOnlineEnabled?: boolean
   telematicsFmsEnabled?: boolean
+  tachoScanApiKey?: string
+  vdoFleetId?: string
+  telematicsEndpoint?: string
   lastSyncByProvider?: Partial<Record<TachographProvider, string>>
   lastSyncAt?: string
   lastSyncError?: string
@@ -150,6 +153,47 @@ function upsertRecords(existing: TachographRecord[], incoming: TachographRecord[
   return { next, added, updated }
 }
 
+async function tryTachoScanApi(
+  tenantId: string,
+  cfg: TachographConnectorConfig,
+  now: string,
+): Promise<{ records: TachographRecord[]; mode: 'production' | 'demo' }> {
+  const key = cfg.tachoScanApiKey?.trim()
+  if (!key) return { records: [], mode: 'demo' }
+  const base = Deno.env.get('TACHOSCAN_API_BASE') ?? 'https://api.tachoscan.pl'
+  try {
+    const res = await fetch(`${base}/api/v1/downloads?limit=5`, {
+      headers: { Authorization: `Bearer ${key}`, Accept: 'application/json' },
+    })
+    if (!res.ok) return { records: [], mode: 'demo' }
+    const data = await res.json()
+    const items = Array.isArray(data) ? data : Array.isArray(data?.items) ? data.items : []
+    if (items.length === 0) return { records: [], mode: 'demo' }
+    const today = now.slice(0, 10)
+    const records: TachographRecord[] = items.slice(0, 5).map((item: Record<string, unknown>) => ({
+      id: crypto.randomUUID(),
+      tenantId,
+      filename: String(item.filename ?? item.name ?? `TachoScan_${today}.ddd`),
+      source: 'remote_api' as const,
+      recordType: (item.type === 'vu' ? 'vehicle_unit' : 'driver_card') as TachographRecord['recordType'],
+      driverName: String(item.driverName ?? item.driver ?? ''),
+      periodFrom: String(item.periodFrom ?? item.from ?? today),
+      periodTo: String(item.periodTo ?? item.to ?? today),
+      sizeBytes: Number(item.size ?? 0),
+      importedAt: now,
+      lastSyncAt: now,
+      drivingMinutes: Number(item.drivingMinutes ?? 0) || undefined,
+      restMinutes: Number(item.restMinutes ?? 0) || undefined,
+      externalId: String(item.id ?? item.externalId ?? ''),
+      notes: 'TachoScan API',
+    }))
+    return { records, mode: 'production' }
+  } catch (e) {
+    console.warn('[tachograph-sync] TachoScan', e)
+    return { records: [], mode: 'demo' }
+  }
+}
+
 export async function runTachographSync(tenantId: string): Promise<{
   ok: boolean
   added: number
@@ -180,13 +224,27 @@ export async function runTachographSync(tenantId: string): Promise<{
     }
   }
 
-  const { records: incoming, providers } = synthesizeRecords(tenantId, cfg, now)
+  let { records: incoming, providers } = synthesizeRecords(tenantId, cfg, now)
+  let mode = 'demo'
+
+  if (cfg.tachoScanEnabled && cfg.tachoScanApiKey) {
+    const fromApi = await tryTachoScanApi(tenantId, cfg, now)
+    if (fromApi.records.length > 0) {
+      incoming = fromApi.records
+      providers = ['tacho_scan']
+      mode = 'production'
+    }
+  }
+
   const { next, added, updated } = upsertRecords(existing, incoming)
 
   const nextCfg: TachographConnectorConfig = {
     ...cfg,
     lastSyncAt: now,
-    lastSyncError: undefined,
+    lastSyncError:
+      mode === 'demo' && cfg.tachoScanEnabled
+        ? 'TachoScan — demo fallback (sprawdź klucz API)'
+        : undefined,
     lastSyncByProvider: { ...(cfg.lastSyncByProvider ?? {}) },
   }
   for (const p of providers) {
