@@ -58,6 +58,12 @@ export interface TenantModules {
   weeklyPlanner: boolean
   /** Link tracking read-only dla klienta */
   clientPortal: boolean
+  /** OCR zlecenia transportowego (rate con) — zdjęcie / PDF */
+  ocrRateCon: boolean
+  /** Elektroniczny list przewozowy CMR (e-CMR) */
+  eCmr: boolean
+  /** Produkcyjne API Trans.eu / TimoCom (nie demo feed) */
+  freightApiProd: boolean
 }
 
 export const DEFAULT_MODULES: TenantModules = {
@@ -79,6 +85,9 @@ export const DEFAULT_MODULES: TenantModules = {
   driverPayroll: false,
   weeklyPlanner: true,
   clientPortal: false,
+  ocrRateCon: false,
+  eCmr: false,
+  freightApiProd: false,
 }
 
 export function createDefaultTenantSettings(): TenantSettings {

@@ -43,6 +43,7 @@ import {
   ClientTrackingLink,
   RmpdSentChecklist,
 } from '@/app/components/course/RmpdSentChecklist'
+import { ECmrPanel } from '@/app/components/course/ECmrPanel'
 import { findDriverByDisplayName } from '@/lib/domain/driver-profile'
 import type { TenantModules } from '@/lib/tenant/types'
 import { DEFAULT_MODULES } from '@/lib/tenant/types'
@@ -351,6 +352,15 @@ function CourseCard({
           )}
           {!readOnly && modules?.clientPortal && tenantId && onCourseUpdated && (
             <ClientTrackingLink tenantId={tenantId} course={course} onUpdated={onCourseUpdated} />
+          )}
+          {modules?.eCmr && tenantId && onCourseUpdated && (
+            <ECmrPanel
+              tenantId={tenantId}
+              course={course}
+              signerName={driverName ?? 'Dyspozytor'}
+              driverMode={Boolean(readOnly && driverName)}
+              onUpdated={onCourseUpdated}
+            />
           )}
           {readOnly && driverName && modules?.courseStatusPing && tenantId && onCourseUpdated && (
             <CourseStatusActions

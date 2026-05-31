@@ -7,6 +7,9 @@ import * as kv from './kv_store.ts'
 import { mergeSetWithServerAuthority } from './merge_set.ts'
 import { applyTachographWebhook, runTachographSync } from './tachograph_sync.ts'
 import { applyFleetTelematicsWebhook, runFleetTelematicsSync } from './fleet_telematics_sync.ts'
+import { runFreightProductionSync } from './freight_sync.ts'
+import { runInvoicingSync } from './invoicing_sync.ts'
+import { runOcrRateCon } from './ocr_rate_con.ts'
 
 const SLUG = 'transflow-api'
 const PREFIX = `/${SLUG}`
@@ -121,6 +124,42 @@ app.post(`${PREFIX}/automation/webhook`, async (c) => {
   const event = typeof body?.event === 'string' ? body.event : 'webhook.received'
   console.log('[automation/webhook]', event, tenantId)
   return c.json({ ok: true, received: event, tenantId, at: new Date().toISOString() })
+})
+
+app.post(`${PREFIX}/ocr-rate-con`, async (c) => {
+  const requestAuth = await auth.resolveRequestAuth(c.req.header('Authorization'))
+  const body = await c.req.json().catch(() => ({}))
+  const tenantId = typeof body?.tenantId === 'string' ? body.tenantId : null
+  if (!tenantId) return c.json({ ok: false, error: 'tenantId required' }, 400)
+  if (!auth.canReadKey(requestAuth, `ft-${tenantId}-freight-offers`)) {
+    return c.json({ ok: false, error: 'forbidden' }, 403)
+  }
+  const result = await runOcrRateCon(body)
+  return c.json(result)
+})
+
+app.post(`${PREFIX}/freight-sync`, async (c) => {
+  const requestAuth = await auth.resolveRequestAuth(c.req.header('Authorization'))
+  const body = await c.req.json().catch(() => ({}))
+  const tenantId = typeof body?.tenantId === 'string' ? body.tenantId : null
+  if (!tenantId) return c.json({ ok: false, error: 'tenantId required' }, 400)
+  if (!auth.canWriteKey(requestAuth, `ft-${tenantId}-freight-offers`)) {
+    return c.json({ ok: false, error: 'forbidden' }, 403)
+  }
+  const result = await runFreightProductionSync(tenantId, body?.config ?? {})
+  return c.json(result, result.ok ? 200 : 400)
+})
+
+app.post(`${PREFIX}/invoicing-sync`, async (c) => {
+  const requestAuth = await auth.resolveRequestAuth(c.req.header('Authorization'))
+  const body = await c.req.json().catch(() => ({}))
+  const tenantId = typeof body?.tenantId === 'string' ? body.tenantId : null
+  if (!tenantId) return c.json({ ok: false, error: 'tenantId required' }, 400)
+  if (!auth.canWriteKey(requestAuth, `ft-${tenantId}-invoicing-config`)) {
+    return c.json({ ok: false, error: 'forbidden' }, 403)
+  }
+  const result = await runInvoicingSync(body)
+  return c.json(result, result.ok ? 200 : 400)
 })
 
 app.get(`${PREFIX}/ping`, (c) => c.json({ pong: true }))

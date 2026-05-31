@@ -256,6 +256,13 @@ function mergeFreightConnectors(
     wtransnetEnabled: newer.wtransnetEnabled ?? older.wtransnetEnabled ?? true,
     b2pwebEnabled: newer.b2pwebEnabled ?? older.b2pwebEnabled ?? true,
     freightlinkEnabled: newer.freightlinkEnabled ?? older.freightlinkEnabled ?? true,
+    productionApiEnabled: newer.productionApiEnabled ?? older.productionApiEnabled ?? false,
+    transEuClientId: newer.transEuClientId ?? older.transEuClientId,
+    transEuApiKey: newer.transEuApiKey ?? older.transEuApiKey,
+    transEuSandbox: newer.transEuSandbox ?? older.transEuSandbox ?? true,
+    timocomApiKey: newer.timocomApiKey ?? older.timocomApiKey,
+    timocomCompanyId: newer.timocomCompanyId ?? older.timocomCompanyId,
+    lastSyncError: preferLocal ? local.lastSyncError : cloud.lastSyncError ?? local.lastSyncError,
     lastSyncBySource: lastSync as FreightConnectorConfig['lastSyncBySource'],
   }
 }
@@ -444,7 +451,10 @@ export function mergeSyncEnvelopes(
     const older = preferLocal ? cloudEnv.payload : localEnv.payload
     const payload: InvoicingConfig = {
       provider: 'csv',
+      deliveryMode: 'csv',
       defaultPaymentDays: 14,
+      defaultVatRate: 23,
+      autoInvoiceOnDelivered: false,
       ...(older as Partial<InvoicingConfig>),
       ...(newer as Partial<InvoicingConfig>),
     }

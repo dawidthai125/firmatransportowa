@@ -38,6 +38,9 @@ export function modulesForPlan(plan: SubscriptionPlan): TenantModules {
         driverPayroll: false,
         weeklyPlanner: true,
         clientPortal: false,
+        ocrRateCon: false,
+        eCmr: false,
+        freightApiProd: false,
       }
     case 'business':
       return {
@@ -59,6 +62,9 @@ export function modulesForPlan(plan: SubscriptionPlan): TenantModules {
         driverPayroll: false,
         weeklyPlanner: true,
         clientPortal: false,
+        ocrRateCon: false,
+        eCmr: false,
+        freightApiProd: false,
       }
     case 'enterprise':
       return {

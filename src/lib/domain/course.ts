@@ -1,3 +1,5 @@
+import type { ECmrDocument } from '@/lib/domain/e-cmr'
+
 export type CourseStatus =
   | 'planned'
   | 'loading'
@@ -65,6 +67,8 @@ export interface Course {
   /** Token publicznego śledzenia (portal klienta) */
   trackingToken?: string
   trackingPublic?: boolean
+  /** Elektroniczny CMR (e-CMR) */
+  eCmr?: ECmrDocument
   loadAt: string
   unloadAt: string
   driverId?: string

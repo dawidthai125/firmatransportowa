@@ -18,6 +18,8 @@ import {
   saveFreightConnectorConfig,
   syncFreightConnectors,
 } from '@/lib/domain/freight-connectors'
+import { syncFreightProductionApi } from '@/lib/domain/integration-api'
+import { RateConOcrPanel } from '@/app/components/freight/RateConOcrPanel'
 import { freightOfferToCourse } from '@/lib/domain/freight-offer-to-course'
 import { upsertCourse } from '@/lib/domain/courses-store'
 import {
@@ -34,12 +36,19 @@ import { useCallback, useEffect, useState } from 'react'
 interface FreightBoardViewProps {
   tenantId: string
   onNavigateToCourses?: () => void
+  ocrRateConEnabled?: boolean
+  freightApiProdEnabled?: boolean
 }
 
 const ALL_SOURCES = Object.keys(FREIGHT_SOURCE_LABELS) as FreightSource[]
 const ALL_BODIES = Object.keys(FREIGHT_BODY_LABELS) as FreightBodyType[]
 
-export function FreightBoardView({ tenantId, onNavigateToCourses }: FreightBoardViewProps) {
+export function FreightBoardView({
+  tenantId,
+  onNavigateToCourses,
+  ocrRateConEnabled = false,
+  freightApiProdEnabled = false,
+}: FreightBoardViewProps) {
   const [query, setQuery] = useState('')
   const [offers, setOffers] = useState<FreightOffer[]>([])
   const [prefs, setPrefs] = useState<FreightSearchPreferences>(() => loadFreightPreferences(tenantId))
@@ -116,14 +125,114 @@ export function FreightBoardView({ tenantId, onNavigateToCourses }: FreightBoard
         </Card>
       )}
 
+      {ocrRateConEnabled && <RateConOcrPanel tenantId={tenantId} onImported={refresh} />}
+
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-base">Synchronizacja giełd (API)</CardTitle>
           <CardDescription>
-            8 platform frachtowych — demo symuluje live feed; produkcja: klucze API w Edge Function
+            8 platform frachtowych — demo symuluje live feed
+            {freightApiProdEnabled ? '; moduł prod: Trans.eu / TimoCom REST' : ''}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
+          {freightApiProdEnabled && (
+            <div className="space-y-3 rounded-lg border border-primary/20 bg-primary/5 p-3">
+              <p className="text-sm font-medium">API produkcyjne Trans.eu / TimoCom</p>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={connectorCfg.productionApiEnabled}
+                  onChange={(e) => {
+                    const next = { ...connectorCfg, productionApiEnabled: e.target.checked }
+                    saveFreightConnectorConfig(tenantId, next)
+                    setConnectorCfg(next)
+                  }}
+                />
+                Użyj REST API (zamiast samego demo feed)
+              </label>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <div className="space-y-1">
+                  <Label>Trans.eu Client ID</Label>
+                  <Input
+                    value={connectorCfg.transEuClientId ?? ''}
+                    onChange={(e) => {
+                      const next = { ...connectorCfg, transEuClientId: e.target.value || undefined }
+                      saveFreightConnectorConfig(tenantId, next)
+                      setConnectorCfg(next)
+                    }}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label>Trans.eu API Key</Label>
+                  <Input
+                    type="password"
+                    value={connectorCfg.transEuApiKey ?? ''}
+                    onChange={(e) => {
+                      const next = { ...connectorCfg, transEuApiKey: e.target.value || undefined }
+                      saveFreightConnectorConfig(tenantId, next)
+                      setConnectorCfg(next)
+                    }}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label>TimoCom API Key</Label>
+                  <Input
+                    type="password"
+                    value={connectorCfg.timocomApiKey ?? ''}
+                    onChange={(e) => {
+                      const next = { ...connectorCfg, timocomApiKey: e.target.value || undefined }
+                      saveFreightConnectorConfig(tenantId, next)
+                      setConnectorCfg(next)
+                    }}
+                  />
+                </div>
+                <label className="flex items-end gap-2 pb-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={connectorCfg.transEuSandbox ?? true}
+                    onChange={(e) => {
+                      const next = { ...connectorCfg, transEuSandbox: e.target.checked }
+                      saveFreightConnectorConfig(tenantId, next)
+                      setConnectorCfg(next)
+                    }}
+                  />
+                  Trans.eu sandbox
+                </label>
+              </div>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => {
+                  void (async () => {
+                    try {
+                      const r = await syncFreightProductionApi(tenantId, {
+                        transEuEnabled: connectorCfg.transEuEnabled,
+                        timocomEnabled: connectorCfg.timocomEnabled,
+                        transEuClientId: connectorCfg.transEuClientId,
+                        transEuApiKey: connectorCfg.transEuApiKey,
+                        timocomApiKey: connectorCfg.timocomApiKey,
+                        transEuSandbox: connectorCfg.transEuSandbox,
+                      })
+                      setSyncMsg(
+                        `Prod sync (${r.mode}): +${r.added} ofert${r.message ? ` · ${r.message}` : ''}`,
+                      )
+                      refresh()
+                      setConnectorCfg(loadFreightConnectorConfig(tenantId))
+                    } catch (e) {
+                      setSyncMsg(e instanceof Error ? e.message : 'Błąd sync prod API')
+                    }
+                  })()
+                }}
+              >
+                Synchronizuj prod API
+              </Button>
+              {connectorCfg.lastSyncError && (
+                <p className="text-xs text-warning">{connectorCfg.lastSyncError}</p>
+              )}
+            </div>
+          )}
+
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {FREIGHT_CONNECTOR_META.map((meta) => (
               <label
@@ -132,7 +241,7 @@ export function FreightBoardView({ tenantId, onNavigateToCourses }: FreightBoard
               >
                 <input
                   type="checkbox"
-                  checked={connectorCfg[meta.configKey]}
+                  checked={Boolean(connectorCfg[meta.configKey as keyof typeof connectorCfg] && connectorCfg[meta.configKey] === true)}
                   onChange={(e) => {
                     const next = { ...connectorCfg, [meta.configKey]: e.target.checked }
                     saveFreightConnectorConfig(tenantId, next)

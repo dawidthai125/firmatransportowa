@@ -19,6 +19,9 @@ export const MODULE_LABELS: Record<keyof TenantModules, string> = {
   driverPayroll: 'Rozliczenie wynagrodzenia kierowcy',
   weeklyPlanner: 'Planowanie tygodnia',
   clientPortal: 'Portal klienta (tracking)',
+  ocrRateCon: 'OCR zlecenia (rate con)',
+  eCmr: 'e-CMR (elektroniczny list przewozowy)',
+  freightApiProd: 'API produkcyjne Trans.eu / TimoCom',
 }
 
 export const MODULE_DESCRIPTIONS: Partial<Record<keyof TenantModules, string>> = {
@@ -31,6 +34,9 @@ export const MODULE_DESCRIPTIONS: Partial<Record<keyof TenantModules, string>> =
   driverPayroll: 'Stawki km/dzień/% frachtu i zestawienie wypłat z raportów kabiny.',
   weeklyPlanner: 'Widok tygodnia: kto, gdzie i kiedy — prosty plan dyspozytora.',
   clientPortal: 'Link read-only dla klienta — status kursu bez logowania do panelu.',
+  ocrRateCon: 'Wgraj zdjęcie/PDF zlecenia — parser wyciąga trasę, stawkę i wagę na giełdę.',
+  eCmr: 'Podpisy cyfrowe nadawcy, kierowcy i odbiorcy — status e-CMR przy kursie.',
+  freightApiProd: 'Live feed z Trans.eu i TimoCom przez REST API (klucze w konfiguracji).',
 }
 
 /** Moduły opcjonalne — domyślnie wyłączone u nowych tenantów (poza planem trial). */
@@ -38,4 +44,7 @@ export const OPTIONAL_MODULE_DEFAULTS: Partial<TenantModules> = {
   invoicing: false,
   driverPayroll: false,
   clientPortal: false,
+  ocrRateCon: false,
+  eCmr: false,
+  freightApiProd: false,
 }

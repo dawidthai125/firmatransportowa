@@ -23,6 +23,14 @@ export interface FreightConnectorConfig {
   wtransnetEnabled: boolean
   b2pwebEnabled: boolean
   freightlinkEnabled: boolean
+  /** Produkcyjne REST API (moduł freightApiProd) */
+  productionApiEnabled: boolean
+  transEuClientId?: string
+  transEuApiKey?: string
+  transEuSandbox?: boolean
+  timocomApiKey?: string
+  timocomCompanyId?: string
+  lastSyncError?: string
   lastSyncBySource: Partial<Record<FreightSource, string>>
 }
 
@@ -51,6 +59,8 @@ const DEFAULT_CONNECTOR: FreightConnectorConfig = {
   wtransnetEnabled: true,
   b2pwebEnabled: true,
   freightlinkEnabled: true,
+  productionApiEnabled: false,
+  transEuSandbox: true,
   lastSyncBySource: {},
 }
 

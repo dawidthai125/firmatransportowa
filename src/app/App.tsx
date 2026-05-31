@@ -315,6 +315,8 @@ export default function App() {
           <FreightBoardView
             tenantId={currentTenant.id}
             onNavigateToCourses={() => setAdminView('courses')}
+            ocrRateConEnabled={currentTenant.settings.modules.ocrRateCon}
+            freightApiProdEnabled={currentTenant.settings.modules.freightApiProd}
           />
         )}
         {adminAllowed && adminView === 'reports' && <DailyReportsView tenantId={currentTenant.id} />}

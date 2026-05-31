@@ -15,7 +15,7 @@
 import type { AdminView, DriverView } from '@/lib/navigation'
 import type { TenantDataKey, TenantModules } from '@/lib/tenant/types'
 
-export const APP_FEATURES_CATALOG_VERSION = '0.18.0'
+export const APP_FEATURES_CATALOG_VERSION = '0.19.0'
 
 export type AppFeatureArea = 'admin' | 'driver' | 'mechanic' | 'platform' | 'integration'
 
@@ -223,6 +223,54 @@ export const APP_FEATURES: AppFeature[] = [
     dataKeys: ['course-messages'],
     codePaths: ['src/app/components/course/CourseChatPanel.tsx'],
     sinceVersion: '0.18',
+  },
+  {
+    id: 'freight-ocr-rate-con',
+    title: 'OCR zlecenia (rate con)',
+    description: 'Upload zdjęcia/PDF — parser + Edge OCR wyciąga trasę i stawkę na giełdę.',
+    area: 'admin',
+    roles: ['owner', 'dispatcher'],
+    status: 'live',
+    adminView: 'loads',
+    module: 'ocrRateCon',
+    codePaths: ['src/app/components/freight/RateConOcrPanel.tsx', 'supabase/functions/transflow-api/ocr_rate_con.ts'],
+    sinceVersion: '0.19',
+  },
+  {
+    id: 'course-e-cmr',
+    title: 'e-CMR',
+    description: 'Elektroniczny list przewozowy — podpisy nadawcy, kierowcy i odbiorcy przy kursie.',
+    area: 'admin',
+    roles: ['owner', 'dispatcher', 'driver'],
+    status: 'live',
+    adminView: 'courses',
+    module: 'eCmr',
+    codePaths: ['src/app/components/course/ECmrPanel.tsx', 'src/lib/domain/e-cmr.ts'],
+    sinceVersion: '0.19',
+  },
+  {
+    id: 'int-freight-prod-api',
+    title: 'Trans.eu / TimoCom REST (prod)',
+    description: 'Synchronizacja live feed przez REST API — klucze w panelu giełdy.',
+    area: 'integration',
+    roles: ['owner', 'dispatcher'],
+    status: 'beta',
+    module: 'freightApiProd',
+    codePaths: ['supabase/functions/transflow-api/freight_sync.ts'],
+    sinceVersion: '0.19',
+  },
+  {
+    id: 'int-invoicing-rest',
+    title: 'Fakturowanie REST API',
+    description: 'Wystawianie faktur przez Fakturownia.pl / wFirma REST — pełna konfiguracja w module Fakturowanie.',
+    area: 'integration',
+    roles: ['owner'],
+    status: 'beta',
+    module: 'invoicing',
+    adminView: 'invoicing',
+    dataKeys: ['invoicing-config'],
+    codePaths: ['supabase/functions/transflow-api/invoicing_sync.ts', 'src/app/views/InvoicingView.tsx'],
+    sinceVersion: '0.19',
   },
   {
     id: 'admin-files',

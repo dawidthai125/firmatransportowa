@@ -32,7 +32,7 @@ export function buildInvoiceLinesFromCourses(
       buyerName: c.consignee || c.shipper,
       description: `Transport ${c.loadCity} → ${c.unloadCity} · ${c.cargo}`,
       netPln: c.freightPln,
-      vatRate: 23,
+      vatRate: config.defaultVatRate ?? 23,
       issueDate: today,
       dueDate: addDays(today, config.defaultPaymentDays),
     }))

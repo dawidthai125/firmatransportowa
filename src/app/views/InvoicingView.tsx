@@ -10,13 +10,17 @@ import {
   exportWfirmaCsv,
 } from '@/lib/domain/invoice-export'
 import {
+  INVOICING_DELIVERY_LABELS,
   INVOICING_PROVIDER_LABELS,
+  invoicingCsvEnabled,
+  invoicingRestEnabled,
   loadInvoicingConfig,
   saveInvoicingConfig,
   type InvoicingConfig,
 } from '@/lib/domain/invoicing-config'
+import { createInvoicesViaEdge, testInvoicingConnection } from '@/lib/domain/integration-api'
 import { useCloudSyncRefreshKeys } from '@/lib/sync/useCloudSyncRefresh'
-import { FileDown, Receipt } from 'lucide-react'
+import { FileDown, Plug, Receipt, Send } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 
 interface InvoicingViewProps {
@@ -26,14 +30,16 @@ interface InvoicingViewProps {
 export function InvoicingView({ tenantId }: InvoicingViewProps) {
   const [config, setConfig] = useState<InvoicingConfig>(() => loadInvoicingConfig(tenantId))
   const [courseCount, setCourseCount] = useState(0)
+  const [apiMsg, setApiMsg] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
 
   const refresh = useCallback(() => {
     seedDemoCourses(tenantId)
-    setConfig(loadInvoicingConfig(tenantId))
+    const cfg = loadInvoicingConfig(tenantId)
+    setConfig(cfg)
     const courses = loadCourses(tenantId)
-    const lines = buildInvoiceLinesFromCourses(courses, config)
-    setCourseCount(lines.length)
-  }, [tenantId, config])
+    setCourseCount(buildInvoiceLinesFromCourses(courses, cfg).length)
+  }, [tenantId])
 
   useEffect(() => {
     refresh()
@@ -45,9 +51,11 @@ export function InvoicingView({ tenantId }: InvoicingViewProps) {
     const next = { ...config, ...patch }
     saveInvoicingConfig(tenantId, next)
     setConfig(next)
+    const courses = loadCourses(tenantId)
+    setCourseCount(buildInvoiceLinesFromCourses(courses, next).length)
   }
 
-  function exportNow() {
+  function exportCsv() {
     const courses = loadCourses(tenantId)
     const lines = buildInvoiceLinesFromCourses(courses, config)
     if (lines.length === 0) {
@@ -68,14 +76,78 @@ export function InvoicingView({ tenantId }: InvoicingViewProps) {
     }
     downloadCsv(`${prefix}-${new Date().toISOString().slice(0, 10)}.csv`, content)
     persist({ lastExportAt: new Date().toISOString() })
+    setApiMsg(`Wyeksportowano ${lines.length} pozycji do CSV`)
   }
+
+  async function sendViaApi() {
+    if (config.provider !== 'fakturownia' && config.provider !== 'wfirma') return
+    setBusy(true)
+    setApiMsg(null)
+    try {
+      const courses = loadCourses(tenantId)
+      const lines = buildInvoiceLinesFromCourses(courses, config)
+      if (lines.length === 0) {
+        setApiMsg('Brak kursów do wystawienia faktur')
+        return
+      }
+      const r = await createInvoicesViaEdge(
+        tenantId,
+        config.provider,
+        {
+          fakturowniaSubdomain: config.fakturowniaSubdomain,
+          fakturowniaApiToken: config.fakturowniaApiToken,
+          wfirmaApiToken: config.wfirmaApiToken,
+          wfirmaCompanyId: config.wfirmaCompanyId,
+          sellerName: config.sellerName,
+          sellerNip: config.sellerNip,
+        },
+        lines,
+      )
+      persist({
+        lastApiSyncAt: new Date().toISOString(),
+        lastApiError: r.errors?.join('; '),
+      })
+      setApiMsg(
+        r.ok
+          ? `Wystawiono ${r.created} faktur (${r.mode}) · ID: ${r.invoiceIds.join(', ')}`
+          : r.errors?.join('; ') ?? 'Błąd API',
+      )
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Błąd połączenia'
+      persist({ lastApiError: msg })
+      setApiMsg(msg)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function testConnection() {
+    if (config.provider !== 'fakturownia' && config.provider !== 'wfirma') return
+    setBusy(true)
+    try {
+      const r = await testInvoicingConnection(tenantId, config.provider, {
+        fakturowniaSubdomain: config.fakturowniaSubdomain,
+        fakturowniaApiToken: config.fakturowniaApiToken,
+        wfirmaApiToken: config.wfirmaApiToken,
+        wfirmaCompanyId: config.wfirmaCompanyId,
+      })
+      setApiMsg(r.message)
+    } catch (e) {
+      setApiMsg(e instanceof Error ? e.message : 'Test nieudany')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const csvOn = invoicingCsvEnabled(config)
+  const restOn = invoicingRestEnabled(config)
 
   return (
     <div className="space-y-4">
       <div>
         <h1 className="text-xl font-semibold">Fakturowanie</h1>
         <p className="text-sm text-muted-foreground">
-          Eksport zleceń dostarczonych do CSV, Fakturownia lub wFirma
+          Pełna konfiguracja — moduł włączany w Ustawieniach firmy (domyślnie wyłączony)
         </p>
       </div>
 
@@ -83,13 +155,11 @@ export function InvoicingView({ tenantId }: InvoicingViewProps) {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <Receipt className="h-4 w-4 text-primary" />
-            Konfiguracja
+            Konfiguracja dostawcy
           </CardTitle>
-          <CardDescription>
-            {courseCount} kursów gotowych do eksportu · moduł włączany w Ustawieniach firmy
-          </CardDescription>
+          <CardDescription>{courseCount} kursów gotowych do fakturowania</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-3 text-sm">
+        <CardContent className="space-y-4 text-sm">
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label>Dostawca</Label>
@@ -100,6 +170,21 @@ export function InvoicingView({ tenantId }: InvoicingViewProps) {
                 }
               >
                 {Object.entries(INVOICING_PROVIDER_LABELS).map(([k, v]) => (
+                  <option key={k} value={k}>
+                    {v}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Tryb wysyłki</Label>
+              <Select
+                value={config.deliveryMode}
+                onChange={(e) =>
+                  persist({ deliveryMode: e.target.value as InvoicingConfig['deliveryMode'] })
+                }
+              >
+                {Object.entries(INVOICING_DELIVERY_LABELS).map(([k, v]) => (
                   <option key={k} value={k}>
                     {v}
                   </option>
@@ -118,6 +203,19 @@ export function InvoicingView({ tenantId }: InvoicingViewProps) {
               />
             </div>
             <div className="space-y-1.5">
+              <Label>Stawka VAT (%)</Label>
+              <Input
+                type="number"
+                value={config.defaultVatRate}
+                onChange={(e) =>
+                  persist({ defaultVatRate: Number(e.target.value) || 23 })
+                }
+              />
+            </div>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
               <Label>Nazwa sprzedawcy</Label>
               <Input
                 value={config.sellerName ?? ''}
@@ -131,34 +229,149 @@ export function InvoicingView({ tenantId }: InvoicingViewProps) {
                 onChange={(e) => persist({ sellerNip: e.target.value || undefined })}
               />
             </div>
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label>Adres sprzedawcy</Label>
+              <Input
+                value={config.sellerAddress ?? ''}
+                onChange={(e) => persist({ sellerAddress: e.target.value || undefined })}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>E-mail na fakturze</Label>
+              <Input
+                type="email"
+                value={config.sellerEmail ?? ''}
+                onChange={(e) => persist({ sellerEmail: e.target.value || undefined })}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Numer konta bankowego</Label>
+              <Input
+                value={config.sellerBankAccount ?? ''}
+                onChange={(e) => persist({ sellerBankAccount: e.target.value || undefined })}
+              />
+            </div>
           </div>
 
           {config.provider === 'fakturownia' && (
-            <div className="space-y-1.5">
-              <Label>Subdomena Fakturownia</Label>
-              <Input
-                placeholder="twojafirma"
-                value={config.fakturowniaSubdomain ?? ''}
-                onChange={(e) =>
-                  persist({ fakturowniaSubdomain: e.target.value || undefined })
-                }
-              />
-              <p className="text-xs text-muted-foreground">
-                API produkcyjne — klucz w Supabase Secrets (planowane)
-              </p>
+            <div className="space-y-3 rounded-lg border border-border p-3">
+              <p className="font-medium">Fakturownia.pl — REST API</p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label>Subdomena</Label>
+                  <Input
+                    placeholder="twojafirma"
+                    value={config.fakturowniaSubdomain ?? ''}
+                    onChange={(e) =>
+                      persist({ fakturowniaSubdomain: e.target.value || undefined })
+                    }
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Token API</Label>
+                  <Input
+                    type="password"
+                    autoComplete="off"
+                    value={config.fakturowniaApiToken ?? ''}
+                    onChange={(e) =>
+                      persist({ fakturowniaApiToken: e.target.value || undefined })
+                    }
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>ID działu (opcjonalnie)</Label>
+                  <Input
+                    value={config.fakturowniaDepartmentId ?? ''}
+                    onChange={(e) =>
+                      persist({ fakturowniaDepartmentId: e.target.value || undefined })
+                    }
+                  />
+                </div>
+              </div>
             </div>
           )}
 
-          {config.lastExportAt && (
-            <p className="text-xs text-muted-foreground">
-              Ostatni eksport: {new Date(config.lastExportAt).toLocaleString('pl-PL')}
-            </p>
+          {config.provider === 'wfirma' && (
+            <div className="space-y-3 rounded-lg border border-border p-3">
+              <p className="font-medium">wFirma — REST API</p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label>Company ID</Label>
+                  <Input
+                    value={config.wfirmaCompanyId ?? ''}
+                    onChange={(e) =>
+                      persist({ wfirmaCompanyId: e.target.value || undefined })
+                    }
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Token API</Label>
+                  <Input
+                    type="password"
+                    autoComplete="off"
+                    value={config.wfirmaApiToken ?? ''}
+                    onChange={(e) =>
+                      persist({ wfirmaApiToken: e.target.value || undefined })
+                    }
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Seria dokumentów</Label>
+                  <Input
+                    value={config.wfirmaSeriesName ?? ''}
+                    onChange={(e) =>
+                      persist({ wfirmaSeriesName: e.target.value || undefined })
+                    }
+                  />
+                </div>
+              </div>
+            </div>
           )}
 
-          <Button className="gap-2" onClick={exportNow} disabled={config.provider === 'none'}>
-            <FileDown className="h-4 w-4" />
-            Eksportuj {courseCount} pozycji
-          </Button>
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={config.autoInvoiceOnDelivered}
+              onChange={(e) => persist({ autoInvoiceOnDelivered: e.target.checked })}
+            />
+            Automatycznie wystawiaj fakturę po statusie „dostarczony” (REST)
+          </label>
+
+          <div className="flex flex-wrap gap-2">
+            {csvOn && (
+              <Button className="gap-2" onClick={exportCsv} disabled={config.provider === 'none'}>
+                <FileDown className="h-4 w-4" />
+                Eksport CSV ({courseCount})
+              </Button>
+            )}
+            {restOn && config.provider !== 'none' && config.provider !== 'csv' && (
+              <>
+                <Button variant="secondary" className="gap-2" disabled={busy} onClick={() => void testConnection()}>
+                  <Plug className="h-4 w-4" />
+                  Test połączenia
+                </Button>
+                <Button className="gap-2" disabled={busy} onClick={() => void sendViaApi()}>
+                  <Send className="h-4 w-4" />
+                  Wystaw przez API ({courseCount})
+                </Button>
+              </>
+            )}
+          </div>
+
+          {config.lastExportAt && (
+            <p className="text-xs text-muted-foreground">
+              Ostatni CSV: {new Date(config.lastExportAt).toLocaleString('pl-PL')}
+            </p>
+          )}
+          {config.lastApiSyncAt && (
+            <p className="text-xs text-muted-foreground">
+              Ostatnie API: {new Date(config.lastApiSyncAt).toLocaleString('pl-PL')}
+            </p>
+          )}
+          {config.lastApiError && (
+            <p className="text-xs text-warning">API: {config.lastApiError}</p>
+          )}
+          {apiMsg && <p className="text-xs text-success">{apiMsg}</p>}
         </CardContent>
       </Card>
     </div>

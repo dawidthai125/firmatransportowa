@@ -9,6 +9,7 @@ export type FreightSource =
   | 'b2pweb'
   | 'freightlink'
   | 'email_lead'
+  | 'ocr_rate_con'
   | 'partner_network'
   | 'internal_board'
 
@@ -76,6 +77,7 @@ export const FREIGHT_SOURCE_LABELS: Record<FreightSource, string> = {
   b2pweb: 'B2PWeb',
   freightlink: 'Freightlink',
   email_lead: 'Lead e-mail',
+  ocr_rate_con: 'OCR rate con',
   partner_network: 'Sieć partnerska',
   internal_board: 'Giełda wewnętrzna',
 }
