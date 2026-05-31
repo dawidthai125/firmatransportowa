@@ -3,7 +3,7 @@ import {
   supabaseAnonKey,
   supabaseFunctionsBase,
 } from '@/config/supabase'
-import { getSupabaseAccessToken } from '@/lib/auth/supabase-client'
+import { getSupabaseAccessToken, getSupabaseClient } from '@/lib/auth/supabase-client'
 import {
   TENANT_DATA_KEYS,
   tenantStorageKey,
@@ -31,9 +31,38 @@ const pendingPushKeys = new Set<string>()
 /** id rekordu → baseline ISO UTC wysłany przy zapisie (ochrona przed nadpisaniem) */
 const pendingSaveBaselines = new Map<string, Record<string, string>>()
 let syncChain: Promise<void> = Promise.resolve()
+let activeFullPull: Promise<void> | null = null
+let lastPullOkAt = 0
+let pushRetryTimer: ReturnType<typeof setTimeout> | null = null
 
 export function getLastSyncError(): string | null {
   return lastSyncError
+}
+
+function friendlySyncError(e: unknown): string {
+  const raw = e instanceof Error ? e.message : String(e)
+  if (/abort|timeout/i.test(raw)) {
+    return 'Serwer chmury nie odpowiada — odśwież za chwilę'
+  }
+  if (/failed to fetch|network|load failed/i.test(raw)) {
+    return 'Brak połączenia z internetem lub chmurą'
+  }
+  if (/50[23]/.test(raw)) {
+    return 'Chmura startuje — spróbuj ponownie za kilka sekund'
+  }
+  return raw.length > 80 ? `${raw.slice(0, 77)}…` : raw
+}
+
+async function waitForSupabaseAuth(maxMs = 3500): Promise<void> {
+  if (!isSupabaseConfigured()) return
+  const sb = getSupabaseClient()
+  if (!sb) return
+  const deadline = Date.now() + maxMs
+  while (Date.now() < deadline) {
+    const { data } = await sb.auth.getSession()
+    if (data.session?.access_token) return
+    await sleep(120)
+  }
 }
 
 export async function retryCloudSync(): Promise<void> {
@@ -178,16 +207,21 @@ async function batchGet(keys: string[]): Promise<unknown[]> {
 
 async function batchSet(entries: { key: string; value: unknown }[]): Promise<void> {
   if (entries.length === 0) return
-  const payload = entries.map(({ key, value }) => ({
-    key,
-    value: attachSaveBaselines(key, value),
-  }))
-  const res = await fetchCloud('/batch-set', {
-    method: 'POST',
-    headers: await apiHeaders(),
-    body: JSON.stringify({ entries: payload }),
-  })
-  if (!res.ok) throw new Error(`batch-set ${res.status}`)
+  for (let i = 0; i < entries.length; i += CLOUD_BATCH_CHUNK_SIZE) {
+    const chunk = entries.slice(i, i + CLOUD_BATCH_CHUNK_SIZE)
+    const payload = chunk.map(({ key, value }) => ({
+      key,
+      value: attachSaveBaselines(key, value),
+    }))
+    await withRetries('batch-set', async () => {
+      const res = await fetchCloud('/batch-set', {
+        method: 'POST',
+        headers: await apiHeaders(),
+        body: JSON.stringify({ entries: payload }),
+      })
+      if (!res.ok) throw new Error(`batch-set ${res.status}`)
+    })
+  }
 }
 
 function notifySyncMerged(keys: string[]) {
@@ -261,6 +295,20 @@ function allTenantStorageKeys(): string[] {
 export async function pullAllFromCloud(options?: { pushLocalAfter?: boolean }): Promise<void> {
   if (!isSupabaseConfigured()) return
 
+  if (activeFullPull) return activeFullPull
+
+  activeFullPull = pullAllFromCloudInner(options).finally(() => {
+    window.setTimeout(() => {
+      activeFullPull = null
+    }, 800)
+  })
+
+  return activeFullPull
+}
+
+async function pullAllFromCloudInner(options?: { pushLocalAfter?: boolean }): Promise<void> {
+  await waitForSupabaseAuth()
+
   await withSyncLock(async () => {
     setStatus('syncing')
     try {
@@ -276,6 +324,9 @@ export async function pullAllFromCloud(options?: { pushLocalAfter?: boolean }): 
         if (allChanged.length > 0) notifySyncMerged(allChanged)
       })
 
+      lastPullOkAt = Date.now()
+
+      /** @deprecated — nie używać przy starcie aplikacji; wypycha cały localStorage i psuje sync */
       if (options?.pushLocalAfter) {
         for (const key of allTenantStorageKeys()) {
           if (readRawStorageEntry(key) != null) pendingPushKeys.add(key)
@@ -285,7 +336,7 @@ export async function pullAllFromCloud(options?: { pushLocalAfter?: boolean }): 
       setStatus('ok')
     } catch (e) {
       console.error('[TransFlow] pull failed', e)
-      const msg = e instanceof Error ? e.message : 'Sync error'
+      const msg = friendlySyncError(e)
       setStatus('error', msg)
       throw e
     }
@@ -355,6 +406,15 @@ export async function pushTenantKeysNow(tenantId: string, dataKeys: TenantDataKe
   })
 }
 
+function schedulePushRetry(keys: string[]): void {
+  keys.forEach((k) => pendingPushKeys.add(k))
+  if (pushRetryTimer) return
+  pushRetryTimer = setTimeout(() => {
+    pushRetryTimer = null
+    void flushCloudPush()
+  }, 5000)
+}
+
 /** Push z read-modify-write — pobiera chmurę, scala, dopiero wtedy zapisuje */
 async function flushCloudPush(): Promise<void> {
   if (!isSupabaseConfigured() || pendingPushKeys.size === 0) return
@@ -399,8 +459,17 @@ async function flushCloudPush(): Promise<void> {
       setStatus('ok')
     } catch (e) {
       console.error('[TransFlow] push failed', e)
-      setStatus('error', e instanceof Error ? e.message : 'Push error')
-      keys.forEach((k) => pendingPushKeys.add(k))
+      const msg = friendlySyncError(e)
+      lastSyncError = msg
+      const pullRecent = lastPullOkAt > 0 && Date.now() - lastPullOkAt < 120_000
+      if (pullRecent) {
+        /** Pull OK — dane lokalne aktualne; push ponowimy w tle bez czerwonego alertu */
+        setStatus('ok')
+        schedulePushRetry(keys)
+      } else {
+        setStatus('error', msg)
+        schedulePushRetry(keys)
+      }
     }
   })
 }

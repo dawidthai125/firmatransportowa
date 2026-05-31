@@ -18,6 +18,13 @@ const LABELS: Record<CloudSyncStatus, string> = {
   offline: 'Tylko lokalnie',
 }
 
+function userFacingDetail(status: CloudSyncStatus, detail: string | null): string | null {
+  if (!detail) return null
+  if (status !== 'error') return detail
+  if (/timeout|50[23]|fetch|network/i.test(detail)) return detail
+  return detail
+}
+
 export function CloudStatusBadge() {
   const [status, setStatus] = useState<CloudSyncStatus>(
     isSupabaseConfigured() ? 'idle' : 'offline',
@@ -54,8 +61,8 @@ export function CloudStatusBadge() {
   }
 
   const title =
-    status === 'error' && detail
-      ? `${detail} · kliknij, aby ponowić · v${APP_VERSION}`
+    status === 'error' && (detail || getLastSyncError())
+      ? `${userFacingDetail(status, detail ?? getLastSyncError())} · kliknij, aby ponowić · v${APP_VERSION}`
       : `${LABELS[status]} · v${APP_VERSION}`
 
   return (
