@@ -2,7 +2,6 @@ import { OperationsExceptionsPanel } from '@/app/components/dashboard/Operations
 import { WeeklyOpsPanel } from '@/app/components/dashboard/WeeklyOpsPanel'
 import { DocumentInvoiceQueuePanel } from '@/app/components/dashboard/DocumentInvoiceQueuePanel'
 import { VehicleMarginPanel } from '@/app/components/dashboard/VehicleMarginPanel'
-import { FleetMapPanel } from '@/app/components/fleet/FleetMapPanel'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/Card'
 import { buildComplianceAlerts, buildCompanyComplianceAlerts } from '@/lib/domain/compliance'
 import { loadCourses, seedDemoCourses } from '@/lib/domain/courses-store'
@@ -28,7 +27,11 @@ import { useCloudSyncRefreshKeys } from '@/lib/sync/useCloudSyncRefresh'
 import type { AdminView } from '@/lib/navigation'
 import type { Tenant } from '@/lib/tenant/types'
 import { AlertTriangle, Clock, Route, Truck, Users } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
+
+const FleetMapPanel = lazy(() =>
+  import('@/app/components/fleet/FleetMapPanel').then((m) => ({ default: m.FleetMapPanel })),
+)
 
 interface DashboardViewProps {
   tenant: Tenant
@@ -187,10 +190,18 @@ export function DashboardView({ tenant, onNavigate }: DashboardViewProps) {
           </CardHeader>
           <CardContent>
             {gpsEnabled ? (
-              <FleetMapPanel
-                positions={fleetPositions}
-                onRefresh={liveGps ? refreshFleet : refreshFleetSimulation}
-              />
+              <Suspense
+                fallback={
+                  <div className="flex h-48 items-center justify-center text-sm text-muted-foreground">
+                    Ładowanie mapy…
+                  </div>
+                }
+              >
+                <FleetMapPanel
+                  positions={fleetPositions}
+                  onRefresh={liveGps ? refreshFleet : refreshFleetSimulation}
+                />
+              </Suspense>
             ) : (
               <p className="text-sm text-muted-foreground">
                 Włącz moduł GPS w planie abonamentu, aby zobaczyć mapę floty.

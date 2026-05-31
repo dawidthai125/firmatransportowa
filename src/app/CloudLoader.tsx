@@ -27,7 +27,7 @@ export function CloudLoader({ children }: CloudLoaderProps) {
       if (status === 'error' && msg) setBanner(msg)
     })
 
-    void pullAllFromCloud().catch((e) => {
+    void pullAllFromCloud({ silent: true, full: false }).catch((e) => {
       if (cancelled) return
       const msg = e instanceof Error ? e.message : 'Chmura chwilowo niedostępna'
       setBanner(msg)

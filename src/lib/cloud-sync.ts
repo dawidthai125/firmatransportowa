@@ -4,6 +4,7 @@ import {
   supabaseFunctionsBase,
 } from '@/config/supabase'
 import { getSupabaseAccessToken, getSupabaseClient } from '@/lib/auth/supabase-client'
+import { loadSession } from '@/lib/auth/session'
 import {
   TENANT_DATA_KEYS,
   tenantStorageKey,
@@ -24,7 +25,7 @@ export type CloudSyncStatus = 'idle' | 'syncing' | 'ok' | 'error' | 'offline'
 export const SYNC_MERGED_EVENT = 'transflow:sync-merged'
 
 let statusListeners: ((s: CloudSyncStatus, msg?: string) => void)[] = []
-let lastStatus: CloudSyncStatus = isSupabaseConfigured() ? 'idle' : 'offline'
+let lastStatus: CloudSyncStatus = isSupabaseConfigured() ? 'ok' : 'offline'
 let lastSyncError: string | null = null
 let pushTimer: ReturnType<typeof setTimeout> | null = null
 const pendingPushKeys = new Set<string>()
@@ -42,6 +43,28 @@ const CLOUD_BATCH_CHUNK_SIZE = 24
 const CLOUD_PULL_MAX_RETRIES = 2
 const VISIBILITY_PULL_MIN_INTERVAL_MS = 45_000
 const PUSH_RETRY_MAX = 6
+
+/** Klucze potrzebne pulpitowi / kursom — reszta w drugiej fazie w tle */
+const PRIORITY_TENANT_DATA_KEYS: TenantDataKey[] = [
+  'settings',
+  'courses',
+  'drivers',
+  'vehicles',
+  'daily-reports',
+  'repair-reports',
+  'fleet-positions',
+  'course-messages',
+  'compliance-alerts',
+]
+
+export interface CloudPullOptions {
+  /** @deprecated nie używać przy starcie */
+  pushLocalAfter?: boolean
+  /** Pull startowy / w tle — bez „Synchronizacja…” w badge */
+  silent?: boolean
+  /** false = tylko rejestr + klucze operacyjne bieżącego tenanta */
+  full?: boolean
+}
 
 export function getLastSyncError(): string | null {
   return lastSyncError
@@ -74,7 +97,7 @@ async function waitForSupabaseAuth(maxMs = 3500): Promise<void> {
 }
 
 export async function retryCloudSync(): Promise<void> {
-  await pullAllFromCloud()
+  await pullAllFromCloud({ silent: false, full: true })
 }
 
 /** Zarejestruj baseline formularza — serwer odrzuci zapis, jeśli w KV jest nowsza wersja */
@@ -132,7 +155,15 @@ export function onCloudStatus(cb: (s: CloudSyncStatus, msg?: string) => void): (
 }
 
 function setStatus(s: CloudSyncStatus, msg?: string, options?: { silent?: boolean }) {
-  if (options?.silent && (lastStatus === 'ok' || lastStatus === 'error')) return
+  if (options?.silent) {
+    if (s === 'syncing') return
+    if (s === 'ok') {
+      lastStatus = 'ok'
+      lastSyncError = null
+      statusListeners.forEach((cb) => cb(s, msg))
+      return
+    }
+  }
   lastStatus = s
   if (s === 'ok') lastSyncError = null
   if (s === 'error' && msg) lastSyncError = msg
@@ -287,6 +318,26 @@ async function mergeKeysFromCloud(keys: string[]): Promise<string[]> {
   return changed
 }
 
+function activeTenantId(): string | null {
+  const session = loadSession()
+  if (session?.tenantId) return session.tenantId
+  const tenants = loadTenantsRegistry()
+  return tenants[0]?.id ?? null
+}
+
+function buildPriorityStorageKeys(): string[] {
+  const registryKey = tenantsRegistryKey()
+  const tenantId = activeTenantId()
+  if (!tenantId) return [registryKey]
+  const dataKeys = PRIORITY_TENANT_DATA_KEYS.map((dk) => tenantStorageKey(tenantId, dk))
+  return [registryKey, ...dataKeys]
+}
+
+function buildDeferredStorageKeys(): string[] {
+  const priority = new Set(buildPriorityStorageKeys())
+  return allTenantStorageKeys().filter((k) => !priority.has(k))
+}
+
 function allTenantStorageKeys(): string[] {
   const registryKey = tenantsRegistryKey()
   const tenants = loadTenantsRegistry()
@@ -300,7 +351,7 @@ function allTenantStorageKeys(): string[] {
 }
 
 /** Pobierz rejestr firm + dane tenantów — merge, nigdy ślepe nadpisanie chmurą */
-export async function pullAllFromCloud(options?: { pushLocalAfter?: boolean }): Promise<void> {
+export async function pullAllFromCloud(options?: CloudPullOptions): Promise<void> {
   if (!isSupabaseConfigured()) return
 
   if (activeFullPull) return activeFullPull
@@ -314,34 +365,46 @@ export async function pullAllFromCloud(options?: { pushLocalAfter?: boolean }): 
   return activeFullPull
 }
 
-async function pullAllFromCloudInner(options?: { pushLocalAfter?: boolean }): Promise<void> {
-  await waitForSupabaseAuth()
+async function pullDeferredFromCloud(silent: boolean): Promise<void> {
+  const keys = buildDeferredStorageKeys()
+  if (keys.length === 0) return
+  try {
+    await withSyncLock(async () => {
+      const changed = await mergeKeysFromCloud(keys)
+      if (changed.length > 0) notifySyncMerged(changed)
+    })
+  } catch (e) {
+    console.warn('[TransFlow] deferred pull failed', e)
+    if (!silent) {
+      setStatus('error', friendlySyncError(e))
+    }
+  }
+}
+
+async function pullAllFromCloudInner(options?: CloudPullOptions): Promise<void> {
+  const silent = options?.silent ?? false
+  const full = options?.full ?? true
+
+  await waitForSupabaseAuth(silent ? 1800 : 3500)
 
   await withSyncLock(async () => {
-    setStatus('syncing')
+    setStatus('syncing', undefined, { silent })
     try {
       await withRetries('pull', async () => {
-        const registryKey = tenantsRegistryKey()
-        const [registryCloud] = await batchGet([registryKey])
-        const registryChanged = mergeStorageKey(registryKey, registryCloud, false)
-
-        const dataKeys = allTenantStorageKeys().slice(1)
-        const changedData = await mergeKeysFromCloud(dataKeys)
-        const allChanged = registryChanged ? [registryKey, ...changedData] : changedData
-
-        if (allChanged.length > 0) notifySyncMerged(allChanged)
+        const keys = full ? allTenantStorageKeys() : buildPriorityStorageKeys()
+        const changed = await mergeKeysFromCloud(keys)
+        if (changed.length > 0) notifySyncMerged(changed)
       })
 
       lastPullOkAt = Date.now()
 
-      /** @deprecated — nie używać przy starcie aplikacji; wypycha cały localStorage i psuje sync */
       if (options?.pushLocalAfter) {
         for (const key of allTenantStorageKeys()) {
           if (readRawStorageEntry(key) != null) pendingPushKeys.add(key)
         }
       }
 
-      setStatus('ok')
+      setStatus('ok', undefined, { silent })
     } catch (e) {
       console.error('[TransFlow] pull failed', e)
       const msg = friendlySyncError(e)
@@ -349,6 +412,10 @@ async function pullAllFromCloudInner(options?: { pushLocalAfter?: boolean }): Pr
       throw e
     }
   })
+
+  if (!full) {
+    void pullDeferredFromCloud(true)
+  }
 
   if (pendingPushKeys.size > 0) {
     queueMicrotask(() => {
@@ -544,7 +611,7 @@ export function startCloudSyncListeners(): () => void {
       const now = Date.now()
       if (now - lastVisibilityPullAt < VISIBILITY_PULL_MIN_INTERVAL_MS) return
       lastVisibilityPullAt = now
-      void pullAllFromCloud().catch(() => undefined)
+      void pullAllFromCloud({ silent: true, full: false }).catch(() => undefined)
     } else if (pendingPushKeys.size > 0) {
       void flushCloudPush({ silent: true })
     }

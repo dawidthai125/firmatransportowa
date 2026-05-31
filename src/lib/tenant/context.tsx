@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from 'react'
 import { SYNC_MERGED_EVENT } from '@/lib/cloud-sync'
+import { loadSession } from '@/lib/auth/session'
 import type { Tenant } from './types'
 import { tenantsRegistryKey } from './types'
 import { loadTenantsRegistry, saveTenantsRegistry } from './storage'
@@ -23,9 +24,15 @@ interface TenantContextValue {
 
 const TenantContext = createContext<TenantContextValue | null>(null)
 
+function resolveInitialTenant(): Tenant | null {
+  const session = loadSession()
+  if (!session) return null
+  return loadTenantsRegistry().find((t) => t.id === session.tenantId) ?? null
+}
+
 export function TenantProvider({ children }: { children: ReactNode }) {
   const [tenants, setTenants] = useState<Tenant[]>(() => seedDemoTenantIfEmpty())
-  const [currentTenant, setCurrentTenant] = useState<Tenant | null>(null)
+  const [currentTenant, setCurrentTenant] = useState<Tenant | null>(resolveInitialTenant)
 
   const refreshTenants = useCallback(() => {
     setTenants(loadTenantsRegistry())

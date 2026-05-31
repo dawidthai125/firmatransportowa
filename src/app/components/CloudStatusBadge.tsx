@@ -27,7 +27,7 @@ function userFacingDetail(status: CloudSyncStatus, detail: string | null): strin
 
 export function CloudStatusBadge() {
   const [status, setStatus] = useState<CloudSyncStatus>(
-    isSupabaseConfigured() ? 'idle' : 'offline',
+    isSupabaseConfigured() ? 'ok' : 'offline',
   )
   const [detail, setDetail] = useState<string | null>(null)
   const [retrying, setRetrying] = useState(false)
