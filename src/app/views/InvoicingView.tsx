@@ -23,7 +23,7 @@ import {
   coursesAwaitingPayment,
   coursesOverduePayment,
 } from '@/lib/domain/course-documents-readiness'
-import { useCloudSyncRefreshKeys } from '@/lib/sync/useCloudSyncRefreshKeys'
+import { useCloudSyncRefreshKeys } from '@/lib/sync/useCloudSyncRefresh'
 import { FileDown, Plug, Receipt, Send } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 

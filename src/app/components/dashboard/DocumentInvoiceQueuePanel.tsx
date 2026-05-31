@@ -1,7 +1,6 @@
 import { Button } from '@/app/components/ui/Button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/Card'
 import {
-  courseDocumentGap,
   coursesMissingDocumentsAfterDelivery,
   coursesOverduePayment,
   coursesReadyForInvoicing,
@@ -112,10 +111,6 @@ function Stat({
         {label}
       </p>
       <p className={`text-xl font-bold ${tone}`}>{value}</p>
-    </div>
-  )
-}
-
     </div>
   )
 }
