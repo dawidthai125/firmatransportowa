@@ -1,9 +1,16 @@
 import { Card, CardContent } from '@/app/components/ui/Card'
 import { dailyReportTotalCosts } from '@/lib/domain/daily-report'
+import {
+  formatDailyReportFuel,
+  formatDailyReportOtherCosts,
+  formatDailyReportParking,
+  formatDailyReportTollEur,
+  formatDailyReportTollPln,
+} from '@/lib/domain/daily-report-format'
 import { loadDailyReports } from '@/lib/domain/daily-reports-store'
 import { useCloudSyncRefresh } from '@/lib/sync/useCloudSyncRefresh'
 import { cn } from '@/lib/utils'
-import { CheckCircle2, Clock, FileText, Fuel, MapPin, User } from 'lucide-react'
+import { CheckCircle2, Clock, FileText, MapPin, User } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { DailyReport } from '@/lib/domain/daily-report'
 
@@ -43,12 +50,15 @@ export function DailyReportsView({ tenantId }: DailyReportsViewProps) {
           <p className="text-sm text-muted-foreground">
             {reports.length} raportów · {todayCount} dziś · {endedCount} zakończonych zmian
           </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Koszty w zł — brutto (zapłacone). Opłaty w EUR pokazane osobno i nie wchodzą w sumę zł.
+          </p>
         </div>
         <input
           type="date"
           value={dateFilter}
           onChange={(e) => setDateFilter(e.target.value)}
-          className="rounded-md border border-border bg-background px-3 py-2 text-sm"
+          className="w-full min-w-0 rounded-md border border-border bg-background px-3 py-2 text-sm sm:w-auto"
         />
       </div>
 
@@ -75,9 +85,18 @@ export function DailyReportsView({ tenantId }: DailyReportsViewProps) {
 
 function ReportCard({ report }: { report: DailyReport }) {
   const totalCosts = dailyReportTotalCosts(report)
-  const tollParts = [
-    report.tollPln ? `${report.tollPln} zł myto` : null,
-    report.tollEur ? `${report.tollEur} EUR myto` : null,
+  const costLines = [
+    report.fuelLiters != null && report.fuelLiters > 0
+      ? formatDailyReportFuel(report.fuelLiters, report.fuelCostPln)
+      : null,
+    report.tollPln != null && report.tollPln > 0 ? formatDailyReportTollPln(report.tollPln) : null,
+    report.tollEur != null && report.tollEur > 0 ? formatDailyReportTollEur(report.tollEur) : null,
+    report.parkingPln != null && report.parkingPln > 0
+      ? formatDailyReportParking(report.parkingPln)
+      : null,
+    report.otherCostsPln != null && report.otherCostsPln > 0
+      ? formatDailyReportOtherCosts(report.otherCostsPln)
+      : null,
   ].filter(Boolean)
 
   return (
@@ -109,19 +128,14 @@ function ReportCard({ report }: { report: DailyReport }) {
         <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
           <span className="flex items-center gap-1">
             <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
-            {report.kmDriven} km
+            {report.kmDriven.toLocaleString('pl-PL')} km
           </span>
-          {report.fuelLiters != null && (
-            <span className="flex items-center gap-1">
-              <Fuel className="h-3.5 w-3.5 text-muted-foreground" />
-              {report.fuelLiters} l
-              {report.fuelCostPln != null && ` · ${report.fuelCostPln} zł`}
-            </span>
-          )}
-          {tollParts.length > 0 && <span>{tollParts.join(' · ')}</span>}
+          {costLines.map((line) => (
+            <span key={line}>{line}</span>
+          ))}
           {totalCosts > 0 && (
             <span>
-              Koszty łącznie: <strong>{totalCosts.toLocaleString('pl-PL')} zł</strong>
+              Koszty łącznie (zł): <strong>{totalCosts.toLocaleString('pl-PL')} zł</strong>
             </span>
           )}
         </div>

@@ -277,7 +277,7 @@ export function MechanicRepairsView({ tenantId, mechanicId, mechanicName }: Mech
                     <Calendar className="h-4 w-4" />
                     Ustal termin naprawy
                   </Label>
-                  <div className="mt-2 grid grid-cols-2 gap-2">
+                  <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
                     <Input type="date" value={scheduleDate} onChange={(e) => setScheduleDate(e.target.value)} />
                     <Input type="time" value={scheduleTime} onChange={(e) => setScheduleTime(e.target.value)} />
                   </div>

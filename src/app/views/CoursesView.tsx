@@ -3,7 +3,10 @@ import { Button } from '@/app/components/ui/Button'
 import { Card, CardContent } from '@/app/components/ui/Card'
 import { CloudSyncPlaceholder } from '@/app/components/ui/CloudSyncPlaceholder'
 import { Input, Label, Select } from '@/app/components/ui/Input'
-import type { Course, CourseStatus } from '@/lib/domain/course'
+import {
+  COURSE_TOLL_FIELD_LABEL,
+  formatCourseTollEur,
+} from '@/lib/domain/daily-report-format'
 import {
   COURSE_SCOPE_LABELS,
   COURSE_STATUS_COLORS,
@@ -12,7 +15,9 @@ import {
   courseMargin,
   courseRouteLabel,
   createEmptyCourse,
+  type Course,
   type CourseScope,
+  type CourseStatus,
 } from '@/lib/domain/course'
 import {
   deleteCourse,
@@ -231,7 +236,7 @@ function CourseCard({
                 Fracht: <strong className="text-foreground">{courseFreightDisplay(course)}</strong>
               </span>
               {course.tollEur != null && course.tollEur > 0 && (
-                <span>Myto: <strong>{course.tollEur} EUR</strong></span>
+                <span>{formatCourseTollEur(course.tollEur)}</span>
               )}
               {course.routeCostsPln != null && (
                 <span>
@@ -404,7 +409,7 @@ function CourseForm({
                 onChange={(e) => patch({ routeCostsPln: e.target.value ? Number(e.target.value) : undefined })}
               />
             </Field>
-            <Field label="Myto (EUR)">
+            <Field label={COURSE_TOLL_FIELD_LABEL}>
               <Input
                 type="number"
                 value={course.tollEur ?? ''}

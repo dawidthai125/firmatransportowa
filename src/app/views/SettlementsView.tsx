@@ -236,7 +236,7 @@ export function SettlementsView({ tenantId, tenantSlug, tenantName }: Settlement
             Marża per kurs (z raportów kierowcy)
           </CardTitle>
           <CardDescription>
-            Plan z kursu vs km i koszty (paliwo, myto) wpisane w kabinie — bez nowej zakładki w menu
+            Plan z kursu vs km i koszty (paliwo, opłaty drogowe) wpisane w kabinie — bez nowej zakładki w menu
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-2">

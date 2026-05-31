@@ -41,7 +41,7 @@ function todayIso(): string {
 
 export function buildDailyReportsCsvFile(reports: DailyReport[], tenantSlug: string): PreviewableFile {
   const header = [
-    'Data', 'Kierowca', 'Kurs', 'Km', 'Paliwo_l', 'Paliwo_zl', 'Myto_zl', 'Myto_EUR',
+    'Data', 'Kierowca', 'Kurs', 'Km', 'Paliwo_l', 'Paliwo_zl', 'Oplaty_drogowe_zl', 'Oplaty_drogowe_EUR',
     'Parking_zl', 'Inne_zl', 'Koszty_lacznie_zl', 'Jazda_min', 'Postoj_min', 'Granica',
     'Koniec_pracy', 'Uwagi',
   ]

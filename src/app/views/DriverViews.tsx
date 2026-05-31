@@ -9,6 +9,11 @@ import {
   dailyReportTotalCosts,
 } from '@/lib/domain/daily-report'
 import {
+  TOLL_FIELD_HINT,
+  TOLL_FIELD_LABEL_EUR,
+  TOLL_FIELD_LABEL_PLN,
+} from '@/lib/domain/daily-report-format'
+import {
   checkDailyDrivingLimit,
   formatDrivingHours,
 } from '@/lib/domain/driving-time'
@@ -142,7 +147,7 @@ export function DriverHomeView({
         <QuickAction
           icon={FileText}
           title="Raport dzienny"
-          desc="Km, paliwo, myto PLN/EUR — wypełnij w kabinie"
+          desc="Km, paliwo, opłaty drogowe — wypełnij w kabinie"
           onClick={onOpenReport}
         />
       </div>
@@ -277,6 +282,9 @@ export function DriverReportView({ tenantId, driverName }: DriverReportViewProps
             </span>
           )}
         </p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Kwoty w zł — brutto (zapłacone). Opłaty w EUR nie wchodzą w „Koszty łącznie”.
+        </p>
       </div>
 
       {(drivingCheck.status !== 'ok' || drivingCheck.continuousRisk) && (
@@ -356,7 +364,7 @@ export function DriverReportView({ tenantId, driverName }: DriverReportViewProps
             />
           </Field>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label="Paliwo (l)">
               <Input
                 type="number"
@@ -377,8 +385,8 @@ export function DriverReportView({ tenantId, driverName }: DriverReportViewProps
             </Field>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Myto / opłaty (zł)">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <Field label={TOLL_FIELD_LABEL_PLN} hint={TOLL_FIELD_HINT}>
               <Input
                 type="number"
                 value={report.tollPln ?? ''}
@@ -387,7 +395,7 @@ export function DriverReportView({ tenantId, driverName }: DriverReportViewProps
                 }
               />
             </Field>
-            <Field label="Myto (EUR)">
+            <Field label={TOLL_FIELD_LABEL_EUR}>
               <Input
                 type="number"
                 value={report.tollEur ?? ''}
@@ -398,7 +406,7 @@ export function DriverReportView({ tenantId, driverName }: DriverReportViewProps
             </Field>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label="Parking (zł)">
               <Input
                 type="number"
@@ -419,7 +427,7 @@ export function DriverReportView({ tenantId, driverName }: DriverReportViewProps
             </Field>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label="Jazda (min)">
               <Input
                 type="number"
@@ -458,7 +466,7 @@ export function DriverReportView({ tenantId, driverName }: DriverReportViewProps
           {totalCosts > 0 && (
             <p className="flex items-center gap-2 text-sm">
               <Fuel className="h-4 w-4 text-muted-foreground" />
-              Koszty łącznie: <strong>{totalCosts.toLocaleString('pl-PL')} zł</strong>
+              Koszty łącznie (zł): <strong>{totalCosts.toLocaleString('pl-PL')} zł</strong>
             </p>
           )}
         </CardContent>
@@ -482,10 +490,19 @@ export function DriverReportView({ tenantId, driverName }: DriverReportViewProps
   )
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({
+  label,
+  hint,
+  children,
+}: {
+  label: string
+  hint?: string
+  children: React.ReactNode
+}) {
   return (
     <div className="space-y-1.5">
       <Label>{label}</Label>
+      {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
       {children}
     </div>
   )
