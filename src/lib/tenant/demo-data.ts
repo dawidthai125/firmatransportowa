@@ -65,6 +65,7 @@ function patchRegistryTenants(tenants: Tenant[]): Tenant[] {
                   loadBoard: true,
                   itd: true,
                   tachographImport: true,
+                  freightApiProd: true,
                 },
               },
             })

@@ -59,7 +59,7 @@ const DEFAULT_CONNECTOR: FreightConnectorConfig = {
   wtransnetEnabled: true,
   b2pwebEnabled: true,
   freightlinkEnabled: true,
-  productionApiEnabled: false,
+  productionApiEnabled: true,
   transEuSandbox: true,
   lastSyncBySource: {},
 }

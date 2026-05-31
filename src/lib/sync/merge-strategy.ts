@@ -256,7 +256,7 @@ function mergeFreightConnectors(
     wtransnetEnabled: newer.wtransnetEnabled ?? older.wtransnetEnabled ?? true,
     b2pwebEnabled: newer.b2pwebEnabled ?? older.b2pwebEnabled ?? true,
     freightlinkEnabled: newer.freightlinkEnabled ?? older.freightlinkEnabled ?? true,
-    productionApiEnabled: newer.productionApiEnabled ?? older.productionApiEnabled ?? false,
+    productionApiEnabled: newer.productionApiEnabled ?? older.productionApiEnabled ?? true,
     transEuClientId: newer.transEuClientId ?? older.transEuClientId,
     transEuApiKey: newer.transEuApiKey ?? older.transEuApiKey,
     transEuSandbox: newer.transEuSandbox ?? older.transEuSandbox ?? true,

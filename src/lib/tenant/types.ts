@@ -87,7 +87,7 @@ export const DEFAULT_MODULES: TenantModules = {
   clientPortal: false,
   ocrRateCon: false,
   eCmr: false,
-  freightApiProd: false,
+  freightApiProd: true,
 }
 
 export function createDefaultTenantSettings(): TenantSettings {
