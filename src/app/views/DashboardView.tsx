@@ -105,7 +105,7 @@ export function DashboardView({ tenant, onNavigate }: DashboardViewProps) {
     }
   }, [refreshStats, refreshFleet, gpsEnabled])
 
-  useCloudSyncRefreshKeys(tenant.id, ['fleet-positions', 'courses', 'daily-reports'], () => {
+  useCloudSyncRefreshKeys(tenant.id, ['fleet-positions', 'courses', 'daily-reports', 'drivers', 'vehicles', 'repair-reports', 'settings'], () => {
     refreshFleet()
     refreshStats()
   })

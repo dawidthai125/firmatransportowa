@@ -30,7 +30,7 @@ export function CloudLoader({ children }: CloudLoaderProps) {
       }
     })
 
-    pullAllFromCloud()
+    pullAllFromCloud({ pushLocalAfter: true })
       .catch((e) => {
         if (!cancelled) setError(e instanceof Error ? e.message : 'Błąd chmury')
       })
@@ -65,7 +65,7 @@ export function CloudLoader({ children }: CloudLoaderProps) {
         <div
           className={`fixed inset-x-0 z-[100] bg-warning/10 px-4 py-2 text-center text-xs text-warning ${initialPull ? 'top-8' : 'top-0'}`}
         >
-          Chmura niedostępna ({error}) — dane z przeglądarki.
+          Chmura chwilowo niedostępna — pokazujemy dane z tej przeglądarki. Spróbuj odświeżyć za chwilę.
         </div>
       )}
       {children}

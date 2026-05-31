@@ -17,6 +17,9 @@ import {
   upsertDriver,
 } from '@/lib/domain/drivers-store'
 import { loadVehicles, seedDemoVehicles } from '@/lib/domain/vehicles-store'
+import { EditConflictBanner } from '@/app/components/sync/EditConflictBanner'
+import { useCloudSyncRefreshKeys } from '@/lib/sync/useCloudSyncRefresh'
+import { useSyncedEditGuard } from '@/lib/sync/useSyncedEditGuard'
 import { Plus, Shield, User, Phone } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 
@@ -42,18 +45,34 @@ export function DriversView({ tenantId, readOnly = false }: DriversViewProps) {
     refresh()
   }, [refresh])
 
+  useCloudSyncRefreshKeys(tenantId, ['drivers', 'vehicles'], refresh)
+
+  const { conflict, reloadFromStore, guardSave } = useSyncedEditGuard(
+    tenantId,
+    'drivers',
+    editing,
+    setEditing,
+    isNew,
+    'Ten kierowca',
+  )
+
+  function saveDriver(force = false) {
+    if (!editing) return
+    if (!force && !guardSave()) return
+    setDrivers(upsertDriver(tenantId, { ...editing, updatedAt: new Date().toISOString() }))
+    setEditing(null)
+    setIsNew(false)
+  }
+
+  function handleSave() {
+    saveDriver(false)
+  }
+
   function openNew() {
     const base = createEmptyDriver(tenantId)
     const now = new Date().toISOString()
     setEditing({ ...base, id: crypto.randomUUID(), createdAt: now, updatedAt: now })
     setIsNew(true)
-  }
-
-  function handleSave() {
-    if (!editing) return
-    setDrivers(upsertDriver(tenantId, { ...editing, updatedAt: new Date().toISOString() }))
-    setEditing(null)
-    setIsNew(false)
   }
 
   function handleDelete(id: string) {
@@ -133,6 +152,15 @@ export function DriversView({ tenantId, readOnly = false }: DriversViewProps) {
             setIsNew(false)
           }}
           onSave={handleSave}
+          saveDisabled={conflict}
+          conflictBanner={
+            conflict ? (
+              <EditConflictBanner
+                onReload={() => reloadFromStore(() => loadDrivers(tenantId))}
+                onForceSave={() => saveDriver(true)}
+              />
+            ) : undefined
+          }
         >
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Imię">

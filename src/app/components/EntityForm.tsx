@@ -38,9 +38,18 @@ interface EntityFormModalProps {
   onClose: () => void
   onSave: () => void
   children: React.ReactNode
+  conflictBanner?: React.ReactNode
+  saveDisabled?: boolean
 }
 
-export function EntityFormModal({ title, onClose, onSave, children }: EntityFormModalProps) {
+export function EntityFormModal({
+  title,
+  onClose,
+  onSave,
+  children,
+  conflictBanner,
+  saveDisabled = false,
+}: EntityFormModalProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-0 sm:items-center sm:p-4">
       <Card className="max-h-[92dvh] w-full max-w-lg overflow-hidden sm:rounded-lg">
@@ -50,12 +59,15 @@ export function EntityFormModal({ title, onClose, onSave, children }: EntityForm
             <X className="h-4 w-4" />
           </Button>
         </div>
-        <div className="scroll-area max-h-[calc(92dvh-120px)] space-y-3 p-4">{children}</div>
+        <div className="scroll-area max-h-[calc(92dvh-120px)] space-y-3 p-4">
+          {conflictBanner}
+          {children}
+        </div>
         <div className="flex gap-2 border-t border-border p-4">
           <Button variant="secondary" className="flex-1" onClick={onClose}>
             Anuluj
           </Button>
-          <Button className="flex-1" onClick={onSave}>
+          <Button className="flex-1" onClick={onSave} disabled={saveDisabled}>
             Zapisz
           </Button>
         </div>

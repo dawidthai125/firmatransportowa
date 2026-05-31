@@ -15,7 +15,7 @@
 import type { AdminView, DriverView } from '@/lib/navigation'
 import type { TenantDataKey, TenantModules } from '@/lib/tenant/types'
 
-export const APP_FEATURES_CATALOG_VERSION = '0.17.5'
+export const APP_FEATURES_CATALOG_VERSION = '0.17.6'
 
 export type AppFeatureArea = 'admin' | 'driver' | 'mechanic' | 'platform' | 'integration'
 

@@ -15,9 +15,10 @@ import {
 import { seedDemoCompanyDocuments, loadTenantSettingsData } from '@/lib/domain/tenant-settings'
 import { loadVehicles, seedDemoVehicles } from '@/lib/domain/vehicles-store'
 import { seedDemoTenantIfEmpty } from '@/lib/tenant/demo-data'
+import { useCloudSyncRefreshKeys } from '@/lib/sync/useCloudSyncRefresh'
 import { cn } from '@/lib/utils'
 import { AlertTriangle, Building2, ExternalLink, Globe, ShieldCheck, Truck, User } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import type { ComplianceAlert } from '@/lib/domain/compliance'
 import type { InternationalCourseAlert } from '@/lib/domain/international-compliance'
 
@@ -30,7 +31,7 @@ export function ComplianceView({ tenantId, tenantName }: ComplianceViewProps) {
   const [alerts, setAlerts] = useState<ComplianceAlert[]>([])
   const [intlAlerts, setIntlAlerts] = useState<InternationalCourseAlert[]>([])
 
-  useEffect(() => {
+  const refresh = useCallback(() => {
     seedDemoDrivers(tenantId)
     seedDemoVehicles(tenantId)
     seedDemoCompanyDocuments(tenantId)
@@ -51,6 +52,12 @@ export function ComplianceView({ tenantId, tenantName }: ComplianceViewProps) {
     setAlerts([...driverVehicleAlerts, ...companyAlerts].sort((a, b) => a.daysLeft - b.daysLeft))
     setIntlAlerts(buildInternationalCourseAlerts(tenantId, courses))
   }, [tenantId, tenantName])
+
+  useEffect(() => {
+    refresh()
+  }, [refresh])
+
+  useCloudSyncRefreshKeys(tenantId, ['drivers', 'vehicles', 'courses', 'settings'], refresh)
 
   const expired = alerts.filter((a) => a.status === 'expired')
   const warning = alerts.filter((a) => a.status === 'warning')

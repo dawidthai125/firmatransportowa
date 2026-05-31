@@ -23,9 +23,18 @@ export const SYNC_MERGED_EVENT = 'transflow:sync-merged'
 
 let statusListeners: ((s: CloudSyncStatus, msg?: string) => void)[] = []
 let lastStatus: CloudSyncStatus = isSupabaseConfigured() ? 'idle' : 'offline'
+let lastSyncError: string | null = null
 let pushTimer: ReturnType<typeof setTimeout> | null = null
 const pendingPushKeys = new Set<string>()
 let syncChain: Promise<void> = Promise.resolve()
+
+export function getLastSyncError(): string | null {
+  return lastSyncError
+}
+
+export async function retryCloudSync(): Promise<void> {
+  await pullAllFromCloud()
+}
 
 function withSyncLock<T>(fn: () => Promise<T>): Promise<T> {
   const next = syncChain.then(fn, fn)
@@ -46,10 +55,33 @@ export function onCloudStatus(cb: (s: CloudSyncStatus, msg?: string) => void): (
 
 function setStatus(s: CloudSyncStatus, msg?: string) {
   lastStatus = s
+  if (s === 'ok') lastSyncError = null
+  if (s === 'error' && msg) lastSyncError = msg
   statusListeners.forEach((cb) => cb(s, msg))
 }
 
-const CLOUD_FETCH_TIMEOUT_MS = 12_000
+const CLOUD_FETCH_TIMEOUT_MS = 20_000
+const CLOUD_BATCH_CHUNK_SIZE = 8
+const CLOUD_PULL_MAX_RETRIES = 3
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+async function withRetries<T>(label: string, fn: () => Promise<T>): Promise<T> {
+  let lastErr: unknown
+  for (let attempt = 1; attempt <= CLOUD_PULL_MAX_RETRIES; attempt++) {
+    try {
+      return await fn()
+    } catch (e) {
+      lastErr = e
+      if (attempt < CLOUD_PULL_MAX_RETRIES) {
+        await sleep(400 * attempt)
+      }
+    }
+  }
+  throw lastErr instanceof Error ? lastErr : new Error(`${label} failed`)
+}
 
 async function apiHeaders(): Promise<Record<string, string>> {
   const jwt = await getSupabaseAccessToken()
@@ -85,14 +117,22 @@ async function fetchCloud(
 
 async function batchGet(keys: string[]): Promise<unknown[]> {
   if (keys.length === 0) return []
-  const res = await fetchCloud('/batch-get', {
-    method: 'POST',
-    headers: await apiHeaders(),
-    body: JSON.stringify({ keys }),
-  })
-  if (!res.ok) throw new Error(`batch-get ${res.status}`)
-  const json = (await res.json()) as { values: unknown[] }
-  return json.values
+  const out: unknown[] = []
+  for (let i = 0; i < keys.length; i += CLOUD_BATCH_CHUNK_SIZE) {
+    const chunk = keys.slice(i, i + CLOUD_BATCH_CHUNK_SIZE)
+    const values = await withRetries('batch-get', async () => {
+      const res = await fetchCloud('/batch-get', {
+        method: 'POST',
+        headers: await apiHeaders(),
+        body: JSON.stringify({ keys: chunk }),
+      })
+      if (!res.ok) throw new Error(`batch-get ${res.status}`)
+      const json = (await res.json()) as { values: unknown[] }
+      return json.values
+    })
+    out.push(...values)
+  }
+  return out
 }
 
 async function batchSet(entries: { key: string; value: unknown }[]): Promise<void> {
@@ -160,35 +200,55 @@ async function mergeKeysFromCloud(keys: string[]): Promise<string[]> {
   return changed
 }
 
+function allTenantStorageKeys(): string[] {
+  const registryKey = tenantsRegistryKey()
+  const tenants = loadTenantsRegistry()
+  const dataKeys: string[] = []
+  for (const tenant of tenants) {
+    for (const dk of TENANT_DATA_KEYS) {
+      dataKeys.push(tenantStorageKey(tenant.id, dk))
+    }
+  }
+  return [registryKey, ...dataKeys]
+}
+
 /** Pobierz rejestr firm + dane tenantów — merge, nigdy ślepe nadpisanie chmurą */
-export async function pullAllFromCloud(): Promise<void> {
+export async function pullAllFromCloud(options?: { pushLocalAfter?: boolean }): Promise<void> {
   if (!isSupabaseConfigured()) return
 
-  return withSyncLock(async () => {
+  await withSyncLock(async () => {
     setStatus('syncing')
     try {
-      const registryKey = tenantsRegistryKey()
-      const [registryCloud] = await batchGet([registryKey])
-      const registryChanged = mergeStorageKey(registryKey, registryCloud, false)
-      const tenants = loadTenantsRegistry()
+      await withRetries('pull', async () => {
+        const registryKey = tenantsRegistryKey()
+        const [registryCloud] = await batchGet([registryKey])
+        const registryChanged = mergeStorageKey(registryKey, registryCloud, false)
 
-      const dataKeys: string[] = []
-      for (const tenant of tenants) {
-        for (const dk of TENANT_DATA_KEYS) {
-          dataKeys.push(tenantStorageKey(tenant.id, dk))
+        const dataKeys = allTenantStorageKeys().slice(1)
+        const changedData = await mergeKeysFromCloud(dataKeys)
+        const allChanged = registryChanged ? [registryKey, ...changedData] : changedData
+
+        if (allChanged.length > 0) notifySyncMerged(allChanged)
+      })
+
+      if (options?.pushLocalAfter) {
+        for (const key of allTenantStorageKeys()) {
+          if (readRawStorageEntry(key) != null) pendingPushKeys.add(key)
         }
       }
 
-      const changedData = await mergeKeysFromCloud(dataKeys)
-      const allChanged = registryChanged ? [registryKey, ...changedData] : changedData
-
-      if (allChanged.length > 0) notifySyncMerged(allChanged)
       setStatus('ok')
     } catch (e) {
       console.error('[TransFlow] pull failed', e)
-      setStatus('error', e instanceof Error ? e.message : 'Sync error')
+      const msg = e instanceof Error ? e.message : 'Sync error'
+      setStatus('error', msg)
+      throw e
     }
   })
+
+  if (pendingPushKeys.size > 0) {
+    await flushCloudPush()
+  }
 }
 
 export function scheduleCloudPush(storageKey: string): void {
@@ -349,7 +409,7 @@ export function startCloudSyncListeners(): () => void {
 
   const onVisible = () => {
     if (document.visibilityState === 'visible') {
-      void pullAllFromCloud()
+      void pullAllFromCloud().catch(() => undefined)
     } else if (pendingPushKeys.size > 0) {
       void flushCloudPush()
     }

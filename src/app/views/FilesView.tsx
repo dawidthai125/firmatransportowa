@@ -9,6 +9,7 @@ import {
   seedDemoTenantFiles,
   storedToPreviewable,
 } from '@/lib/files/files-store'
+import { useCloudSyncRefresh } from '@/lib/sync/useCloudSyncRefresh'
 import { cn } from '@/lib/utils'
 import { Eye, FileText, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
@@ -30,6 +31,10 @@ export function FilesView({ tenantId }: FilesViewProps) {
   useEffect(() => {
     void refresh()
   }, [refresh])
+
+  useCloudSyncRefresh(tenantId, 'files', () => {
+    void refresh()
+  })
 
   function openFile(stored: StoredTenantFile) {
     openPreview(storedToPreviewable(stored), { tenantId, allowSave: false })

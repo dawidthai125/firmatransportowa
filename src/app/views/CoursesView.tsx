@@ -34,7 +34,9 @@ import {
   type CourseSettlementSummary,
 } from '@/lib/domain/course-settlement'
 import { loadDailyReports, seedDemoDailyReports } from '@/lib/domain/daily-reports-store'
+import { EditConflictBanner } from '@/app/components/sync/EditConflictBanner'
 import { useCloudSyncRefreshKeys } from '@/lib/sync/useCloudSyncRefresh'
+import { useSyncedEditGuard } from '@/lib/sync/useSyncedEditGuard'
 import { cn } from '@/lib/utils'
 import { AlertTriangle, Globe, MapPin, Pencil, Plus, Route, Trash2, X } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
@@ -67,6 +69,15 @@ export function CoursesView({ tenantId, readOnly = false }: CoursesViewProps) {
 
   useCloudSyncRefreshKeys(tenantId, ['courses', 'daily-reports'], refresh)
 
+  const { conflict, reloadFromStore, guardSave } = useSyncedEditGuard(
+    tenantId,
+    'courses',
+    editing,
+    setEditing,
+    isNew,
+    'Ten kurs',
+  )
+
   function openNew() {
     const base = createEmptyCourse(tenantId)
     const now = new Date().toISOString()
@@ -89,8 +100,9 @@ export function CoursesView({ tenantId, readOnly = false }: CoursesViewProps) {
     setIsNew(false)
   }
 
-  function handleSave() {
+  function saveCourse(force = false) {
     if (!editing) return
+    if (!force && !guardSave()) return
     const saved = {
       ...editing,
       updatedAt: new Date().toISOString(),
@@ -98,6 +110,10 @@ export function CoursesView({ tenantId, readOnly = false }: CoursesViewProps) {
     }
     setCourses(upsertCourse(tenantId, saved))
     closeForm()
+  }
+
+  function handleSave() {
+    saveCourse(false)
   }
 
   function handleDelete(id: string) {
@@ -155,6 +171,9 @@ export function CoursesView({ tenantId, readOnly = false }: CoursesViewProps) {
           onChange={setEditing}
           onSave={handleSave}
           onClose={closeForm}
+          conflict={conflict}
+          onReloadConflict={() => reloadFromStore(() => loadCourses(tenantId))}
+          onForceSave={() => saveCourse(true)}
         />
       )}
     </div>
@@ -289,12 +308,18 @@ function CourseForm({
   onChange,
   onSave,
   onClose,
+  conflict = false,
+  onReloadConflict,
+  onForceSave,
 }: {
   course: Course
   isNew: boolean
   onChange: (c: Course) => void
   onSave: () => void
   onClose: () => void
+  conflict?: boolean
+  onReloadConflict?: () => void
+  onForceSave?: () => void
 }) {
   function patch(partial: Partial<Course>) {
     onChange({ ...course, ...partial })
@@ -311,6 +336,12 @@ function CourseForm({
         </div>
 
         <div className="scroll-area max-h-[calc(92dvh-120px)] space-y-3 p-4">
+          {conflict && onReloadConflict && (
+            <EditConflictBanner
+              onReload={onReloadConflict}
+              onForceSave={onForceSave}
+            />
+          )}
           <Field label="Numer / referencja">
             <Input value={course.reference} onChange={(e) => patch({ reference: e.target.value })} placeholder="K/2026/003" />
           </Field>
@@ -466,7 +497,7 @@ function CourseForm({
           <Button variant="secondary" className="flex-1" onClick={onClose}>
             Anuluj
           </Button>
-          <Button className="flex-1" onClick={onSave}>
+          <Button className="flex-1" onClick={onSave} disabled={conflict}>
             Zapisz
           </Button>
         </div>

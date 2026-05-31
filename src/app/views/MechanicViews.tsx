@@ -21,9 +21,14 @@ import {
   type MechanicRepairWorkInput,
 } from '@/lib/domain/repair-reports-store'
 import { useCloudSyncRefresh } from '@/lib/sync/useCloudSyncRefresh'
+import { EditConflictBanner } from '@/app/components/sync/EditConflictBanner'
+import {
+  checkRecordStale,
+  confirmSaveOverStaleRecord,
+} from '@/lib/sync/record-conflict'
 import { cn } from '@/lib/utils'
 import { Calendar, MessageCircle, Phone, Save, Wrench } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 interface MechanicRepairsViewProps {
   tenantId: string
@@ -53,6 +58,8 @@ export function MechanicRepairsView({ tenantId, mechanicId, mechanicName }: Mech
     repairSummary: '',
     repairCostPln: undefined,
   })
+  const [conflict, setConflict] = useState(false)
+  const baselineUpdatedAt = useRef<string | undefined>(undefined)
 
   const applyList = useCallback(
     (all: RepairReport[], keepSelectedId?: string) => {
@@ -80,6 +87,11 @@ export function MechanicRepairsView({ tenantId, mechanicId, mechanicName }: Mech
   useCloudSyncRefresh(tenantId, 'repair-reports', refresh)
 
   useEffect(() => {
+    baselineUpdatedAt.current = selected?.updatedAt
+    setConflict(false)
+  }, [selected?.id])
+
+  useEffect(() => {
     if (selected) {
       setWork(workFromReport(selected))
       if (selected.scheduledRepairAt) {
@@ -90,7 +102,36 @@ export function MechanicRepairsView({ tenantId, mechanicId, mechanicName }: Mech
     }
   }, [selected?.id, selected?.updatedAt])
 
+  useEffect(() => {
+    if (!selected) {
+      setConflict(false)
+      return
+    }
+    const check = checkRecordStale(
+      tenantId,
+      'repair-reports',
+      selected.id,
+      baselineUpdatedAt.current,
+    )
+    setConflict(check.isStale)
+  }, [tenantId, selected, reports])
+
   const active = reports.filter((r) => !['completed'].includes(r.status))
+
+  function guardMechanicSave(): boolean {
+    if (!selected || !conflict) return true
+    return confirmSaveOverStaleRecord('To zgłoszenie awarii')
+  }
+
+  function reloadSelected() {
+    if (!selected) return
+    const fresh = loadRepairReports(tenantId).find((r) => r.id === selected.id)
+    if (fresh) {
+      setSelected(fresh)
+      baselineUpdatedAt.current = fresh.updatedAt
+      setConflict(false)
+    }
+  }
 
   function runUpdate(fn: () => RepairReport[], selectedId: string) {
     const all = fn()
@@ -98,7 +139,7 @@ export function MechanicRepairsView({ tenantId, mechanicId, mechanicName }: Mech
   }
 
   function handleSchedule() {
-    if (!selected || !scheduleDate) return
+    if (!selected || !scheduleDate || !guardMechanicSave()) return
     const iso = `${scheduleDate}T${scheduleTime}:00`
     runUpdate(
       () => mechanicScheduleRepair(tenantId, selected.id, iso, scheduleNotes || undefined),
@@ -107,23 +148,23 @@ export function MechanicRepairsView({ tenantId, mechanicId, mechanicName }: Mech
   }
 
   function handleContact() {
-    if (!selected || !contactMsg.trim()) return
+    if (!selected || !contactMsg.trim() || !guardMechanicSave()) return
     runUpdate(() => mechanicRequestDriverContact(tenantId, selected.id, contactMsg.trim()), selected.id)
     setContactMsg('')
   }
 
   function handleSaveWork() {
-    if (!selected) return
+    if (!selected || !guardMechanicSave()) return
     runUpdate(() => mechanicSaveRepairWork(tenantId, selected.id, work), selected.id)
   }
 
   function handleInRepair() {
-    if (!selected) return
+    if (!selected || !guardMechanicSave()) return
     runUpdate(() => mechanicMarkInRepair(tenantId, selected.id, work), selected.id)
   }
 
   function handleComplete() {
-    if (!selected) return
+    if (!selected || !guardMechanicSave()) return
     runUpdate(() => mechanicCompleteRepair(tenantId, selected.id, work), selected.id)
   }
 
@@ -183,6 +224,21 @@ export function MechanicRepairsView({ tenantId, mechanicId, mechanicName }: Mech
       {selected && (
         <Card>
           <CardContent className="space-y-4 p-4">
+            {conflict && (
+              <EditConflictBanner
+                onReload={reloadSelected}
+                onForceSave={() => {
+                  if (!selected) return
+                  if (confirmSaveOverStaleRecord('To zgłoszenie awarii')) {
+                    runUpdate(
+                      () => mechanicSaveRepairWork(tenantId, selected.id, work),
+                      selected.id,
+                    )
+                    setConflict(false)
+                  }
+                }}
+              />
+            )}
             <div>
               <p className="font-semibold">{selected.title}</p>
               <p className="text-sm text-muted-foreground">

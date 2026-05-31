@@ -27,6 +27,8 @@ import {
   upsertVehicle,
 } from '@/lib/domain/vehicles-store'
 import { useCloudSyncRefreshKeys } from '@/lib/sync/useCloudSyncRefresh'
+import { EditConflictBanner } from '@/app/components/sync/EditConflictBanner'
+import { useSyncedEditGuard } from '@/lib/sync/useSyncedEditGuard'
 import { cn } from '@/lib/utils'
 import { AlertTriangle, CloudDownload, MapPin, Plus, RefreshCw, Satellite } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
@@ -62,6 +64,22 @@ export function FleetView({ tenantId, gpsEnabled = true, readOnly = false }: Fle
     refresh,
   )
 
+  const { conflict, reloadFromStore, guardSave } = useSyncedEditGuard(
+    tenantId,
+    'vehicles',
+    editing,
+    setEditing,
+    isNew,
+    'Ten pojazd',
+  )
+
+  function openNew() {
+    const base = createEmptyVehicle(tenantId)
+    const now = new Date().toISOString()
+    setEditing({ ...base, id: crypto.randomUUID(), createdAt: now, updatedAt: now })
+    setIsNew(true)
+  }
+
   async function onTelematicsSync() {
     setSyncing(true)
     setSyncMsg(null)
@@ -78,19 +96,17 @@ export function FleetView({ tenantId, gpsEnabled = true, readOnly = false }: Fle
     }
   }
 
-  function openNew() {
-    const base = createEmptyVehicle(tenantId)
-    const now = new Date().toISOString()
-    setEditing({ ...base, id: crypto.randomUUID(), createdAt: now, updatedAt: now })
-    setIsNew(true)
-  }
-
-  function handleSave() {
+  function saveVehicle(force = false) {
     if (!editing) return
+    if (!force && !guardSave()) return
     upsertVehicle(tenantId, { ...editing, updatedAt: new Date().toISOString() })
     refresh()
     setEditing(null)
     setIsNew(false)
+  }
+
+  function handleSave() {
+    saveVehicle(false)
   }
 
   function handleDelete(id: string) {
@@ -215,6 +231,15 @@ export function FleetView({ tenantId, gpsEnabled = true, readOnly = false }: Fle
             setIsNew(false)
           }}
           onSave={handleSave}
+          saveDisabled={conflict}
+          conflictBanner={
+            conflict ? (
+              <EditConflictBanner
+                onReload={() => reloadFromStore(() => loadVehicles(tenantId))}
+                onForceSave={() => saveVehicle(true)}
+              />
+            ) : undefined
+          }
         >
           <Field label="Numer rejestracyjny">
             <Input

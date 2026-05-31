@@ -30,13 +30,18 @@ import {
 } from '@/lib/domain/international-compliance'
 import { syncDriverReminders } from '@/lib/notifications/driver-reminders'
 import { useCloudSyncRefreshKeys } from '@/lib/sync/useCloudSyncRefresh'
+import { EditConflictBanner } from '@/app/components/sync/EditConflictBanner'
+import {
+  checkRecordStale,
+  confirmSaveOverStaleRecord,
+} from '@/lib/sync/record-conflict'
 import { seedDemoCompanyDocuments, loadTenantSettingsData } from '@/lib/domain/tenant-settings'
 import { expiryStatus, EXPIRY_STATUS_COLORS, formatExpiryDate } from '@/lib/domain/compliance'
 import { isPushSubscribed, subscribeAppPush } from '@/lib/notifications/app-notify'
 import { ensureNotificationPermission } from '@/lib/notifications/web-notify'
 import { cn } from '@/lib/utils'
 import { AlertTriangle, CheckCircle2, FileText, Fuel, Phone, Route, Truck, User, Wrench } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Course } from '@/lib/domain/course'
 import type { DailyReport } from '@/lib/domain/daily-report'
 
@@ -206,7 +211,9 @@ interface DriverReportViewProps {
 export function DriverReportView({ tenantId, driverName }: DriverReportViewProps) {
   const [report, setReport] = useState<DailyReport | null>(null)
   const [saved, setSaved] = useState(false)
+  const [reportConflict, setReportConflict] = useState(false)
   const [courses, setCourses] = useState<Course[]>([])
+  const baselineUpdatedAt = useRef<string | undefined>(undefined)
 
   const init = useCallback(() => {
     seedDemoCourses(tenantId)
@@ -216,6 +223,8 @@ export function DriverReportView({ tenantId, driverName }: DriverReportViewProps
     if (existing) {
       setReport(existing)
       setSaved(existing.shiftEnded)
+      baselineUpdatedAt.current = existing.updatedAt
+      setReportConflict(false)
       return
     }
     const driver = findDriverByDisplayName(tenantId, driverName)
@@ -229,13 +238,36 @@ export function DriverReportView({ tenantId, driverName }: DriverReportViewProps
       createdAt: now,
       updatedAt: now,
     })
+    baselineUpdatedAt.current = now
+    setReportConflict(false)
   }, [tenantId, driverName])
+
+  const refreshFromCloud = useCallback(() => {
+    seedDemoCourses(tenantId)
+    setCourses(loadCourses(tenantId))
+    const existing = getTodayReportForDriver(tenantId, driverName)
+    if (!existing) return
+    if (!saved) {
+      const stale = checkRecordStale(
+        tenantId,
+        'daily-reports',
+        existing.id,
+        baselineUpdatedAt.current,
+      )
+      setReportConflict(stale.isStale)
+      return
+    }
+    setReport(existing)
+    setSaved(existing.shiftEnded)
+    baselineUpdatedAt.current = existing.updatedAt
+    setReportConflict(false)
+  }, [tenantId, driverName, saved])
 
   useEffect(() => {
     init()
   }, [init])
 
-  useCloudSyncRefreshKeys(tenantId, ['daily-reports', 'courses'], init)
+  useCloudSyncRefreshKeys(tenantId, ['daily-reports', 'courses'], refreshFromCloud)
 
   function patch(partial: Partial<DailyReport>) {
     if (!report) return
@@ -243,8 +275,15 @@ export function DriverReportView({ tenantId, driverName }: DriverReportViewProps
     setSaved(false)
   }
 
-  function handleSave(endShift = false) {
+  function handleSave(endShift = false, force = false) {
     if (!report) return
+    if (
+      !force &&
+      reportConflict &&
+      !confirmSaveOverStaleRecord('Twój raport dzienny')
+    ) {
+      return
+    }
     const now = new Date().toISOString()
     const savedReport: DailyReport = {
       ...report,
@@ -255,6 +294,17 @@ export function DriverReportView({ tenantId, driverName }: DriverReportViewProps
     upsertDailyReport(tenantId, savedReport)
     setReport(savedReport)
     setSaved(true)
+    baselineUpdatedAt.current = now
+    setReportConflict(false)
+  }
+
+  function reloadReport() {
+    const existing = getTodayReportForDriver(tenantId, driverName)
+    if (!existing) return
+    setReport(existing)
+    setSaved(existing.shiftEnded)
+    baselineUpdatedAt.current = existing.updatedAt
+    setReportConflict(false)
   }
 
   if (!report) return null
@@ -286,6 +336,13 @@ export function DriverReportView({ tenantId, driverName }: DriverReportViewProps
           Kwoty w zł — brutto (zapłacone). Opłaty w EUR nie wchodzą w „Koszty łącznie”.
         </p>
       </div>
+
+      {reportConflict && (
+        <EditConflictBanner
+          onReload={reloadReport}
+          onForceSave={() => handleSave(false, true)}
+        />
+      )}
 
       {(drivingCheck.status !== 'ok' || drivingCheck.continuousRisk) && (
         <Card className="border-warning/40 bg-warning/5">
@@ -473,7 +530,7 @@ export function DriverReportView({ tenantId, driverName }: DriverReportViewProps
       </Card>
 
       <div className="flex flex-col gap-2">
-        <Button className="w-full" size="lg" onClick={() => handleSave(false)}>
+        <Button className="w-full" size="lg" onClick={() => handleSave(false)} disabled={reportConflict}>
           Zapisz raport
         </Button>
         <Button
@@ -481,7 +538,7 @@ export function DriverReportView({ tenantId, driverName }: DriverReportViewProps
           size="lg"
           variant="secondary"
           onClick={() => handleSave(true)}
-          disabled={report.shiftEnded}
+          disabled={reportConflict || report.shiftEnded}
         >
           {report.shiftEnded ? 'Zmiana zakończona' : 'Kończę pracę'}
         </Button>

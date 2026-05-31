@@ -6,6 +6,7 @@ import {
   type AutomationRule,
 } from '@/lib/automation/rules'
 import { runScheduledAutomations } from '@/lib/automation/scheduler'
+import { useCloudSyncRefresh } from '@/lib/sync/useCloudSyncRefresh'
 import { cn } from '@/lib/utils'
 import { Bot, Play, Zap } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
@@ -28,6 +29,8 @@ export function AutomationsView({ tenantId, tenantSlug, tenantName }: Automation
   useEffect(() => {
     refresh()
   }, [refresh])
+
+  useCloudSyncRefresh(tenantId, 'automation', refresh)
 
   function toggle(ruleId: string, enabled: boolean) {
     setRules(toggleAutomationRule(tenantId, ruleId, enabled).rules)
