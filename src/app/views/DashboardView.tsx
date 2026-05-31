@@ -2,6 +2,7 @@ import { useInitialCloudSyncDone } from '@/app/CloudLoader'
 import { OperationsExceptionsPanel } from '@/app/components/dashboard/OperationsExceptionsPanel'
 import { CloudSyncPlaceholder } from '@/app/components/ui/CloudSyncPlaceholder'
 import { WeeklyOpsPanel } from '@/app/components/dashboard/WeeklyOpsPanel'
+import { DocumentInvoiceQueuePanel } from '@/app/components/dashboard/DocumentInvoiceQueuePanel'
 import { VehicleMarginPanel } from '@/app/components/dashboard/VehicleMarginPanel'
 import { FleetMapPanel } from '@/app/components/fleet/FleetMapPanel'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/Card'
@@ -149,6 +150,12 @@ export function DashboardView({ tenant, onNavigate }: DashboardViewProps) {
       <WeeklyOpsPanel
         courses={opsData.courses}
         reports={opsData.reports}
+        onNavigate={onNavigate}
+      />
+
+      <DocumentInvoiceQueuePanel
+        tenantId={tenant.id}
+        invoicingEnabled={tenant.settings.modules.invoicing}
         onNavigate={onNavigate}
       />
 

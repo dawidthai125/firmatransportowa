@@ -6,9 +6,11 @@ import {
   loadDriverNotifications,
   pushDriverNotification,
 } from '@/lib/notifications/driver-inbox'
+import { messagesForCourse } from '@/lib/domain/course-messages-store'
 import { showAppNotification } from '@/lib/notifications/app-notify'
 
 const SEEN_COURSES_KEY = 'ft-driver-seen-courses'
+const SEEN_CHAT_KEY = 'ft-driver-seen-chat'
 
 function seenCoursesKey(tenantId: string, driverName: string): string {
   return `${SEEN_COURSES_KEY}:${tenantId}:${driverName.toLowerCase()}`
@@ -25,6 +27,18 @@ function loadSeenCourseIds(tenantId: string, driverName: string): string[] {
 
 function saveSeenCourseIds(tenantId: string, driverName: string, ids: string[]): void {
   localStorage.setItem(seenCoursesKey(tenantId, driverName), JSON.stringify(ids))
+}
+
+function seenChatKey(tenantId: string, driverName: string): string {
+  return `${SEEN_CHAT_KEY}:${tenantId}:${driverName.toLowerCase()}`
+}
+
+function loadSeenChatAt(tenantId: string, driverName: string): string {
+  return localStorage.getItem(seenChatKey(tenantId, driverName)) ?? ''
+}
+
+function saveSeenChatAt(tenantId: string, driverName: string, iso: string): void {
+  localStorage.setItem(seenChatKey(tenantId, driverName), iso)
 }
 
 /** Sprawdza nowe kursy i brak raportu — wywołaj na Start kierowcy */
@@ -49,6 +63,24 @@ export function syncDriverReminders(tenantId: string, driverName: string): void 
     seen.add(course.id)
   }
   saveSeenCourseIds(tenantId, driverName, [...seen])
+
+  let latestDispatcherMsg = ''
+  for (const course of active) {
+    const msgs = messagesForCourse(tenantId, course.id).filter((m) => m.authorRole !== 'driver')
+    const last = msgs[msgs.length - 1]
+    if (last && last.createdAt > latestDispatcherMsg) latestDispatcherMsg = last.createdAt
+  }
+  const seenChat = loadSeenChatAt(tenantId, driverName)
+  if (latestDispatcherMsg && latestDispatcherMsg > seenChat) {
+    const n = pushDriverNotification(tenantId, driverName, {
+      title: 'Wiadomość od dyspozytora',
+      message: 'Nowa wiadomość przy aktywnym kursie — sprawdź czat.',
+      level: 'info',
+      actionView: 'courses',
+    })
+    void showAppNotification(n.title, n.message, { tag: 'driver-chat' })
+    saveSeenChatAt(tenantId, driverName, latestDispatcherMsg)
+  }
 
   const hour = new Date().getHours()
   const hasReport = Boolean(getTodayReportForDriver(tenantId, driverName))

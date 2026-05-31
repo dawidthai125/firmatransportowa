@@ -1,7 +1,7 @@
 import { Button } from '@/app/components/ui/Button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/Card'
 import { Input, Label, Select } from '@/app/components/ui/Input'
-import { loadCourses, seedDemoCourses } from '@/lib/domain/courses-store'
+import { loadCourses, seedDemoCourses, upsertCourse } from '@/lib/domain/courses-store'
 import {
   buildInvoiceLinesFromCourses,
   downloadCsv,
@@ -19,7 +19,11 @@ import {
   type InvoicingConfig,
 } from '@/lib/domain/invoicing-config'
 import { createInvoicesViaEdge, testInvoicingConnection } from '@/lib/domain/integration-api'
-import { useCloudSyncRefreshKeys } from '@/lib/sync/useCloudSyncRefresh'
+import {
+  coursesAwaitingPayment,
+  coursesOverduePayment,
+} from '@/lib/domain/course-documents-readiness'
+import { useCloudSyncRefreshKeys } from '@/lib/sync/useCloudSyncRefreshKeys'
 import { FileDown, Plug, Receipt, Send } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 
@@ -112,6 +116,10 @@ export function InvoicingView({ tenantId }: InvoicingViewProps) {
           ? `Wystawiono ${r.created} faktur (${r.mode}) · ID: ${r.invoiceIds.join(', ')}`
           : r.errors?.join('; ') ?? 'Błąd API',
       )
+      if (r.ok && r.created > 0) {
+        markCoursesInvoiced(tenantId, lines.map((l) => l.courseId), config.defaultPaymentDays)
+        refresh()
+      }
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Błąd połączenia'
       persist({ lastApiError: msg })
@@ -141,6 +149,21 @@ export function InvoicingView({ tenantId }: InvoicingViewProps) {
 
   const csvOn = invoicingCsvEnabled(config)
   const restOn = invoicingRestEnabled(config)
+  const allCourses = loadCourses(tenantId)
+  const awaiting = coursesAwaitingPayment(allCourses)
+  const overdue = coursesOverduePayment(allCourses)
+
+  function markPaid(courseId: string) {
+    const courses = loadCourses(tenantId)
+    const c = courses.find((x) => x.id === courseId)
+    if (!c) return
+    upsertCourse(tenantId, {
+      ...c,
+      paymentReceivedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    })
+    refresh()
+  }
 
   return (
     <div className="space-y-4">
@@ -374,6 +397,68 @@ export function InvoicingView({ tenantId }: InvoicingViewProps) {
           {apiMsg && <p className="text-xs text-success">{apiMsg}</p>}
         </CardContent>
       </Card>
+
+      {(awaiting.length > 0 || overdue.length > 0) && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Należności (cash flow)</CardTitle>
+            <CardDescription>
+              Śledzenie terminów płatności — problem #1 w raportach Bibby Financial Services 2025
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            {overdue.map((c) => (
+              <div key={c.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-danger/30 bg-danger/5 p-2">
+                <span>
+                  {c.reference} · termin {c.paymentDueAt} · {c.freightPln.toLocaleString('pl-PL')} zł
+                </span>
+                <Button size="sm" variant="secondary" onClick={() => markPaid(c.id)}>
+                  Oznacz opłacone
+                </Button>
+              </div>
+            ))}
+            {awaiting.map((c) => (
+              <div key={c.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border p-2">
+                <span>
+                  {c.reference} · termin {c.paymentDueAt} · {c.freightPln.toLocaleString('pl-PL')} zł
+                </span>
+                <Button size="sm" variant="ghost" onClick={() => markPaid(c.id)}>
+                  Opłacone
+                </Button>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      <Card className="border-muted">
+        <CardHeader>
+          <CardTitle className="text-base">KSeF 2026 — planowane</CardTitle>
+          <CardDescription>
+            Od 2026 obowiązkowe faktury ustrukturyzowane (XML). Integracja KSeF w kolejnej wersji — na razie
+            Fakturownia/wFirma REST + eksport CSV.
+          </CardDescription>
+        </CardHeader>
+      </Card>
     </div>
   )
+}
+
+function markCoursesInvoiced(tenantId: string, courseIds: string[], paymentDays: number): void {
+  const courses = loadCourses(tenantId)
+  const now = new Date()
+  const due = new Date(now)
+  due.setDate(due.getDate() + paymentDays)
+  const dueStr = due.toISOString().slice(0, 10)
+  const issued = now.toISOString()
+  for (const id of courseIds) {
+    const c = courses.find((x) => x.id === id)
+    if (!c) continue
+    upsertCourse(tenantId, {
+      ...c,
+      invoiceIssuedAt: issued,
+      paymentDueAt: dueStr,
+      updatedAt: issued,
+    })
+  }
 }

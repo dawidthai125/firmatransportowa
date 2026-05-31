@@ -29,6 +29,7 @@ import {
   buildInternationalCourseAlerts,
   courseNeedsInternationalCheck,
 } from '@/lib/domain/international-compliance'
+import { mapsUrlToLoad, mapsUrlToUnload } from '@/lib/domain/course-navigation'
 import { syncDriverReminders } from '@/lib/notifications/driver-reminders'
 import { useCloudSyncRefreshKeys } from '@/lib/sync/useCloudSyncRefresh'
 import { EditConflictBanner } from '@/app/components/sync/EditConflictBanner'
@@ -41,7 +42,7 @@ import { expiryStatus, EXPIRY_STATUS_COLORS, formatExpiryDate } from '@/lib/doma
 import { isPushSubscribed, subscribeAppPush } from '@/lib/notifications/app-notify'
 import { ensureNotificationPermission } from '@/lib/notifications/web-notify'
 import { cn } from '@/lib/utils'
-import { AlertTriangle, CheckCircle2, FileText, Fuel, Phone, Route, Truck, User, Wrench } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, FileText, Fuel, MapPin, Phone, Route, Truck, User, Wrench } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Course } from '@/lib/domain/course'
 import type { DailyReport } from '@/lib/domain/daily-report'
@@ -138,6 +139,26 @@ export function DriverHomeView({
                 </ul>
               </div>
             )}
+            <div className="flex flex-wrap gap-2 pt-1">
+              <Button
+                size="sm"
+                variant="secondary"
+                className="gap-1.5"
+                onClick={() => window.open(mapsUrlToLoad(activeCourse), '_blank', 'noopener')}
+              >
+                <MapPin className="h-3.5 w-3.5" />
+                Nawiguj załadunek
+              </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                className="gap-1.5"
+                onClick={() => window.open(mapsUrlToUnload(activeCourse), '_blank', 'noopener')}
+              >
+                <MapPin className="h-3.5 w-3.5" />
+                Nawiguj rozładunek
+              </Button>
+            </div>
           </CardContent>
         )}
       </Card>

@@ -9,6 +9,10 @@ import { loadDailyReports, seedDemoDailyReports } from '@/lib/domain/daily-repor
 import { staleGpsSnapshotsForAlerts } from '@/lib/domain/fleet-enrichment'
 import { activeItdAlerts } from '@/lib/domain/itd-store'
 import { buildInternationalCourseAlerts } from '@/lib/domain/international-compliance'
+import {
+  coursesMissingDocumentsAfterDelivery,
+  coursesReadyForInvoicing,
+} from '@/lib/domain/course-documents-readiness'
 import { loadRepairReports, seedDemoRepairReports } from '@/lib/domain/repair-reports-store'
 import { seedDemoCompanyDocuments, loadTenantSettingsData } from '@/lib/domain/tenant-settings'
 import { loadVehicles, seedDemoVehicles } from '@/lib/domain/vehicles-store'
@@ -84,6 +88,28 @@ export function buildOperationsExceptions(
       title: `${cmrMissing.length} kursów bez numeru CMR`,
       description: cmrMissing.map((a) => a.courseRef).join(', '),
       actionView: 'courses',
+    })
+  }
+
+  const missingDocs = coursesMissingDocumentsAfterDelivery(loadCourses(tenantId))
+  if (missingDocs.length > 0) {
+    out.push({
+      id: 'pod-missing-invoice-block',
+      severity: 'warning',
+      title: `${missingDocs.length} dostarczonych kursów bez POD/CMR`,
+      description: `${missingDocs.map((c) => c.reference).join(', ')} — faktura i płatność czekają`,
+      actionView: 'courses',
+    })
+  }
+
+  const invoiceReady = coursesReadyForInvoicing(loadCourses(tenantId))
+  if (invoiceReady.length > 0) {
+    out.push({
+      id: 'invoice-ready',
+      severity: 'info',
+      title: `${invoiceReady.length} kursów gotowych do faktury`,
+      description: 'Dokumenty kompletne — wystaw fakturę bez szukania skanów',
+      actionView: 'invoicing',
     })
   }
 

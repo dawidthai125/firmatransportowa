@@ -1,4 +1,5 @@
 import type { Course } from '@/lib/domain/course'
+import { courseReadyForInvoicing } from '@/lib/domain/course-documents-readiness'
 import type { InvoicingConfig } from '@/lib/domain/invoicing-config'
 
 export interface InvoiceLine {
@@ -24,8 +25,7 @@ export function buildInvoiceLinesFromCourses(
 ): InvoiceLine[] {
   const today = new Date().toISOString().slice(0, 10)
   return courses
-    .filter((c) => c.status === 'delivered' || c.status === 'completed')
-    .filter((c) => c.freightPln > 0)
+    .filter(courseReadyForInvoicing)
     .map((c) => ({
       courseId: c.id,
       reference: c.reference,

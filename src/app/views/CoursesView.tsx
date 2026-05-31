@@ -44,13 +44,15 @@ import {
   RmpdSentChecklist,
 } from '@/app/components/course/RmpdSentChecklist'
 import { ECmrPanel } from '@/app/components/course/ECmrPanel'
+import { courseDocumentGap } from '@/lib/domain/course-documents-readiness'
+import { courseShareTextForDriver } from '@/lib/domain/course-navigation'
 import { findDriverByDisplayName } from '@/lib/domain/driver-profile'
 import type { TenantModules } from '@/lib/tenant/types'
 import { DEFAULT_MODULES } from '@/lib/tenant/types'
 import { useCloudSyncRefreshKeys } from '@/lib/sync/useCloudSyncRefresh'
 import { useSyncedEditGuard } from '@/lib/sync/useSyncedEditGuard'
 import { cn } from '@/lib/utils'
-import { AlertTriangle, Globe, MapPin, Pencil, Plus, Route, Trash2, X } from 'lucide-react'
+import { AlertTriangle, Copy, Globe, MapPin, Pencil, Plus, Route, Trash2, X } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 
 interface CoursesViewProps {
@@ -256,6 +258,7 @@ function CourseCard({
 }) {
   const margin = courseMargin(course)
   const isInternational = course.scope !== 'domestic'
+  const docGap = courseDocumentGap(course)
   const intlIssues = courseNeedsInternationalCheck(course)
     ? buildInternationalCourseAlerts(course.tenantId, [course])
     : []
@@ -295,6 +298,16 @@ function CourseCard({
                   {issue.issue === 'missing_rmpd' ? 'RMPD' : issue.issue === 'missing_cmr' ? 'CMR' : 'Wypis'}
                 </span>
               ))}
+              {docGap !== 'complete' && ['delivered', 'completed'].includes(course.status) && (
+                <span className="rounded-full bg-warning/15 px-2 py-0.5 text-xs font-medium text-warning">
+                  Brak POD/CMR
+                </span>
+              )}
+              {course.invoiceIssuedAt && !course.paymentReceivedAt && (
+                <span className="rounded-full bg-primary/15 px-2 py-0.5 text-xs font-medium text-primary">
+                  Faktura wystawiona
+                </span>
+              )}
             </div>
 
             <p className="text-sm text-muted-foreground">{course.cargo}</p>
@@ -391,6 +404,17 @@ function CourseCard({
 
           {!readOnly && (
             <div className="flex gap-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Kopiuj info dla kierowcy"
+                title="Kopiuj trasę — wyślij SMS/WhatsApp"
+                onClick={() => {
+                  void navigator.clipboard.writeText(courseShareTextForDriver(course))
+                }}
+              >
+                <Copy className="h-4 w-4" />
+              </Button>
               <Button variant="ghost" size="icon" onClick={onEdit} aria-label="Edytuj">
                 <Pencil className="h-4 w-4" />
               </Button>

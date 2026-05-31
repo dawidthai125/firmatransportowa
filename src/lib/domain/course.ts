@@ -69,6 +69,12 @@ export interface Course {
   trackingPublic?: boolean
   /** Elektroniczny CMR (e-CMR) */
   eCmr?: ECmrDocument
+  /** Faktura wystawiona (REST/CSV/API) */
+  invoiceIssuedAt?: string
+  /** Termin płatności od kontrahenta */
+  paymentDueAt?: string
+  /** Płatność otrzymana */
+  paymentReceivedAt?: string
   loadAt: string
   unloadAt: string
   driverId?: string
