@@ -277,21 +277,23 @@ function mergeFreightConnectors(
 }
 
 function mergeFleetTelematicsConnectors(
-  local: Partial<FleetTelematicsConnectorConfig>,
-  cloud: Partial<FleetTelematicsConnectorConfig>,
+  local: Partial<FleetTelematicsConnectorConfig> | null | undefined,
+  cloud: Partial<FleetTelematicsConnectorConfig> | null | undefined,
   localAt: string,
   cloudAt: string,
 ): FleetTelematicsConnectorConfig {
+  const localSafe = local ?? {}
+  const cloudSafe = cloud ?? {}
   const preferLocal = Date.parse(localAt) >= Date.parse(cloudAt)
-  const newer = preferLocal ? local : cloud
-  const older = preferLocal ? cloud : local
+  const newer = preferLocal ? localSafe : cloudSafe
+  const older = preferLocal ? cloudSafe : localSafe
   const lastSync: Partial<Record<string, string>> = {
     ...(older.lastSyncByProvider ?? {}),
     ...(newer.lastSyncByProvider ?? {}),
   }
   for (const key of Object.keys({ ...older.lastSyncByProvider, ...newer.lastSyncByProvider })) {
-    const l = local.lastSyncByProvider?.[key as keyof typeof local.lastSyncByProvider]
-    const c = cloud.lastSyncByProvider?.[key as keyof typeof cloud.lastSyncByProvider]
+    const l = localSafe.lastSyncByProvider?.[key as keyof typeof localSafe.lastSyncByProvider]
+    const c = cloudSafe.lastSyncByProvider?.[key as keyof typeof cloudSafe.lastSyncByProvider]
     if (l || c) lastSync[key] = maxIso(l, c)
   }
   return {
@@ -303,27 +305,29 @@ function mergeFleetTelematicsConnectors(
     transicsFleetId: newer.transicsFleetId ?? older.transicsFleetId,
     genericWebhookUrl: newer.genericWebhookUrl ?? older.genericWebhookUrl,
     lastSyncByProvider: lastSync as FleetTelematicsConnectorConfig['lastSyncByProvider'],
-    lastSyncAt: maxIso(local.lastSyncAt, cloud.lastSyncAt),
-    lastSyncError: preferLocal ? local.lastSyncError : cloud.lastSyncError ?? local.lastSyncError,
+    lastSyncAt: maxIso(localSafe.lastSyncAt, cloudSafe.lastSyncAt),
+    lastSyncError: preferLocal ? localSafe.lastSyncError : cloudSafe.lastSyncError ?? localSafe.lastSyncError,
   }
 }
 
 function mergeTachographConnectors(
-  local: Partial<TachographConnectorConfig>,
-  cloud: Partial<TachographConnectorConfig>,
+  local: Partial<TachographConnectorConfig> | null | undefined,
+  cloud: Partial<TachographConnectorConfig> | null | undefined,
   localAt: string,
   cloudAt: string,
 ): TachographConnectorConfig {
+  const localSafe = local ?? {}
+  const cloudSafe = cloud ?? {}
   const preferLocal = Date.parse(localAt) >= Date.parse(cloudAt)
-  const newer = preferLocal ? local : cloud
-  const older = preferLocal ? cloud : local
+  const newer = preferLocal ? localSafe : cloudSafe
+  const older = preferLocal ? cloudSafe : localSafe
   const lastSync: Partial<Record<string, string>> = {
     ...(older.lastSyncByProvider ?? {}),
     ...(newer.lastSyncByProvider ?? {}),
   }
   for (const key of Object.keys({ ...older.lastSyncByProvider, ...newer.lastSyncByProvider })) {
-    const l = local.lastSyncByProvider?.[key as keyof typeof local.lastSyncByProvider]
-    const c = cloud.lastSyncByProvider?.[key as keyof typeof cloud.lastSyncByProvider]
+    const l = localSafe.lastSyncByProvider?.[key as keyof typeof localSafe.lastSyncByProvider]
+    const c = cloudSafe.lastSyncByProvider?.[key as keyof typeof cloudSafe.lastSyncByProvider]
     if (l || c) lastSync[key] = maxIso(l, c)
   }
   return {
@@ -334,8 +338,8 @@ function mergeTachographConnectors(
     vdoFleetId: newer.vdoFleetId ?? older.vdoFleetId,
     telematicsEndpoint: newer.telematicsEndpoint ?? older.telematicsEndpoint,
     lastSyncByProvider: lastSync as TachographConnectorConfig['lastSyncByProvider'],
-    lastSyncAt: maxIso(local.lastSyncAt, cloud.lastSyncAt),
-    lastSyncError: preferLocal ? local.lastSyncError : cloud.lastSyncError ?? local.lastSyncError,
+    lastSyncAt: maxIso(localSafe.lastSyncAt, cloudSafe.lastSyncAt),
+    lastSyncError: preferLocal ? localSafe.lastSyncError : cloudSafe.lastSyncError ?? localSafe.lastSyncError,
   }
 }
 

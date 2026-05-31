@@ -34,6 +34,14 @@ let syncChain: Promise<void> = Promise.resolve()
 let activeFullPull: Promise<void> | null = null
 let lastPullOkAt = 0
 let pushRetryTimer: ReturnType<typeof setTimeout> | null = null
+let pushRetryAttempt = 0
+let lastVisibilityPullAt = 0
+
+const CLOUD_FETCH_TIMEOUT_MS = 12_000
+const CLOUD_BATCH_CHUNK_SIZE = 24
+const CLOUD_PULL_MAX_RETRIES = 2
+const VISIBILITY_PULL_MIN_INTERVAL_MS = 45_000
+const PUSH_RETRY_MAX = 6
 
 export function getLastSyncError(): string | null {
   return lastSyncError
@@ -123,16 +131,13 @@ export function onCloudStatus(cb: (s: CloudSyncStatus, msg?: string) => void): (
   }
 }
 
-function setStatus(s: CloudSyncStatus, msg?: string) {
+function setStatus(s: CloudSyncStatus, msg?: string, options?: { silent?: boolean }) {
+  if (options?.silent && (lastStatus === 'ok' || lastStatus === 'error')) return
   lastStatus = s
   if (s === 'ok') lastSyncError = null
   if (s === 'error' && msg) lastSyncError = msg
   statusListeners.forEach((cb) => cb(s, msg))
 }
-
-const CLOUD_FETCH_TIMEOUT_MS = 20_000
-const CLOUD_BATCH_CHUNK_SIZE = 8
-const CLOUD_PULL_MAX_RETRIES = 3
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
@@ -187,22 +192,25 @@ async function fetchCloud(
 
 async function batchGet(keys: string[]): Promise<unknown[]> {
   if (keys.length === 0) return []
-  const out: unknown[] = []
+  const chunks: string[][] = []
   for (let i = 0; i < keys.length; i += CLOUD_BATCH_CHUNK_SIZE) {
-    const chunk = keys.slice(i, i + CLOUD_BATCH_CHUNK_SIZE)
-    const values = await withRetries('batch-get', async () => {
-      const res = await fetchCloud('/batch-get', {
-        method: 'POST',
-        headers: await apiHeaders(),
-        body: JSON.stringify({ keys: chunk }),
-      })
-      if (!res.ok) throw new Error(`batch-get ${res.status}`)
-      const json = (await res.json()) as { values: unknown[] }
-      return json.values
-    })
-    out.push(...values)
+    chunks.push(keys.slice(i, i + CLOUD_BATCH_CHUNK_SIZE))
   }
-  return out
+  const chunkResults = await Promise.all(
+    chunks.map((chunk) =>
+      withRetries('batch-get', async () => {
+        const res = await fetchCloud('/batch-get', {
+          method: 'POST',
+          headers: await apiHeaders(),
+          body: JSON.stringify({ keys: chunk }),
+        })
+        if (!res.ok) throw new Error(`batch-get ${res.status}`)
+        const json = (await res.json()) as { values: unknown[] }
+        return json.values
+      }),
+    ),
+  )
+  return chunkResults.flat()
 }
 
 async function batchSet(entries: { key: string; value: unknown }[]): Promise<void> {
@@ -343,7 +351,9 @@ async function pullAllFromCloudInner(options?: { pushLocalAfter?: boolean }): Pr
   })
 
   if (pendingPushKeys.size > 0) {
-    await flushCloudPush()
+    queueMicrotask(() => {
+      void flushCloudPush({ silent: true })
+    })
   }
 }
 
@@ -352,7 +362,7 @@ export function scheduleCloudPush(storageKey: string): void {
   pendingPushKeys.add(storageKey)
   if (pushTimer) clearTimeout(pushTimer)
   pushTimer = setTimeout(() => {
-    void flushCloudPush()
+    void flushCloudPush({ silent: true })
   }, 2000)
 }
 
@@ -409,21 +419,29 @@ export async function pushTenantKeysNow(tenantId: string, dataKeys: TenantDataKe
 function schedulePushRetry(keys: string[]): void {
   keys.forEach((k) => pendingPushKeys.add(k))
   if (pushRetryTimer) return
+  if (pushRetryAttempt >= PUSH_RETRY_MAX) {
+    console.warn('[TransFlow] limit ponowień push — dane zostają lokalnie')
+    return
+  }
+  const delay = Math.min(8000 * 1.8 ** pushRetryAttempt, 120_000)
+  pushRetryAttempt += 1
   pushRetryTimer = setTimeout(() => {
     pushRetryTimer = null
-    void flushCloudPush()
-  }, 5000)
+    void flushCloudPush({ silent: true })
+  }, delay)
 }
 
 /** Push z read-modify-write — pobiera chmurę, scala, dopiero wtedy zapisuje */
-async function flushCloudPush(): Promise<void> {
+async function flushCloudPush(options?: { silent?: boolean }): Promise<void> {
   if (!isSupabaseConfigured() || pendingPushKeys.size === 0) return
+
+  const silent = options?.silent ?? false
 
   return withSyncLock(async () => {
     const keys = [...pendingPushKeys]
     pendingPushKeys.clear()
 
-    setStatus('syncing')
+    setStatus('syncing', undefined, { silent })
     try {
       const cloudValues = await batchGet(keys)
       const entries: { key: string; value: unknown }[] = []
@@ -456,18 +474,18 @@ async function flushCloudPush(): Promise<void> {
 
       if (entries.length > 0) await batchSet(entries)
       if (mergedKeys.length > 0) notifySyncMerged(mergedKeys)
-      setStatus('ok')
+      pushRetryAttempt = 0
+      setStatus('ok', undefined, { silent })
     } catch (e) {
       console.error('[TransFlow] push failed', e)
       const msg = friendlySyncError(e)
       lastSyncError = msg
       const pullRecent = lastPullOkAt > 0 && Date.now() - lastPullOkAt < 120_000
       if (pullRecent) {
-        /** Pull OK — dane lokalne aktualne; push ponowimy w tle bez czerwonego alertu */
-        setStatus('ok')
+        setStatus('ok', undefined, { silent })
         schedulePushRetry(keys)
       } else {
-        setStatus('error', msg)
+        setStatus('error', msg, { silent })
         schedulePushRetry(keys)
       }
     }
@@ -523,9 +541,12 @@ export function startCloudSyncListeners(): () => void {
 
   const onVisible = () => {
     if (document.visibilityState === 'visible') {
+      const now = Date.now()
+      if (now - lastVisibilityPullAt < VISIBILITY_PULL_MIN_INTERVAL_MS) return
+      lastVisibilityPullAt = now
       void pullAllFromCloud().catch(() => undefined)
     } else if (pendingPushKeys.size > 0) {
-      void flushCloudPush()
+      void flushCloudPush({ silent: true })
     }
   }
 
