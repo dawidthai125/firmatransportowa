@@ -483,9 +483,10 @@ function adminSteps(
           action: 'Sekcja „Plan abonamentowy” → wybierz plan',
         },
         {
-          title: 'Integracja tachografu',
-          description: 'TachoScan, VDO Online, telematyka FMS — włącz dostawców i podaj klucze API (demo lokalnie).',
-          action: 'Sekcja „Integracja tachografu (API)”',
+          title: 'Klucze API',
+          description:
+            'Trans.eu, Fakturownia, Webfleet, TachoScan, OpenAI — wpisz w „Klucze API”, zapisz i aktywuj.',
+          action: 'Karta „Klucze API” → Przejdź do Klucze API',
         },
         {
           title: 'Dokumenty firmy',

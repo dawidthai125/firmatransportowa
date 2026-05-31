@@ -18,25 +18,17 @@ import {
   PLAN_DESCRIPTIONS,
   PLAN_LABELS,
 } from '@/lib/tenant/plan-presets'
-import { useTenant } from '@/lib/tenant/context'
+import { IntegrationsHubCard } from '@/app/components/integrations/IntegrationsHubCard'
+import type { AdminView } from '@/lib/navigation'
 import { cn } from '@/lib/utils'
-import { Plus, Settings, Trash2, Gauge, Satellite, Smartphone, ToggleLeft } from 'lucide-react'
+import { Plus, Settings, Trash2, Smartphone, ToggleLeft } from 'lucide-react'
 import {
   applyPwaBrandingToDocument,
   DEFAULT_PWA_BRANDING,
   loadPwaBranding,
   savePwaBranding,
 } from '@/lib/pwa/pwa-branding'
-import {
-  loadFleetTelematicsConfig,
-  saveFleetTelematicsConfig,
-  type FleetTelematicsConnectorConfig,
-} from '@/lib/domain/fleet-telematics-connectors'
-import {
-  loadTachographConnectorConfig,
-  saveTachographConnectorConfig,
-  type TachographConnectorConfig,
-} from '@/lib/domain/tachograph-connectors'
+import { useTenant } from '@/lib/tenant/context'
 import { useCloudSyncRefreshKeys } from '@/lib/sync/useCloudSyncRefresh'
 import { MODULE_DESCRIPTIONS, MODULE_LABELS } from '@/lib/tenant/module-labels'
 import { DEFAULT_MODULES, type TenantModules } from '@/lib/tenant/types'
@@ -44,21 +36,16 @@ import { useCallback, useEffect, useState } from 'react'
 
 interface SettingsViewProps {
   tenant: Tenant
+  onNavigate?: (view: AdminView) => void
 }
 
-export function SettingsView({ tenant }: SettingsViewProps) {
+export function SettingsView({ tenant, onNavigate }: SettingsViewProps) {
   const { registerTenant, setCurrentTenant } = useTenant()
   const { settings } = tenant
   const [documents, setDocuments] = useState<CompanyDocument[]>([])
   const [mechanics, setMechanics] = useState(loadTenantSettingsData(tenant.id).mechanics)
   const [verifierIds, setVerifierIds] = useState(
     loadTenantSettingsData(tenant.id).repairWorkflow.verifierUserIds.join(', '),
-  )
-  const [tachoCfg, setTachoCfg] = useState<TachographConnectorConfig>(() =>
-    loadTachographConnectorConfig(tenant.id),
-  )
-  const [fleetGpsCfg, setFleetGpsCfg] = useState<FleetTelematicsConnectorConfig>(() =>
-    loadFleetTelematicsConfig(tenant.id),
   )
   const [pwaAppName, setPwaAppName] = useState(DEFAULT_PWA_BRANDING.appName)
   const [pwaShortName, setPwaShortName] = useState(DEFAULT_PWA_BRANDING.shortName)
@@ -69,8 +56,6 @@ export function SettingsView({ tenant }: SettingsViewProps) {
     setDocuments(data.companyDocuments)
     setMechanics(data.mechanics)
     setVerifierIds(data.repairWorkflow.verifierUserIds.join(', '))
-    setTachoCfg(loadTachographConnectorConfig(tenant.id))
-    setFleetGpsCfg(loadFleetTelematicsConfig(tenant.id))
     const pwa = loadPwaBranding(tenant.id)
     setPwaAppName(pwa.appName)
     setPwaShortName(pwa.shortName)
@@ -80,19 +65,7 @@ export function SettingsView({ tenant }: SettingsViewProps) {
     refresh()
   }, [refresh])
 
-  useCloudSyncRefreshKeys(tenant.id, ['tachograph-connectors', 'fleet-telematics-connectors'], refresh)
-
-  function saveTachoConnector(patch: Partial<TachographConnectorConfig>) {
-    const next = { ...tachoCfg, ...patch }
-    saveTachographConnectorConfig(tenant.id, next)
-    setTachoCfg(next)
-  }
-
-  function saveFleetGpsConnector(patch: Partial<FleetTelematicsConnectorConfig>) {
-    const next = { ...fleetGpsCfg, ...patch }
-    saveFleetTelematicsConfig(tenant.id, next)
-    setFleetGpsCfg(next)
-  }
+  useCloudSyncRefreshKeys(tenant.id, ['settings', 'freight-connectors', 'tachograph-connectors', 'fleet-telematics-connectors', 'invoicing-config', 'ocr-config'], refresh)
 
   function persist(next: CompanyDocument[]) {
     setDocuments(next)
@@ -390,197 +363,10 @@ export function SettingsView({ tenant }: SettingsViewProps) {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Gauge className="h-4 w-4 text-primary" />
-            Integracja tachografu (API)
-          </CardTitle>
-          <CardDescription>
-            TachoScan, VDO Online i telematyka FMS — klucze produkcyjne w Supabase Secrets Edge Function
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4 text-sm">
-          <label className="flex flex-wrap items-center gap-2">
-            <input
-              type="checkbox"
-              checked={tachoCfg.tachoScanEnabled}
-              onChange={(e) => saveTachoConnector({ tachoScanEnabled: e.target.checked })}
-            />
-            TachoScan API
-            {tachoCfg.lastSyncByProvider.tacho_scan && (
-              <span className="text-xs text-muted-foreground">
-                · sync {new Date(tachoCfg.lastSyncByProvider.tacho_scan).toLocaleString('pl-PL')}
-              </span>
-            )}
-          </label>
-          <div className="space-y-1.5 pl-6">
-            <Label htmlFor="tacho-scan-key">Klucz API (demo — zapis lokalny)</Label>
-            <Input
-              id="tacho-scan-key"
-              type="password"
-              autoComplete="off"
-              placeholder="TachoScan API key"
-              value={tachoCfg.tachoScanApiKey ?? ''}
-              onChange={(e) => saveTachoConnector({ tachoScanApiKey: e.target.value || undefined })}
-            />
-          </div>
-
-          <label className="flex flex-wrap items-center gap-2">
-            <input
-              type="checkbox"
-              checked={tachoCfg.vdoOnlineEnabled}
-              onChange={(e) => saveTachoConnector({ vdoOnlineEnabled: e.target.checked })}
-            />
-            VDO Fleet / Online
-            {tachoCfg.lastSyncByProvider.vdo_online && (
-              <span className="text-xs text-muted-foreground">
-                · sync {new Date(tachoCfg.lastSyncByProvider.vdo_online).toLocaleString('pl-PL')}
-              </span>
-            )}
-          </label>
-          <div className="space-y-1.5 pl-6">
-            <Label htmlFor="vdo-fleet-id">ID floty VDO</Label>
-            <Input
-              id="vdo-fleet-id"
-              placeholder="Fleet ID"
-              value={tachoCfg.vdoFleetId ?? ''}
-              onChange={(e) => saveTachoConnector({ vdoFleetId: e.target.value || undefined })}
-            />
-          </div>
-
-          <label className="flex flex-wrap items-center gap-2">
-            <input
-              type="checkbox"
-              checked={tachoCfg.telematicsFmsEnabled}
-              onChange={(e) => saveTachoConnector({ telematicsFmsEnabled: e.target.checked })}
-            />
-            Telematyka / FMS (Webfleet, CAN)
-            {tachoCfg.lastSyncByProvider.telematics_fms && (
-              <span className="text-xs text-muted-foreground">
-                · sync {new Date(tachoCfg.lastSyncByProvider.telematics_fms).toLocaleString('pl-PL')}
-              </span>
-            )}
-          </label>
-          <div className="space-y-1.5 pl-6">
-            <Label htmlFor="telematics-endpoint">Endpoint webhook / REST</Label>
-            <Input
-              id="telematics-endpoint"
-              placeholder="https://partner.example/fms/tachograph"
-              value={tachoCfg.telematicsEndpoint ?? ''}
-              onChange={(e) =>
-                saveTachoConnector({ telematicsEndpoint: e.target.value || undefined })
-              }
-            />
-          </div>
-
-          {tachoCfg.lastSyncAt && (
-            <p className="text-xs text-muted-foreground">
-              Ostatnia synchronizacja: {new Date(tachoCfg.lastSyncAt).toLocaleString('pl-PL')}
-            </p>
-          )}
-          {tachoCfg.lastSyncError && (
-            <p className="text-xs text-danger">Błąd sync: {tachoCfg.lastSyncError}</p>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Satellite className="h-4 w-4 text-primary" />
-            Telematyka GPS (Webfleet / Transics)
-          </CardTitle>
-          <CardDescription>
-            Urządzenie w ciężarówce → API dostawcy → Edge webhook/cron → pozycje na mapie Floty
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4 text-sm">
-          <label className="flex flex-wrap items-center gap-2">
-            <input
-              type="checkbox"
-              checked={fleetGpsCfg.webfleetEnabled}
-              onChange={(e) => saveFleetGpsConnector({ webfleetEnabled: e.target.checked })}
-            />
-            Webfleet
-            {fleetGpsCfg.lastSyncByProvider.webfleet && (
-              <span className="text-xs text-muted-foreground">
-                · sync {new Date(fleetGpsCfg.lastSyncByProvider.webfleet).toLocaleString('pl-PL')}
-              </span>
-            )}
-          </label>
-          <div className="grid gap-2 pl-6 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="webfleet-account">Konto Webfleet</Label>
-              <Input
-                id="webfleet-account"
-                placeholder="account name"
-                value={fleetGpsCfg.webfleetAccount ?? ''}
-                onChange={(e) => saveFleetGpsConnector({ webfleetAccount: e.target.value || undefined })}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="webfleet-key">Klucz API (demo lokalnie)</Label>
-              <Input
-                id="webfleet-key"
-                type="password"
-                autoComplete="off"
-                value={fleetGpsCfg.webfleetApiKey ?? ''}
-                onChange={(e) => saveFleetGpsConnector({ webfleetApiKey: e.target.value || undefined })}
-              />
-            </div>
-          </div>
-
-          <label className="flex flex-wrap items-center gap-2">
-            <input
-              type="checkbox"
-              checked={fleetGpsCfg.transicsEnabled}
-              onChange={(e) => saveFleetGpsConnector({ transicsEnabled: e.target.checked })}
-            />
-            Transics
-            {fleetGpsCfg.lastSyncByProvider.transics && (
-              <span className="text-xs text-muted-foreground">
-                · sync {new Date(fleetGpsCfg.lastSyncByProvider.transics).toLocaleString('pl-PL')}
-              </span>
-            )}
-          </label>
-          <div className="space-y-1.5 pl-6">
-            <Label htmlFor="transics-fleet">ID floty Transics</Label>
-            <Input
-              id="transics-fleet"
-              value={fleetGpsCfg.transicsFleetId ?? ''}
-              onChange={(e) => saveFleetGpsConnector({ transicsFleetId: e.target.value || undefined })}
-            />
-          </div>
-
-          <label className="flex flex-wrap items-center gap-2">
-            <input
-              type="checkbox"
-              checked={fleetGpsCfg.genericEnabled}
-              onChange={(e) => saveFleetGpsConnector({ genericEnabled: e.target.checked })}
-            />
-            Inny dostawca (FleetGO, Geotab…)
-          </label>
-          <div className="space-y-1.5 pl-6">
-            <Label htmlFor="generic-webhook">URL webhook (push pozycji)</Label>
-            <Input
-              id="generic-webhook"
-              placeholder="https://…/fleet-telematics-webhook"
-              value={fleetGpsCfg.genericWebhookUrl ?? ''}
-              onChange={(e) => saveFleetGpsConnector({ genericWebhookUrl: e.target.value || undefined })}
-            />
-          </div>
-
-          {fleetGpsCfg.lastSyncAt && (
-            <p className="text-xs text-muted-foreground">
-              Ostatnia synchronizacja GPS: {new Date(fleetGpsCfg.lastSyncAt).toLocaleString('pl-PL')}
-            </p>
-          )}
-          {fleetGpsCfg.lastSyncError && (
-            <p className="text-xs text-danger">Błąd sync GPS: {fleetGpsCfg.lastSyncError}</p>
-          )}
-        </CardContent>
-      </Card>
+      <IntegrationsHubCard
+        tenantId={tenant.id}
+        onOpen={onNavigate ? () => onNavigate('integrations') : undefined}
+      />
 
       {isCompanyDeployment() && (
         <Card>

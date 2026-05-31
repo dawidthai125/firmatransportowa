@@ -4,8 +4,10 @@ import { Input, Label } from '@/app/components/ui/Input'
 import {
   applyIntegrationActivation,
   loadIntegrationHub,
+  runIntegrationBootSync,
   saveIntegrationHub,
   testAllIntegrations,
+  type IntegrationBootResult,
   type IntegrationHubSnapshot,
 } from '@/lib/domain/integration-hub'
 import type { IntegrationTestResult } from '@/lib/domain/integration-api'
@@ -24,6 +26,7 @@ export function IntegrationsView({ tenant }: IntegrationsViewProps) {
   const { registerTenant, setCurrentTenant } = useTenant()
   const [hub, setHub] = useState<IntegrationHubSnapshot>(() => loadIntegrationHub(tenant.id))
   const [tests, setTests] = useState<IntegrationTestResult[] | null>(null)
+  const [boot, setBoot] = useState<IntegrationBootResult[] | null>(null)
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
 
@@ -65,6 +68,8 @@ export function IntegrationsView({ tenant }: IntegrationsViewProps) {
   async function handleSaveAndActivate() {
     setBusy(true)
     setMsg(null)
+    setTests(null)
+    setBoot(null)
     try {
       saveIntegrationHub(tenant.id, {
         freight: hub.freight,
@@ -76,7 +81,17 @@ export function IntegrationsView({ tenant }: IntegrationsViewProps) {
       const next = applyIntegrationActivation(tenant)
       registerTenant(next)
       setCurrentTenant(next)
-      setMsg('Zapisano — moduły i connectory włączone automatycznie.')
+      const testResults = await testAllIntegrations(tenant.id)
+      setTests(testResults)
+      const bootResults = await runIntegrationBootSync(tenant.id)
+      setBoot(bootResults)
+      refresh()
+      const okBoot = bootResults.filter((b) => b.ok).length
+      setMsg(
+        `Gotowe — moduły włączone, ${okBoot}/${bootResults.length} synców OK. Sprawdź wyniki poniżej.`,
+      )
+    } catch (e) {
+      setMsg(e instanceof Error ? e.message : 'Błąd zapisu')
     } finally {
       setBusy(false)
     }
@@ -137,6 +152,29 @@ export function IntegrationsView({ tenant }: IntegrationsViewProps) {
 
       {msg && (
         <p className="rounded-md border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">{msg}</p>
+      )}
+
+      {boot && boot.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Uruchomione sync po zapisie</CardTitle>
+            <CardDescription>Pierwsza synchronizacja z Edge — dane trafiają od razu do modułów</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {boot.map((b) => (
+              <div
+                key={b.label}
+                className={cn(
+                  'flex flex-wrap items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm',
+                  b.ok ? 'border-success/30 bg-success/5' : 'border-warning/30 bg-warning/5',
+                )}
+              >
+                <span className="font-medium">{b.label}</span>
+                <span className="text-xs text-muted-foreground">{b.detail}</span>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
       )}
 
       {tests && (

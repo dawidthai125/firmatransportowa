@@ -364,7 +364,7 @@ export default function App() {
           <IntegrationsView tenant={currentTenant} />
         )}
         {adminAllowed && adminView === 'settings' && mode === 'owner' && (
-          <SettingsView tenant={currentTenant} />
+          <SettingsView tenant={currentTenant} onNavigate={setAdminView} />
         )}
       </AdminShell>
     </HelpProvider>
