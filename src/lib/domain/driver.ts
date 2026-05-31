@@ -17,6 +17,7 @@ export interface Driver {
   notes?: string
   createdAt: string
   updatedAt: string
+  serverSavedAt?: string
 }
 
 export function driverDisplayName(d: Driver): string {

@@ -4,6 +4,7 @@ import { cors } from 'npm:hono/cors'
 import { logger } from 'npm:hono/logger'
 import * as auth from './auth.ts'
 import * as kv from './kv_store.ts'
+import { mergeSetWithServerAuthority } from './merge_set.ts'
 import { applyTachographWebhook, runTachographSync } from './tachograph_sync.ts'
 import { applyFleetTelematicsWebhook, runFleetTelematicsSync } from './fleet_telematics_sync.ts'
 
@@ -23,7 +24,9 @@ app.use(
   }),
 )
 
-app.get(`${PREFIX}/health`, (c) => c.json({ status: 'ok', service: 'transflow-api' }))
+app.get(`${PREFIX}/health`, (c) =>
+  c.json({ status: 'ok', service: 'transflow-api', serverTime: new Date().toISOString() }),
+)
 
 app.post(`${PREFIX}/batch-get`, async (c) => {
   const requestAuth = await auth.resolveRequestAuth(c.req.header('Authorization'))
@@ -43,11 +46,16 @@ app.post(`${PREFIX}/batch-set`, async (c) => {
   const body = await c.req.json()
   const entries: { key: string; value: unknown }[] = Array.isArray(body?.entries) ? body.entries : []
   const allowed = auth.filterWritableEntries(requestAuth, entries)
-  if (allowed.length === 0) return c.json({ ok: true, count: 0 })
+  if (allowed.length === 0) return c.json({ ok: true, count: 0, serverTime: new Date().toISOString() })
+
+  const serverAt = new Date().toISOString()
   const keys = allowed.map((e) => e.key)
-  const values = allowed.map((e) => e.value)
-  await kv.mset(keys, values)
-  return c.json({ ok: true, count: allowed.length })
+  const existingValues = await kv.mget(keys)
+  const mergedValues = allowed.map((entry, i) =>
+    mergeSetWithServerAuthority(existingValues[i], entry.value, serverAt),
+  )
+  await kv.mset(keys, mergedValues)
+  return c.json({ ok: true, count: allowed.length, serverTime: serverAt })
 })
 
 app.post(`${PREFIX}/fleet-telematics-sync`, async (c) => {

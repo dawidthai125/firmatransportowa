@@ -1,6 +1,10 @@
 import { fireAutomation } from '@/lib/automation/bridge'
 import type { Course } from '@/lib/domain/course'
 import { tombstoneDeleteInTenantData } from '@/lib/sync/tombstone'
+import {
+  type GuardedSaveOptions,
+  writeGuardedTenantArrayRecord,
+} from '@/lib/sync/guarded-save'
 import { readTenantData, writeTenantData } from '@/lib/tenant/storage'
 
 export function loadCourses(tenantId: string): Course[] {
@@ -28,6 +32,26 @@ export function upsertCourse(tenantId: string, course: Course): Course[] {
   if (idx >= 0) next[idx] = course
   else next.unshift(course)
   saveCourses(tenantId, next)
+  fireAutomation(tenantId, 'course.saved', { course })
+  if (course.scope !== 'domestic') {
+    fireAutomation(tenantId, 'course.international', { course })
+  }
+  return next
+}
+
+export async function upsertCourseGuarded(
+  tenantId: string,
+  course: Course,
+  options?: GuardedSaveOptions,
+): Promise<Course[]> {
+  const next = await writeGuardedTenantArrayRecord(
+    tenantId,
+    'courses',
+    course,
+    loadCourses,
+    saveCourses,
+    options,
+  )
   fireAutomation(tenantId, 'course.saved', { course })
   if (course.scope !== 'domestic') {
     fireAutomation(tenantId, 'course.international', { course })

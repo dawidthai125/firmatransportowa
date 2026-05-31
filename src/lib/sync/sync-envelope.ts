@@ -4,11 +4,13 @@ export const SYNC_ENVELOPE_VERSION = 1 as const
 
 export interface SyncEnvelope<T = unknown> {
   v: typeof SYNC_ENVELOPE_VERSION
-  /** ISO — czas ostatniego zapisu na tym kliencie (po merge) */
+  /** ISO UTC — czas ostatniego merge/zapisu (serwer lub klient) */
   updatedAt: string
   payload: T
   /** id rekordu → ISO deletedAt — propagacja usunięć między klientami */
   tombstones?: Record<string, string>
+  /** Tylko przy push — oczekiwany czas z formularza; serwer odrzuca starszy zapis */
+  saveBaselines?: Record<string, string>
 }
 
 export function isSyncEnvelope(raw: unknown): raw is SyncEnvelope {
@@ -48,11 +50,12 @@ export function maxIso(a?: string, b?: string): string {
 }
 
 export function recordTimestamp(item: {
+  serverSavedAt?: string
   updatedAt?: string
   importedAt?: string
   createdAt?: string
 }): number {
-  const ts = item.updatedAt ?? item.importedAt ?? item.createdAt
+  const ts = item.serverSavedAt ?? item.updatedAt ?? item.importedAt ?? item.createdAt
   if (!ts) return 0
   const n = Date.parse(ts)
   return Number.isNaN(n) ? 0 : n

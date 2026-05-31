@@ -14,8 +14,9 @@ import {
   deleteDriver,
   loadDrivers,
   seedDemoDrivers,
-  upsertDriver,
+  upsertDriverGuarded,
 } from '@/lib/domain/drivers-store'
+import { StaleRecordSaveError, staleSaveMessage } from '@/lib/sync/guarded-save'
 import { loadVehicles, seedDemoVehicles } from '@/lib/domain/vehicles-store'
 import { EditConflictBanner } from '@/app/components/sync/EditConflictBanner'
 import { useCloudSyncRefreshKeys } from '@/lib/sync/useCloudSyncRefresh'
@@ -47,7 +48,7 @@ export function DriversView({ tenantId, readOnly = false }: DriversViewProps) {
 
   useCloudSyncRefreshKeys(tenantId, ['drivers', 'vehicles'], refresh)
 
-  const { conflict, reloadFromStore, guardSave } = useSyncedEditGuard(
+  const { conflict, reloadFromStore, guardSave, getBaselineUpdatedAt } = useSyncedEditGuard(
     tenantId,
     'drivers',
     editing,
@@ -56,12 +57,24 @@ export function DriversView({ tenantId, readOnly = false }: DriversViewProps) {
     'Ten kierowca',
   )
 
-  function saveDriver(force = false) {
+  async function saveDriver(force = false) {
     if (!editing) return
     if (!force && !guardSave()) return
-    setDrivers(upsertDriver(tenantId, { ...editing, updatedAt: new Date().toISOString() }))
-    setEditing(null)
-    setIsNew(false)
+    try {
+      const next = await upsertDriverGuarded(tenantId, editing, {
+        baselineUpdatedAt: getBaselineUpdatedAt(),
+        force,
+      })
+      setDrivers(next)
+      setEditing(null)
+      setIsNew(false)
+    } catch (e) {
+      if (e instanceof StaleRecordSaveError) {
+        window.alert(staleSaveMessage())
+      } else {
+        throw e
+      }
+    }
   }
 
   function handleSave() {

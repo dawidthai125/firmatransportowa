@@ -9,6 +9,7 @@ export interface StaleRecordCheck {
 
 type TimestampedRecord = {
   id: string
+  serverSavedAt?: string
   updatedAt?: string
   importedAt?: string
   createdAt?: string
@@ -36,7 +37,10 @@ export function checkRecordStale(
   const remoteTs = recordTimestamp(remote)
   const baselineTs = recordTimestamp({ updatedAt: baselineUpdatedAt })
   if (remoteTs > baselineTs) {
-    return { isStale: true, remoteUpdatedAt: remote.updatedAt ?? remote.createdAt }
+    return {
+      isStale: true,
+      remoteUpdatedAt: remote.serverSavedAt ?? remote.updatedAt ?? remote.createdAt,
+    }
   }
   return { isStale: false }
 }

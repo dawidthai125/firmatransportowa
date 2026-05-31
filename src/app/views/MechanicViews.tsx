@@ -12,14 +12,15 @@ import {
 import {
   filterMechanicReports,
   loadRepairReports,
-  mechanicCompleteRepair,
-  mechanicMarkInRepair,
-  mechanicRequestDriverContact,
-  mechanicSaveRepairWork,
-  mechanicScheduleRepair,
+  mechanicCompleteRepairGuarded,
+  mechanicMarkInRepairGuarded,
+  mechanicRequestDriverContactGuarded,
+  mechanicSaveRepairWorkGuarded,
+  mechanicScheduleRepairGuarded,
   seedDemoRepairReports,
   type MechanicRepairWorkInput,
 } from '@/lib/domain/repair-reports-store'
+import { StaleRecordSaveError, staleSaveMessage } from '@/lib/sync/guarded-save'
 import { useCloudSyncRefresh } from '@/lib/sync/useCloudSyncRefresh'
 import { EditConflictBanner } from '@/app/components/sync/EditConflictBanner'
 import {
@@ -87,7 +88,7 @@ export function MechanicRepairsView({ tenantId, mechanicId, mechanicName }: Mech
   useCloudSyncRefresh(tenantId, 'repair-reports', refresh)
 
   useEffect(() => {
-    baselineUpdatedAt.current = selected?.updatedAt
+    baselineUpdatedAt.current = selected?.serverSavedAt ?? selected?.updatedAt
     setConflict(false)
   }, [selected?.id])
 
@@ -128,44 +129,80 @@ export function MechanicRepairsView({ tenantId, mechanicId, mechanicName }: Mech
     const fresh = loadRepairReports(tenantId).find((r) => r.id === selected.id)
     if (fresh) {
       setSelected(fresh)
-      baselineUpdatedAt.current = fresh.updatedAt
+      baselineUpdatedAt.current = fresh.serverSavedAt ?? fresh.updatedAt
       setConflict(false)
     }
   }
 
-  function runUpdate(fn: () => RepairReport[], selectedId: string) {
-    const all = fn()
-    applyList(all, selectedId)
+  async function runUpdate(
+    fn: (options: { baselineUpdatedAt?: string; force?: boolean }) => Promise<RepairReport[]>,
+    selectedId: string,
+    force = false,
+  ) {
+    if (!selected) return
+    if (!force && conflict && !guardMechanicSave()) return
+    try {
+      const all = await fn({
+        baselineUpdatedAt: baselineUpdatedAt.current,
+        force,
+      })
+      applyList(all, selectedId)
+      const fresh = all.find((r) => r.id === selectedId)
+      if (fresh) {
+        baselineUpdatedAt.current = fresh.serverSavedAt ?? fresh.updatedAt
+      }
+      setConflict(false)
+    } catch (e) {
+      if (e instanceof StaleRecordSaveError) {
+        window.alert(staleSaveMessage())
+        setConflict(true)
+      } else {
+        throw e
+      }
+    }
   }
 
   function handleSchedule() {
-    if (!selected || !scheduleDate || !guardMechanicSave()) return
+    if (!selected || !scheduleDate) return
     const iso = `${scheduleDate}T${scheduleTime}:00`
-    runUpdate(
-      () => mechanicScheduleRepair(tenantId, selected.id, iso, scheduleNotes || undefined),
+    void runUpdate(
+      (opts) =>
+        mechanicScheduleRepairGuarded(tenantId, selected.id, iso, scheduleNotes || undefined, opts),
       selected.id,
     )
   }
 
   function handleContact() {
-    if (!selected || !contactMsg.trim() || !guardMechanicSave()) return
-    runUpdate(() => mechanicRequestDriverContact(tenantId, selected.id, contactMsg.trim()), selected.id)
+    if (!selected || !contactMsg.trim()) return
+    void runUpdate(
+      (opts) => mechanicRequestDriverContactGuarded(tenantId, selected.id, contactMsg.trim(), opts),
+      selected.id,
+    )
     setContactMsg('')
   }
 
   function handleSaveWork() {
-    if (!selected || !guardMechanicSave()) return
-    runUpdate(() => mechanicSaveRepairWork(tenantId, selected.id, work), selected.id)
+    if (!selected) return
+    void runUpdate(
+      (opts) => mechanicSaveRepairWorkGuarded(tenantId, selected.id, work, opts),
+      selected.id,
+    )
   }
 
   function handleInRepair() {
-    if (!selected || !guardMechanicSave()) return
-    runUpdate(() => mechanicMarkInRepair(tenantId, selected.id, work), selected.id)
+    if (!selected) return
+    void runUpdate(
+      (opts) => mechanicMarkInRepairGuarded(tenantId, selected.id, work, opts),
+      selected.id,
+    )
   }
 
   function handleComplete() {
-    if (!selected || !guardMechanicSave()) return
-    runUpdate(() => mechanicCompleteRepair(tenantId, selected.id, work), selected.id)
+    if (!selected) return
+    void runUpdate(
+      (opts) => mechanicCompleteRepairGuarded(tenantId, selected.id, work, opts),
+      selected.id,
+    )
   }
 
   const canEditWork =
@@ -229,13 +266,11 @@ export function MechanicRepairsView({ tenantId, mechanicId, mechanicName }: Mech
                 onReload={reloadSelected}
                 onForceSave={() => {
                   if (!selected) return
-                  if (confirmSaveOverStaleRecord('To zgłoszenie awarii')) {
-                    runUpdate(
-                      () => mechanicSaveRepairWork(tenantId, selected.id, work),
-                      selected.id,
-                    )
-                    setConflict(false)
-                  }
+                  void runUpdate(
+                    (opts) => mechanicSaveRepairWorkGuarded(tenantId, selected.id, work, opts),
+                    selected.id,
+                    true,
+                  )
                 }}
               />
             )}

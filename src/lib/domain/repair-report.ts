@@ -52,6 +52,8 @@ export interface RepairReport {
   repairCostPln?: number
   completedAt?: string
   updatedAt: string
+  /** Czas zapisu w chmurze (UTC) */
+  serverSavedAt?: string
 }
 
 export const REPAIR_STATUS_LABELS: Record<RepairReportStatus, string> = {

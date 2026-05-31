@@ -46,6 +46,8 @@ export interface Course {
   notes?: string
   createdAt: string
   updatedAt: string
+  /** Czas zapisu w chmurze (UTC) */
+  serverSavedAt?: string
 }
 
 export const COURSE_SCOPE_LABELS: Record<CourseScope, string> = {

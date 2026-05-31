@@ -22,6 +22,8 @@ export interface DailyReport {
   notes?: string
   shiftEnded: boolean
   shiftEndedAt?: string
+  /** Czas zapisu w chmurze (UTC) — do porównań, nie zegar telefonu */
+  serverSavedAt?: string
   createdAt: string
   updatedAt: string
 }

@@ -16,6 +16,8 @@ import {
   writeTenantDataEnvelope,
 } from '@/lib/tenant/storage'
 import { mergeSyncEnvelopes, parseTenantStorageKey } from '@/lib/sync/merge-strategy'
+import type { SyncEnvelope } from '@/lib/sync/sync-envelope'
+import { isSyncEnvelope } from '@/lib/sync/sync-envelope'
 
 export type CloudSyncStatus = 'idle' | 'syncing' | 'ok' | 'error' | 'offline'
 
@@ -26,6 +28,8 @@ let lastStatus: CloudSyncStatus = isSupabaseConfigured() ? 'idle' : 'offline'
 let lastSyncError: string | null = null
 let pushTimer: ReturnType<typeof setTimeout> | null = null
 const pendingPushKeys = new Set<string>()
+/** id rekordu → baseline ISO UTC wysłany przy zapisie (ochrona przed nadpisaniem) */
+const pendingSaveBaselines = new Map<string, Record<string, string>>()
 let syncChain: Promise<void> = Promise.resolve()
 
 export function getLastSyncError(): string | null {
@@ -34,6 +38,43 @@ export function getLastSyncError(): string | null {
 
 export async function retryCloudSync(): Promise<void> {
   await pullAllFromCloud()
+}
+
+/** Zarejestruj baseline formularza — serwer odrzuci zapis, jeśli w KV jest nowsza wersja */
+export function registerSaveBaseline(
+  tenantId: string,
+  dataKey: TenantDataKey,
+  recordId: string,
+  baselineUpdatedAt: string,
+): void {
+  if (!baselineUpdatedAt) return
+  const storageKey = tenantStorageKey(tenantId, dataKey)
+  const map = pendingSaveBaselines.get(storageKey) ?? {}
+  map[recordId] = baselineUpdatedAt
+  pendingSaveBaselines.set(storageKey, map)
+  pendingPushKeys.add(storageKey)
+}
+
+function attachSaveBaselines(key: string, value: unknown): unknown {
+  const baselines = pendingSaveBaselines.get(key)
+  if (!baselines || Object.keys(baselines).length === 0) return value
+  pendingSaveBaselines.delete(key)
+  if (!isSyncEnvelope(value)) return value
+  const env = value as SyncEnvelope
+  return { ...env, saveBaselines: baselines }
+}
+
+/** Pobierz i scal jeden klucz tenant — przed zapisem z formularza */
+export async function pullTenantDataKey(
+  tenantId: string,
+  dataKey: TenantDataKey,
+): Promise<void> {
+  if (!isSupabaseConfigured()) return
+  const key = tenantStorageKey(tenantId, dataKey)
+  await withSyncLock(async () => {
+    const [cloudVal] = await batchGet([key])
+    mergeStorageKey(key, cloudVal, false)
+  })
 }
 
 function withSyncLock<T>(fn: () => Promise<T>): Promise<T> {
@@ -137,10 +178,14 @@ async function batchGet(keys: string[]): Promise<unknown[]> {
 
 async function batchSet(entries: { key: string; value: unknown }[]): Promise<void> {
   if (entries.length === 0) return
+  const payload = entries.map(({ key, value }) => ({
+    key,
+    value: attachSaveBaselines(key, value),
+  }))
   const res = await fetchCloud('/batch-set', {
     method: 'POST',
     headers: await apiHeaders(),
-    body: JSON.stringify({ entries }),
+    body: JSON.stringify({ entries: payload }),
   })
   if (!res.ok) throw new Error(`batch-set ${res.status}`)
 }

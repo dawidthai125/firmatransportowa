@@ -23,8 +23,9 @@ import {
   deleteCourse,
   loadCourses,
   seedDemoCourses,
-  upsertCourse,
+  upsertCourseGuarded,
 } from '@/lib/domain/courses-store'
+import { StaleRecordSaveError, staleSaveMessage } from '@/lib/sync/guarded-save'
 import {
   buildInternationalCourseAlerts,
   courseNeedsInternationalCheck,
@@ -69,7 +70,7 @@ export function CoursesView({ tenantId, readOnly = false }: CoursesViewProps) {
 
   useCloudSyncRefreshKeys(tenantId, ['courses', 'daily-reports'], refresh)
 
-  const { conflict, reloadFromStore, guardSave } = useSyncedEditGuard(
+  const { conflict, reloadFromStore, guardSave, getBaselineUpdatedAt } = useSyncedEditGuard(
     tenantId,
     'courses',
     editing,
@@ -100,16 +101,29 @@ export function CoursesView({ tenantId, readOnly = false }: CoursesViewProps) {
     setIsNew(false)
   }
 
-  function saveCourse(force = false) {
+  async function saveCourse(force = false) {
     if (!editing) return
     if (!force && !guardSave()) return
-    const saved = {
-      ...editing,
-      updatedAt: new Date().toISOString(),
-      reference: editing.reference || `K/${new Date().getFullYear()}/${String(courses.length + 1).padStart(3, '0')}`,
+    try {
+      const saved = {
+        ...editing,
+        reference:
+          editing.reference ||
+          `K/${new Date().getFullYear()}/${String(courses.length + 1).padStart(3, '0')}`,
+      }
+      const next = await upsertCourseGuarded(tenantId, saved, {
+        baselineUpdatedAt: getBaselineUpdatedAt(),
+        force,
+      })
+      setCourses(next)
+      closeForm()
+    } catch (e) {
+      if (e instanceof StaleRecordSaveError) {
+        window.alert(staleSaveMessage())
+      } else {
+        throw e
+      }
     }
-    setCourses(upsertCourse(tenantId, saved))
-    closeForm()
   }
 
   function handleSave() {

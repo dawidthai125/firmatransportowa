@@ -20,6 +20,7 @@ export interface Vehicle {
   notes?: string
   createdAt: string
   updatedAt: string
+  serverSavedAt?: string
 }
 
 export const VEHICLE_TYPE_LABELS: Record<VehicleType, string> = {

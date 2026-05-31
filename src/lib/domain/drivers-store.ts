@@ -1,5 +1,9 @@
 import type { Driver } from '@/lib/domain/driver'
 import { tombstoneDeleteInTenantData } from '@/lib/sync/tombstone'
+import {
+  type GuardedSaveOptions,
+  writeGuardedTenantArrayRecord,
+} from '@/lib/sync/guarded-save'
 import { readTenantData, writeTenantData } from '@/lib/tenant/storage'
 
 export function loadDrivers(tenantId: string): Driver[] {
@@ -18,6 +22,21 @@ export function upsertDriver(tenantId: string, driver: Driver): Driver[] {
   else next.unshift(driver)
   saveDrivers(tenantId, next)
   return next
+}
+
+export async function upsertDriverGuarded(
+  tenantId: string,
+  driver: Driver,
+  options?: GuardedSaveOptions,
+): Promise<Driver[]> {
+  return writeGuardedTenantArrayRecord(
+    tenantId,
+    'drivers',
+    driver,
+    loadDrivers,
+    saveDrivers,
+    options,
+  )
 }
 
 export function deleteDriver(tenantId: string, driverId: string): Driver[] {

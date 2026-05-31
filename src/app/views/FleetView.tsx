@@ -24,8 +24,9 @@ import {
   deleteVehicle,
   loadVehicles,
   seedDemoVehicles,
-  upsertVehicle,
+  upsertVehicleGuarded,
 } from '@/lib/domain/vehicles-store'
+import { StaleRecordSaveError, staleSaveMessage } from '@/lib/sync/guarded-save'
 import { useCloudSyncRefreshKeys } from '@/lib/sync/useCloudSyncRefresh'
 import { EditConflictBanner } from '@/app/components/sync/EditConflictBanner'
 import { useSyncedEditGuard } from '@/lib/sync/useSyncedEditGuard'
@@ -64,7 +65,7 @@ export function FleetView({ tenantId, gpsEnabled = true, readOnly = false }: Fle
     refresh,
   )
 
-  const { conflict, reloadFromStore, guardSave } = useSyncedEditGuard(
+  const { conflict, reloadFromStore, guardSave, getBaselineUpdatedAt } = useSyncedEditGuard(
     tenantId,
     'vehicles',
     editing,
@@ -96,13 +97,24 @@ export function FleetView({ tenantId, gpsEnabled = true, readOnly = false }: Fle
     }
   }
 
-  function saveVehicle(force = false) {
+  async function saveVehicle(force = false) {
     if (!editing) return
     if (!force && !guardSave()) return
-    upsertVehicle(tenantId, { ...editing, updatedAt: new Date().toISOString() })
-    refresh()
-    setEditing(null)
-    setIsNew(false)
+    try {
+      await upsertVehicleGuarded(tenantId, editing, {
+        baselineUpdatedAt: getBaselineUpdatedAt(),
+        force,
+      })
+      refresh()
+      setEditing(null)
+      setIsNew(false)
+    } catch (e) {
+      if (e instanceof StaleRecordSaveError) {
+        window.alert(staleSaveMessage())
+      } else {
+        throw e
+      }
+    }
   }
 
   function handleSave() {

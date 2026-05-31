@@ -1,5 +1,9 @@
 import type { Vehicle } from '@/lib/domain/vehicle'
 import { tombstoneDeleteInTenantData } from '@/lib/sync/tombstone'
+import {
+  type GuardedSaveOptions,
+  writeGuardedTenantArrayRecord,
+} from '@/lib/sync/guarded-save'
 import { readTenantData, writeTenantData } from '@/lib/tenant/storage'
 
 export function loadVehicles(tenantId: string): Vehicle[] {
@@ -18,6 +22,21 @@ export function upsertVehicle(tenantId: string, vehicle: Vehicle): Vehicle[] {
   else next.unshift(vehicle)
   saveVehicles(tenantId, next)
   return next
+}
+
+export async function upsertVehicleGuarded(
+  tenantId: string,
+  vehicle: Vehicle,
+  options?: GuardedSaveOptions,
+): Promise<Vehicle[]> {
+  return writeGuardedTenantArrayRecord(
+    tenantId,
+    'vehicles',
+    vehicle,
+    loadVehicles,
+    saveVehicles,
+    options,
+  )
 }
 
 export function deleteVehicle(tenantId: string, vehicleId: string): Vehicle[] {

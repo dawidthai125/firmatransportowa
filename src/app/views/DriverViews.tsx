@@ -19,8 +19,9 @@ import {
 } from '@/lib/domain/driving-time'
 import {
   getTodayReportForDriver,
-  upsertDailyReport,
+  upsertDailyReportGuarded,
 } from '@/lib/domain/daily-reports-store'
+import { StaleRecordSaveError, staleSaveMessage } from '@/lib/sync/guarded-save'
 import { loadCourses, seedDemoCourses } from '@/lib/domain/courses-store'
 import { activeCourseForDriver } from '@/lib/domain/course-settlement'
 import { findDriverByDisplayName, resolveDriverVehicle } from '@/lib/domain/driver-profile'
@@ -223,7 +224,7 @@ export function DriverReportView({ tenantId, driverName }: DriverReportViewProps
     if (existing) {
       setReport(existing)
       setSaved(existing.shiftEnded)
-      baselineUpdatedAt.current = existing.updatedAt
+      baselineUpdatedAt.current = existing.serverSavedAt ?? existing.updatedAt
       setReportConflict(false)
       return
     }
@@ -275,7 +276,7 @@ export function DriverReportView({ tenantId, driverName }: DriverReportViewProps
     setSaved(false)
   }
 
-  function handleSave(endShift = false, force = false) {
+  async function handleSave(endShift = false, force = false) {
     if (!report) return
     if (
       !force &&
@@ -284,18 +285,31 @@ export function DriverReportView({ tenantId, driverName }: DriverReportViewProps
     ) {
       return
     }
-    const now = new Date().toISOString()
     const savedReport: DailyReport = {
       ...report,
-      updatedAt: now,
       shiftEnded: endShift ? true : report.shiftEnded,
-      shiftEndedAt: endShift ? now : report.shiftEndedAt,
+      shiftEndedAt: endShift ? new Date().toISOString() : report.shiftEndedAt,
     }
-    upsertDailyReport(tenantId, savedReport)
-    setReport(savedReport)
-    setSaved(true)
-    baselineUpdatedAt.current = now
-    setReportConflict(false)
+    try {
+      await upsertDailyReportGuarded(tenantId, savedReport, {
+        baselineUpdatedAt: baselineUpdatedAt.current,
+        force,
+      })
+      const fresh = getTodayReportForDriver(tenantId, driverName)
+      if (fresh) {
+        setReport(fresh)
+        baselineUpdatedAt.current = fresh.serverSavedAt ?? fresh.updatedAt
+      }
+      setSaved(true)
+      setReportConflict(false)
+    } catch (e) {
+      if (e instanceof StaleRecordSaveError) {
+        window.alert(staleSaveMessage())
+        setReportConflict(true)
+      } else {
+        throw e
+      }
+    }
   }
 
   function reloadReport() {
@@ -303,7 +317,7 @@ export function DriverReportView({ tenantId, driverName }: DriverReportViewProps
     if (!existing) return
     setReport(existing)
     setSaved(existing.shiftEnded)
-    baselineUpdatedAt.current = existing.updatedAt
+    baselineUpdatedAt.current = existing.serverSavedAt ?? existing.updatedAt
     setReportConflict(false)
   }
 

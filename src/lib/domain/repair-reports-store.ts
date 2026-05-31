@@ -2,6 +2,10 @@ import { fireAutomation } from '@/lib/automation/bridge'
 import type { RepairReport } from '@/lib/domain/repair-report'
 import { nextRepairReference } from '@/lib/domain/repair-report'
 import { tombstoneDeleteInTenantData } from '@/lib/sync/tombstone'
+import {
+  type GuardedSaveOptions,
+  writeGuardedTenantArrayRecord,
+} from '@/lib/sync/guarded-save'
 import { readTenantData, writeTenantData } from '@/lib/tenant/storage'
 
 export function loadRepairReports(tenantId: string): RepairReport[] {
@@ -34,6 +38,21 @@ export function upsertRepairReport(tenantId: string, report: RepairReport): Repa
   else next.unshift(report)
   saveRepairReports(tenantId, next)
   return next
+}
+
+export async function upsertRepairReportGuarded(
+  tenantId: string,
+  report: RepairReport,
+  options?: GuardedSaveOptions,
+): Promise<RepairReport[]> {
+  return writeGuardedTenantArrayRecord(
+    tenantId,
+    'repair-reports',
+    report,
+    loadRepairReports,
+    saveRepairReports,
+    options,
+  )
 }
 
 export function submitRepairReport(tenantId: string, report: RepairReport): RepairReport[] {
@@ -234,6 +253,86 @@ export function mechanicCompleteRepair(
     updatedAt: now,
   }
   const next = upsertRepairReport(tenantId, updated)
+  fireAutomation(tenantId, 'repair.completed', { report: updated })
+  return next
+}
+
+export async function mechanicSaveRepairWorkGuarded(
+  tenantId: string,
+  reportId: string,
+  work: MechanicRepairWorkInput,
+  options?: GuardedSaveOptions,
+): Promise<RepairReport[]> {
+  const report = loadRepairReports(tenantId).find((r) => r.id === reportId)
+  if (!report) return loadRepairReports(tenantId)
+  return upsertRepairReportGuarded(tenantId, applyMechanicWork(report, work), options)
+}
+
+export async function mechanicScheduleRepairGuarded(
+  tenantId: string,
+  reportId: string,
+  scheduledAt: string,
+  notes: string | undefined,
+  options?: GuardedSaveOptions,
+): Promise<RepairReport[]> {
+  const report = loadRepairReports(tenantId).find((r) => r.id === reportId)
+  if (!report) return loadRepairReports(tenantId)
+  const updated: RepairReport = {
+    ...report,
+    status: 'scheduled',
+    scheduledRepairAt: scheduledAt,
+    mechanicNotes: notes ?? report.mechanicNotes,
+  }
+  const next = await upsertRepairReportGuarded(tenantId, updated, options)
+  fireAutomation(tenantId, 'repair.scheduled', { report: updated })
+  return next
+}
+
+export async function mechanicRequestDriverContactGuarded(
+  tenantId: string,
+  reportId: string,
+  message: string,
+  options?: GuardedSaveOptions,
+): Promise<RepairReport[]> {
+  const report = loadRepairReports(tenantId).find((r) => r.id === reportId)
+  if (!report) return loadRepairReports(tenantId)
+  const updated: RepairReport = {
+    ...report,
+    status: 'awaiting_driver',
+    mechanicMessage: message,
+  }
+  const next = await upsertRepairReportGuarded(tenantId, updated, options)
+  fireAutomation(tenantId, 'repair.awaiting_driver', { report: updated })
+  return next
+}
+
+export async function mechanicMarkInRepairGuarded(
+  tenantId: string,
+  reportId: string,
+  work: MechanicRepairWorkInput | undefined,
+  options?: GuardedSaveOptions,
+): Promise<RepairReport[]> {
+  const report = loadRepairReports(tenantId).find((r) => r.id === reportId)
+  if (!report) return loadRepairReports(tenantId)
+  const base = work ? applyMechanicWork(report, work) : report
+  return upsertRepairReportGuarded(tenantId, { ...base, status: 'in_repair' }, options)
+}
+
+export async function mechanicCompleteRepairGuarded(
+  tenantId: string,
+  reportId: string,
+  work: MechanicRepairWorkInput | undefined,
+  options?: GuardedSaveOptions,
+): Promise<RepairReport[]> {
+  const report = loadRepairReports(tenantId).find((r) => r.id === reportId)
+  if (!report) return loadRepairReports(tenantId)
+  const base = work ? applyMechanicWork(report, work) : report
+  const updated = {
+    ...base,
+    status: 'completed' as const,
+    completedAt: new Date().toISOString(),
+  }
+  const next = await upsertRepairReportGuarded(tenantId, updated, options)
   fireAutomation(tenantId, 'repair.completed', { report: updated })
   return next
 }

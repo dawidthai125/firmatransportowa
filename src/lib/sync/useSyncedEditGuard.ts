@@ -3,7 +3,7 @@ import { useCloudSyncRefreshKeys } from '@/lib/sync/useCloudSyncRefresh'
 import type { TenantDataKey } from '@/lib/tenant/types'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-type TimestampedRecord = { id: string; updatedAt?: string }
+type TimestampedRecord = { id: string; serverSavedAt?: string; updatedAt?: string }
 
 /**
  * Pilnuje edycji rekordu: wykrywa zmiany z chmury i pyta przed nadpisaniem.
@@ -21,13 +21,13 @@ export function useSyncedEditGuard<T extends TimestampedRecord>(
 
   useEffect(() => {
     if (!editing || isNew) {
-      baselineRef.current = editing?.updatedAt
+      baselineRef.current = editing?.serverSavedAt ?? editing?.updatedAt
       setConflict(false)
       return
     }
-    baselineRef.current = editing.updatedAt
+    baselineRef.current = editing.serverSavedAt ?? editing.updatedAt
     setConflict(false)
-  }, [editing?.id, isNew, editing?.updatedAt])
+  }, [editing?.id, isNew, editing?.serverSavedAt, editing?.updatedAt])
 
   const refreshConflict = useCallback(() => {
     if (!tenantId || !editing || isNew) {
@@ -55,5 +55,9 @@ export function useSyncedEditGuard<T extends TimestampedRecord>(
     return confirmSaveOverStaleRecord(entityLabel)
   }
 
-  return { conflict, reloadFromStore, guardSave, refreshConflict }
+  function getBaselineUpdatedAt(): string | undefined {
+    return baselineRef.current
+  }
+
+  return { conflict, reloadFromStore, guardSave, refreshConflict, getBaselineUpdatedAt }
 }
