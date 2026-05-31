@@ -5,6 +5,7 @@ import type { InvoicingConfig } from '@/lib/domain/invoicing-config'
 import type { TachographConnectorConfig } from '@/lib/domain/tachograph-connectors'
 import type { RepairReport } from '@/lib/domain/repair-report'
 import type { FreightSearchPreferences } from '@/lib/domain/freight-preferences'
+import { DEFAULT_FREIGHT_PREFERENCES } from '@/lib/domain/freight-preferences'
 import type { ItdPlaybookSection, ItdTenantData } from '@/lib/domain/itd-types'
 import type { TenantSettingsData } from '@/lib/domain/tenant-settings'
 import { COMPANY_BRANDING, isCompanyDeployment } from '@/config/branding'
@@ -211,40 +212,48 @@ function mergeItdData(local: ItdTenantData, cloud: ItdTenantData): ItdTenantData
 }
 
 function mergeFreightPreferences(
-  local: Partial<FreightSearchPreferences>,
-  cloud: Partial<FreightSearchPreferences>,
+  local: Partial<FreightSearchPreferences> | null | undefined,
+  cloud: Partial<FreightSearchPreferences> | null | undefined,
   localAt: string,
   cloudAt: string,
-): Partial<FreightSearchPreferences> {
+): FreightSearchPreferences {
+  const localSafe = local ?? {}
+  const cloudSafe = cloud ?? {}
   const preferLocal = Date.parse(localAt) >= Date.parse(cloudAt)
-  const newer = preferLocal ? local : cloud
-  const older = preferLocal ? cloud : local
+  const newer = preferLocal ? localSafe : cloudSafe
+  const older = preferLocal ? cloudSafe : localSafe
   return {
+    ...DEFAULT_FREIGHT_PREFERENCES,
     ...older,
     ...newer,
     savedOfferIds: [
       ...new Set([...(older.savedOfferIds ?? []), ...(newer.savedOfferIds ?? [])]),
     ],
-    updatedAt: maxIso(maxIso(local.updatedAt, cloud.updatedAt), maxIso(localAt, cloudAt)),
+    updatedAt: maxIso(
+      maxIso(localSafe.updatedAt, cloudSafe.updatedAt),
+      maxIso(localAt, cloudAt),
+    ),
   }
 }
 
 function mergeFreightConnectors(
-  local: Partial<FreightConnectorConfig>,
-  cloud: Partial<FreightConnectorConfig>,
+  local: Partial<FreightConnectorConfig> | null | undefined,
+  cloud: Partial<FreightConnectorConfig> | null | undefined,
   localAt: string,
   cloudAt: string,
 ): FreightConnectorConfig {
+  const localSafe = local ?? {}
+  const cloudSafe = cloud ?? {}
   const preferLocal = Date.parse(localAt) >= Date.parse(cloudAt)
-  const newer = preferLocal ? local : cloud
-  const older = preferLocal ? cloud : local
+  const newer = preferLocal ? localSafe : cloudSafe
+  const older = preferLocal ? cloudSafe : localSafe
   const lastSync: Partial<Record<string, string>> = {
     ...(older.lastSyncBySource ?? {}),
     ...(newer.lastSyncBySource ?? {}),
   }
   for (const key of Object.keys({ ...older.lastSyncBySource, ...newer.lastSyncBySource })) {
-    const l = local.lastSyncBySource?.[key as keyof typeof local.lastSyncBySource]
-    const c = cloud.lastSyncBySource?.[key as keyof typeof cloud.lastSyncBySource]
+    const l = localSafe.lastSyncBySource?.[key as keyof typeof localSafe.lastSyncBySource]
+    const c = cloudSafe.lastSyncBySource?.[key as keyof typeof cloudSafe.lastSyncBySource]
     if (l || c) lastSync[key] = maxIso(l, c)
   }
   return {
@@ -262,7 +271,7 @@ function mergeFreightConnectors(
     transEuSandbox: newer.transEuSandbox ?? older.transEuSandbox ?? true,
     timocomApiKey: newer.timocomApiKey ?? older.timocomApiKey,
     timocomCompanyId: newer.timocomCompanyId ?? older.timocomCompanyId,
-    lastSyncError: preferLocal ? local.lastSyncError : cloud.lastSyncError ?? local.lastSyncError,
+    lastSyncError: preferLocal ? localSafe.lastSyncError : cloudSafe.lastSyncError ?? localSafe.lastSyncError,
     lastSyncBySource: lastSync as FreightConnectorConfig['lastSyncBySource'],
   }
 }
