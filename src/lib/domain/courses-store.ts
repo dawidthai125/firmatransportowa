@@ -18,6 +18,8 @@ function normalizeCourse(c: Course): Course {
     scope: c.scope ?? 'domestic',
     loadCountry: c.loadCountry ?? 'PL',
     unloadCountry: c.unloadCountry ?? 'PL',
+    attachments: c.attachments ?? [],
+    sentRegistered: c.sentRegistered ?? false,
   }
 }
 

@@ -36,6 +36,16 @@ import {
 } from '@/lib/domain/course-settlement'
 import { loadDailyReports, seedDemoDailyReports } from '@/lib/domain/daily-reports-store'
 import { EditConflictBanner } from '@/app/components/sync/EditConflictBanner'
+import { CourseStatusActions } from '@/app/components/course/CourseStatusActions'
+import { CourseDocumentsPanel } from '@/app/components/course/CourseDocumentsPanel'
+import { CourseChatPanel } from '@/app/components/course/CourseChatPanel'
+import {
+  ClientTrackingLink,
+  RmpdSentChecklist,
+} from '@/app/components/course/RmpdSentChecklist'
+import { findDriverByDisplayName } from '@/lib/domain/driver-profile'
+import type { TenantModules } from '@/lib/tenant/types'
+import { DEFAULT_MODULES } from '@/lib/tenant/types'
 import { useCloudSyncRefreshKeys } from '@/lib/sync/useCloudSyncRefresh'
 import { useSyncedEditGuard } from '@/lib/sync/useSyncedEditGuard'
 import { cn } from '@/lib/utils'
@@ -45,9 +55,16 @@ import { useCallback, useEffect, useState } from 'react'
 interface CoursesViewProps {
   tenantId: string
   readOnly?: boolean
+  driverName?: string
+  modules?: TenantModules
 }
 
-export function CoursesView({ tenantId, readOnly = false }: CoursesViewProps) {
+export function CoursesView({
+  tenantId,
+  readOnly = false,
+  driverName,
+  modules = DEFAULT_MODULES,
+}: CoursesViewProps) {
   const cloudReady = useInitialCloudSyncDone()
   const [courses, setCourses] = useState<Course[]>([])
   const [settlements, setSettlements] = useState<Map<string, CourseSettlementSummary>>(new Map())
@@ -138,6 +155,23 @@ export function CoursesView({ tenantId, readOnly = false }: CoursesViewProps) {
 
   const activeCount = courses.filter((c) => ['planned', 'loading', 'in_transit'].includes(c.status)).length
 
+  const driverRecord = driverName ? findDriverByDisplayName(tenantId, driverName) : undefined
+  const visibleCourses =
+    readOnly && driverName
+      ? courses.filter(
+          (c) =>
+            !driverRecord ||
+            !c.driverId ||
+            c.driverId === driverRecord.id ||
+            ['planned', 'loading', 'in_transit', 'delivered'].includes(c.status),
+        )
+      : courses
+
+  function handleCourseUpdated(updated: Course) {
+    setCourses((prev) => prev.map((c) => (c.id === updated.id ? updated : c)))
+    if (editing?.id === updated.id) setEditing(updated)
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -165,7 +199,7 @@ export function CoursesView({ tenantId, readOnly = false }: CoursesViewProps) {
         </Card>
       ) : (
         <div className="space-y-3">
-          {courses.map((course) => (
+          {visibleCourses.map((course) => (
             <CourseCard
               key={course.id}
               course={course}
@@ -173,6 +207,10 @@ export function CoursesView({ tenantId, readOnly = false }: CoursesViewProps) {
               onEdit={() => openEdit(course)}
               onDelete={() => handleDelete(course.id)}
               readOnly={readOnly}
+              driverName={driverName}
+              modules={modules}
+              tenantId={tenantId}
+              onCourseUpdated={handleCourseUpdated}
             />
           ))}
         </div>
@@ -200,12 +238,20 @@ function CourseCard({
   onEdit,
   onDelete,
   readOnly,
+  driverName,
+  modules,
+  tenantId,
+  onCourseUpdated,
 }: {
   course: Course
   settlement?: CourseSettlementSummary
   onEdit: () => void
   onDelete: () => void
   readOnly: boolean
+  driverName?: string
+  modules?: TenantModules
+  tenantId?: string
+  onCourseUpdated?: (course: Course) => void
 }) {
   const margin = courseMargin(course)
   const isInternational = course.scope !== 'domestic'
@@ -299,6 +345,39 @@ function CourseCard({
               )}
             </div>
           </div>
+
+          {!readOnly && modules?.rmpdSent && tenantId && onCourseUpdated && (
+            <RmpdSentChecklist tenantId={tenantId} course={course} onUpdated={onCourseUpdated} />
+          )}
+          {!readOnly && modules?.clientPortal && tenantId && onCourseUpdated && (
+            <ClientTrackingLink tenantId={tenantId} course={course} onUpdated={onCourseUpdated} />
+          )}
+          {readOnly && driverName && modules?.courseStatusPing && tenantId && onCourseUpdated && (
+            <CourseStatusActions
+              tenantId={tenantId}
+              course={course}
+              driverName={driverName}
+              onUpdated={onCourseUpdated}
+            />
+          )}
+          {modules?.courseDocuments && tenantId && onCourseUpdated && (
+            <CourseDocumentsPanel
+              tenantId={tenantId}
+              course={course}
+              uploaderName={driverName ?? 'Dyspozytor'}
+              readOnly={readOnly && !driverName}
+              onUpdated={onCourseUpdated}
+            />
+          )}
+          {modules?.driverChat && tenantId && (
+            <CourseChatPanel
+              tenantId={tenantId}
+              courseId={course.id}
+              authorName={driverName ?? 'Dyspozytor'}
+              authorRole={driverName ? 'driver' : 'dispatcher'}
+              readOnly={readOnly && !driverName}
+            />
+          )}
 
           {!readOnly && (
             <div className="flex gap-1">

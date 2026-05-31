@@ -25,6 +25,10 @@ import { MechanicHomeView } from '@/app/views/MechanicViews'
 import { RepairsView } from '@/app/views/RepairsView'
 import { SettlementsView } from '@/app/views/SettlementsView'
 import { SettingsView } from '@/app/views/SettingsView'
+import { WeeklyPlannerView } from '@/app/views/WeeklyPlannerView'
+import { InvoicingView } from '@/app/views/InvoicingView'
+import { DriverPayrollView } from '@/app/views/DriverPayrollView'
+import { ClientTrackingView } from '@/app/views/ClientTrackingView'
 import { TachographView } from '@/app/views/TachographView'
 import type { AppMode } from '@/lib/auth/session'
 import { loadSession, roleToAppMode, saveSession } from '@/lib/auth/session'
@@ -43,6 +47,7 @@ import {
 import { runScheduledAutomations } from '@/lib/automation/scheduler'
 import { HelpProvider } from '@/lib/help/help-context'
 import { useTenant } from '@/lib/tenant/context'
+import { DEFAULT_MODULES } from '@/lib/tenant/types'
 import { usePwaBrandingEffect } from '@/lib/pwa/usePwaBrandingEffect'
 import { useEffect, useMemo, useState } from 'react'
 
@@ -55,13 +60,16 @@ const DISPATCHER_FORBIDDEN_VIEWS: AdminView[] = [
   'files',
   'automations',
   'itd',
+  'invoicing',
+  'driverPayroll',
 ]
 
 function filterNavByModules<T extends string>(
   items: NavItem<T>[],
   modules: import('@/lib/tenant/types').TenantModules,
 ): NavItem<T>[] {
-  return items.filter((item) => !item.module || modules[item.module])
+  const merged = { ...DEFAULT_MODULES, ...modules }
+  return items.filter((item) => !item.module || merged[item.module])
 }
 
 function canAccessAdminView(view: AdminView, mode: AppMode): boolean {
@@ -73,6 +81,9 @@ function canAccessAdminView(view: AdminView, mode: AppMode): boolean {
 export default function App() {
   const { currentTenant, tenants, setCurrentTenant } = useTenant()
   const session = loadSession()
+
+  const trackingMatch =
+    typeof window !== 'undefined' ? window.location.hash.match(/^#track\/([a-zA-Z0-9-]+)/) : null
 
   usePwaBrandingEffect(currentTenant?.id)
 
@@ -168,6 +179,17 @@ export default function App() {
     return <SessionBootSplash />
   }
 
+  const trackingTenant = currentTenant ?? getDefaultTenant(tenants)
+  if (trackingMatch && trackingTenant?.settings.modules.clientPortal) {
+    return (
+      <ClientTrackingView
+        token={trackingMatch[1]}
+        tenantId={trackingTenant.id}
+        tenantName={trackingTenant.name}
+      />
+    )
+  }
+
   if (!session) {
     return <LoginScreen onLogin={setMode} />
   }
@@ -231,7 +253,14 @@ export default function App() {
           {driverView === 'issue' && (
             <DriverIssueView tenantId={currentTenant.id} driverName={session.user.displayName} />
           )}
-          {driverView === 'courses' && <CoursesView tenantId={currentTenant.id} readOnly />}
+          {driverView === 'courses' && (
+            <CoursesView
+              tenantId={currentTenant.id}
+              readOnly
+              driverName={session.user.displayName}
+              modules={currentTenant.settings.modules}
+            />
+          )}
           {driverView === 'report' && (
             <DriverReportView tenantId={currentTenant.id} driverName={session.user.displayName} />
           )}
@@ -270,7 +299,18 @@ export default function App() {
             onNavigate={setAdminView}
           />
         )}
-        {adminAllowed && adminView === 'courses' && <CoursesView tenantId={currentTenant.id} />}
+        {adminAllowed && adminView === 'courses' && (
+          <CoursesView tenantId={currentTenant.id} modules={currentTenant.settings.modules} />
+        )}
+        {adminAllowed && adminView === 'weeklyPlanner' && (
+          <WeeklyPlannerView tenantId={currentTenant.id} />
+        )}
+        {adminAllowed && adminView === 'invoicing' && mode === 'owner' && (
+          <InvoicingView tenantId={currentTenant.id} />
+        )}
+        {adminAllowed && adminView === 'driverPayroll' && mode === 'owner' && (
+          <DriverPayrollView tenantId={currentTenant.id} />
+        )}
         {adminAllowed && adminView === 'loads' && (
           <FreightBoardView
             tenantId={currentTenant.id}

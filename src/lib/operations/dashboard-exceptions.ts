@@ -87,6 +87,22 @@ export function buildOperationsExceptions(
     })
   }
 
+  const recentStatus = loadCourses(tenantId).filter((c) => {
+    if (!c.statusUpdatedAt) return false
+    return Date.now() - Date.parse(c.statusUpdatedAt) < 86400000
+  })
+  if (recentStatus.length > 0) {
+    out.push({
+      id: 'course-status-ping',
+      severity: 'info',
+      title: `${recentStatus.length} aktualizacji statusu z kabiny (24 h)`,
+      description: recentStatus
+        .map((c) => `${c.reference}${c.statusUpdatedBy ? ` — ${c.statusUpdatedBy}` : ''}`)
+        .join(', '),
+      actionView: 'courses',
+    })
+  }
+
   if (itdActive.length > 0) {
     out.push({
       id: 'itd-active',

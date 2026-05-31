@@ -14,6 +14,9 @@ export type AdminView =
   | 'itd'
   | 'tachograph'
   | 'settings'
+  | 'weeklyPlanner'
+  | 'invoicing'
+  | 'driverPayroll'
 
 export type DriverView = 'home' | 'report' | 'courses' | 'issue' | 'itd' | 'profile'
 
@@ -31,9 +34,12 @@ export const OWNER_NAV: NavItem<AdminView>[] = [
   { id: 'dashboard', label: 'Pulpit', icon: 'layout-dashboard' },
   { id: 'features', label: 'Funkcje', icon: 'layers' },
   { id: 'courses', label: 'Kursy', icon: 'route', module: 'courses' },
+  { id: 'weeklyPlanner', label: 'Plan tygodnia', icon: 'calendar-range', module: 'weeklyPlanner' },
   { id: 'loads', label: 'Giełda ładunków', icon: 'search', module: 'loadBoard' },
   { id: 'reports', label: 'Raporty', icon: 'file-text', module: 'courses' },
   { id: 'settlements', label: 'Rozliczenia', icon: 'calculator', module: 'courses' },
+  { id: 'driverPayroll', label: 'Wynagrodzenia', icon: 'wallet', module: 'driverPayroll' },
+  { id: 'invoicing', label: 'Fakturowanie', icon: 'receipt', module: 'invoicing' },
   { id: 'files', label: 'Pliki', icon: 'folder-open', module: 'courses' },
   { id: 'automations', label: 'Automatyzacje', icon: 'bot', module: 'courses' },
   { id: 'fleet', label: 'Flota', icon: 'truck', module: 'fleet' },
@@ -49,6 +55,7 @@ export const DISPATCHER_NAV: NavItem<AdminView>[] = [
   { id: 'dashboard', label: 'Pulpit', icon: 'layout-dashboard' },
   { id: 'features', label: 'Funkcje', icon: 'layers' },
   { id: 'courses', label: 'Kursy', icon: 'route', module: 'courses' },
+  { id: 'weeklyPlanner', label: 'Plan', icon: 'calendar-range', module: 'weeklyPlanner' },
   { id: 'loads', label: 'Giełda', icon: 'search', module: 'loadBoard' },
   { id: 'reports', label: 'Raporty', icon: 'file-text', module: 'courses' },
   { id: 'fleet', label: 'Flota', icon: 'truck', module: 'fleet' },
@@ -83,4 +90,7 @@ export const VIEW_TITLES: Record<AdminView, string> = {
   compliance: 'Zgodność i dokumenty',
   tachograph: 'Import tachografu (DDD)',
   settings: 'Ustawienia firmy',
+  weeklyPlanner: 'Plan tygodnia',
+  invoicing: 'Fakturowanie',
+  driverPayroll: 'Wynagrodzenia kierowców',
 }

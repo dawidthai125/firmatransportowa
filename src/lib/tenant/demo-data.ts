@@ -1,6 +1,6 @@
 import { COMPANY_BRANDING, isCompanyDeployment, LEGACY_TENANT_SLUGS } from '@/config/branding'
 import type { Tenant } from './types'
-import { createDefaultTenantSettings } from './types'
+import { createDefaultTenantSettings, DEFAULT_MODULES } from './types'
 
 function buildDemoTenant(): Tenant {
   const company = isCompanyDeployment()
@@ -32,6 +32,7 @@ function normalizeTenantRecord(t: Tenant): Tenant {
       ...demo.settings,
       ...(t.settings ?? {}),
       modules: {
+        ...DEFAULT_MODULES,
         ...demo.settings.modules,
         ...(t.settings?.modules ?? {}),
       },

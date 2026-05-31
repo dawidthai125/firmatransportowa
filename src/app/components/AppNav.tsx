@@ -2,12 +2,14 @@ import { cn } from '@/lib/utils'
 import {
   Bot,
   Calculator,
+  CalendarRange,
   FileText,
   FolderOpen,
   HardDrive,
   Home,
   LayoutDashboard,
   Layers,
+  Receipt,
   Route,
   Search,
   Settings,
@@ -16,6 +18,7 @@ import {
   Truck,
   User,
   Users,
+  Wallet,
   Wrench,
   type LucideIcon,
 } from 'lucide-react'
@@ -39,6 +42,9 @@ const ICONS: Record<string, LucideIcon> = {
   home: Home,
   'file-text': FileText,
   user: User,
+  'calendar-range': CalendarRange,
+  receipt: Receipt,
+  wallet: Wallet,
 }
 
 interface AppNavProps<T extends string> {

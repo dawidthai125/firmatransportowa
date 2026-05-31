@@ -29,6 +29,15 @@ export function modulesForPlan(plan: SubscriptionPlan): TenantModules {
         itd: false,
         tachographImport: false,
         repairs: true,
+        courseStatusPing: true,
+        courseDocuments: true,
+        vehicleMargin: true,
+        invoicing: false,
+        rmpdSent: false,
+        driverChat: true,
+        driverPayroll: false,
+        weeklyPlanner: true,
+        clientPortal: false,
       }
     case 'business':
       return {
@@ -41,6 +50,15 @@ export function modulesForPlan(plan: SubscriptionPlan): TenantModules {
         itd: true,
         tachographImport: false,
         repairs: true,
+        courseStatusPing: true,
+        courseDocuments: true,
+        vehicleMargin: true,
+        invoicing: false,
+        rmpdSent: true,
+        driverChat: true,
+        driverPayroll: false,
+        weeklyPlanner: true,
+        clientPortal: false,
       }
     case 'enterprise':
       return {

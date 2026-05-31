@@ -40,6 +40,24 @@ export interface TenantModules {
   itd: boolean
   tachographImport: boolean
   repairs: boolean
+  /** Kierowca aktualizuje status kursu z kabiny */
+  courseStatusPing: boolean
+  /** Zdjęcia CMR / POD przy kursie */
+  courseDocuments: boolean
+  /** Marża per pojazd na pulpicie */
+  vehicleMargin: boolean
+  /** Eksport faktur — Fakturownia / wFirma / CSV */
+  invoicing: boolean
+  /** Checklista RMPD / SENT */
+  rmpdSent: boolean
+  /** Czat przy kursie dyspozytor ↔ kierowca */
+  driverChat: boolean
+  /** Rozliczenie wynagrodzenia kierowcy */
+  driverPayroll: boolean
+  /** Plan tygodnia — widok Gantt-lite */
+  weeklyPlanner: boolean
+  /** Link tracking read-only dla klienta */
+  clientPortal: boolean
 }
 
 export const DEFAULT_MODULES: TenantModules = {
@@ -52,6 +70,15 @@ export const DEFAULT_MODULES: TenantModules = {
   itd: true,
   tachographImport: true,
   repairs: true,
+  courseStatusPing: true,
+  courseDocuments: true,
+  vehicleMargin: true,
+  invoicing: false,
+  rmpdSent: true,
+  driverChat: true,
+  driverPayroll: false,
+  weeklyPlanner: true,
+  clientPortal: false,
 }
 
 export function createDefaultTenantSettings(): TenantSettings {
@@ -83,6 +110,9 @@ export type TenantDataKey =
   | 'tachograph'
   | 'tachograph-connectors'
   | 'fleet-telematics-connectors'
+  | 'course-messages'
+  | 'invoicing-config'
+  | 'driver-payroll-rates'
 
 export const TENANT_DATA_KEYS: TenantDataKey[] = [
   'drivers',
@@ -102,6 +132,9 @@ export const TENANT_DATA_KEYS: TenantDataKey[] = [
   'tachograph',
   'tachograph-connectors',
   'fleet-telematics-connectors',
+  'course-messages',
+  'invoicing-config',
+  'driver-payroll-rates',
 ]
 
 export function tenantStorageKey(tenantId: string, key: TenantDataKey): string {

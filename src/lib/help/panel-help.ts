@@ -409,10 +409,74 @@ function adminSteps(
         { label: 'Pliki', hint: 'Kopia importu ręcznego w bibliotece' },
       ],
     },
+    weeklyPlanner: {
+      title: 'Plan tygodnia',
+      summary: 'Widok 7 dni — które kursy są aktywne danego dnia, z kierowcą i statusem.',
+      steps: [
+        {
+          title: 'Przegląd tygodnia',
+          description: 'Kolumny pon–niedz — kurs widoczny, gdy mieści się między załadunkiem a rozładunkiem.',
+          action: 'Przewiń siatkę dni na ekranie',
+        },
+        {
+          title: 'Edycja kursów',
+          description: 'Daty i przypisania zmieniasz w module Kursy.',
+          action: 'Menu → Kursy',
+        },
+      ],
+      related: [{ label: 'Kursy', hint: 'Tworzenie i edycja zleceń' }],
+    },
+    invoicing: {
+      title: 'Fakturowanie',
+      summary: 'Eksport dostarczonych kursów do CSV, Fakturownia lub wFirma — moduł włączany w Ustawieniach.',
+      steps: [
+        {
+          title: 'Włącz moduł',
+          description: 'Integracja fakturowania jest domyślnie wyłączona — włącz w Ustawienia → Moduły.',
+          action: 'Ustawienia firmy → Moduły i integracje → Integracja fakturowania',
+        },
+        {
+          title: 'Konfiguracja NIP i terminu',
+          description: 'Uzupełnij dane sprzedawcy i wybierz dostawcę eksportu.',
+          action: 'Sekcja Konfiguracja na tym widoku',
+        },
+        {
+          title: 'Eksport CSV',
+          description: 'Pobierz plik z kursami o statusie dostarczony/rozliczony z frachtem PLN.',
+          action: 'Przycisk „Eksportuj pozycje”',
+        },
+      ],
+      related: [{ label: 'Kursy', hint: 'Status dostarczony przed fakturą' }],
+    },
+    driverPayroll: {
+      title: 'Wynagrodzenia kierowców',
+      summary: 'Stawki km / dzień / % frachtu — wyliczenie z raportów kabiny za wybrany okres.',
+      steps: [
+        {
+          title: 'Ustaw stawkę',
+          description: 'Dla każdego kierowcy wybierz model rozliczenia i zapisać.',
+          action: 'Karta kierowcy → Zapisz stawkę',
+        },
+        {
+          title: 'Zakres dat',
+          description: 'Domyślnie bieżący tydzień — możesz zmienić od/do.',
+          action: 'Pola dat u góry widoku',
+        },
+      ],
+      related: [
+        { label: 'Raporty', hint: 'Km i koszty z kabiny' },
+        { label: 'Rozliczenia', hint: 'Marże i czas jazdy' },
+      ],
+    },
     settings: {
       title: 'Ustawienia firmy',
       summary: 'Dokumenty firmy, plan abonamentowy, mechanicy i weryfikatorzy awarii.',
       steps: [
+        {
+          title: 'Moduły i integracje',
+          description: 'Włącz/wyłącz funkcje niezależnie od planu — fakturowanie, portal klienta, czat, marża per auto.',
+          action: 'Sekcja „Moduły i integracje” → checkboxy',
+        },
         {
           title: 'Plan abonamentowy',
           description: 'Starter / Business / Enterprise — włącza lub ukrywa moduły (GPS, giełda, ITD, tachograf).',

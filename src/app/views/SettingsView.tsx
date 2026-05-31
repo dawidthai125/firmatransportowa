@@ -20,7 +20,7 @@ import {
 } from '@/lib/tenant/plan-presets'
 import { useTenant } from '@/lib/tenant/context'
 import { cn } from '@/lib/utils'
-import { Plus, Settings, Trash2, Gauge, Satellite, Smartphone } from 'lucide-react'
+import { Plus, Settings, Trash2, Gauge, Satellite, Smartphone, ToggleLeft } from 'lucide-react'
 import {
   applyPwaBrandingToDocument,
   DEFAULT_PWA_BRANDING,
@@ -38,6 +38,8 @@ import {
   type TachographConnectorConfig,
 } from '@/lib/domain/tachograph-connectors'
 import { useCloudSyncRefreshKeys } from '@/lib/sync/useCloudSyncRefresh'
+import { MODULE_DESCRIPTIONS, MODULE_LABELS } from '@/lib/tenant/module-labels'
+import { DEFAULT_MODULES, type TenantModules } from '@/lib/tenant/types'
 import { useCallback, useEffect, useState } from 'react'
 
 interface SettingsViewProps {
@@ -165,6 +167,17 @@ export function SettingsView({ tenant }: SettingsViewProps) {
     setCurrentTenant(updated)
   }
 
+  function toggleModule(key: keyof TenantModules, enabled: boolean) {
+    const merged: TenantModules = { ...DEFAULT_MODULES, ...settings.modules, [key]: enabled }
+    const updated: Tenant = {
+      ...tenant,
+      settings: { ...tenant.settings, modules: merged },
+      updatedAt: new Date().toISOString(),
+    }
+    registerTenant(updated)
+    setCurrentTenant(updated)
+  }
+
   const scopeLabel =
     settings.transportScope === 'both'
       ? 'Kraj + międzynarodowy'
@@ -258,6 +271,44 @@ export function SettingsView({ tenant }: SettingsViewProps) {
               </div>
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <ToggleLeft className="h-4 w-4 text-primary" />
+            Moduły i integracje
+          </CardTitle>
+          <CardDescription>
+            Włącz lub wyłącz funkcje niezależnie od planu — np. fakturowanie tylko gdy masz konto u dostawcy
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {(Object.keys(MODULE_LABELS) as (keyof TenantModules)[]).map((key) => {
+            const enabled = { ...DEFAULT_MODULES, ...settings.modules }[key]
+            return (
+              <div
+                key={key}
+                className="flex flex-wrap items-start justify-between gap-2 rounded-lg border border-border p-3"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium">{MODULE_LABELS[key]}</p>
+                  {MODULE_DESCRIPTIONS[key] && (
+                    <p className="text-xs text-muted-foreground">{MODULE_DESCRIPTIONS[key]}</p>
+                  )}
+                </div>
+                <label className="flex shrink-0 items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={enabled}
+                    onChange={(e) => toggleModule(key, e.target.checked)}
+                  />
+                  {enabled ? 'Włączony' : 'Wyłączony'}
+                </label>
+              </div>
+            )
+          })}
         </CardContent>
       </Card>
 

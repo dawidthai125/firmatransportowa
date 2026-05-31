@@ -1,6 +1,7 @@
 import type { AutomationRule, AutomationSettings } from '@/lib/automation/rules'
 import type { FreightConnectorConfig } from '@/lib/domain/freight-connectors'
 import type { FleetTelematicsConnectorConfig } from '@/lib/domain/fleet-telematics-connectors'
+import type { InvoicingConfig } from '@/lib/domain/invoicing-config'
 import type { TachographConnectorConfig } from '@/lib/domain/tachograph-connectors'
 import type { RepairReport } from '@/lib/domain/repair-report'
 import type { FreightSearchPreferences } from '@/lib/domain/freight-preferences'
@@ -32,6 +33,8 @@ export const RECORD_ARRAY_KEYS: TenantDataKey[] = [
   'fleet-positions',
   'freight-offers',
   'tachograph',
+  'course-messages',
+  'driver-payroll-rates',
 ]
 
 type Identifiable = { id: string; updatedAt?: string; importedAt?: string; createdAt?: string }
@@ -432,6 +435,19 @@ export function mergeSyncEnvelopes(
       localEnv.updatedAt,
       cloudEnv.updatedAt,
     )
+    return wrapForSync(payload, maxIso(localEnv.updatedAt, cloudEnv.updatedAt))
+  }
+
+  if (dataKey === 'invoicing-config') {
+    const preferLocal = Date.parse(localEnv.updatedAt) >= Date.parse(cloudEnv.updatedAt)
+    const newer = preferLocal ? localEnv.payload : cloudEnv.payload
+    const older = preferLocal ? cloudEnv.payload : localEnv.payload
+    const payload: InvoicingConfig = {
+      provider: 'csv',
+      defaultPaymentDays: 14,
+      ...(older as Partial<InvoicingConfig>),
+      ...(newer as Partial<InvoicingConfig>),
+    }
     return wrapForSync(payload, maxIso(localEnv.updatedAt, cloudEnv.updatedAt))
   }
 

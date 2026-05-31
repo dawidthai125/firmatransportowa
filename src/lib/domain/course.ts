@@ -6,6 +6,20 @@ export type CourseStatus =
   | 'completed'
   | 'cancelled'
 
+/** Załącznik do kursu — CMR, POD, inne */
+export type CourseAttachmentKind = 'cmr' | 'pod' | 'other'
+
+export interface CourseAttachment {
+  id: string
+  kind: CourseAttachmentKind
+  name: string
+  mimeType: string
+  /** Data URL (demo) lub referencja do magazynu plików */
+  dataUrl: string
+  uploadedAt: string
+  uploadedBy: string
+}
+
 /** Zakres geograficzny zlecenia */
 export type CourseScope = 'domestic' | 'international_eu' | 'international_third'
 
@@ -39,6 +53,18 @@ export interface Course {
   licenseExtractNo?: string
   /** RMPD/SENT zarejestrowany (kraje spoza UE) */
   rmpdRegistered?: boolean
+  /** SENT zarejestrowany (krajowy) */
+  sentRegistered?: boolean
+  /** Data ostatniej weryfikacji checklisty RMPD/SENT */
+  rmpdCheckedAt?: string
+  /** Zdjęcia CMR / POD */
+  attachments?: CourseAttachment[]
+  /** Ostatnia zmiana statusu z kabiny */
+  statusUpdatedAt?: string
+  statusUpdatedBy?: string
+  /** Token publicznego śledzenia (portal klienta) */
+  trackingToken?: string
+  trackingPublic?: boolean
   loadAt: string
   unloadAt: string
   driverId?: string
